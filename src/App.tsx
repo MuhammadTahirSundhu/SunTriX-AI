@@ -20,6 +20,13 @@ import Technologies from "./pages/Technologies";
 import Partnership from "./pages/Partnership";
 import Testimonials from "./pages/Testimonials";
 import { PrivacyPolicy, TermsOfService, CookiePolicy } from "./pages/Legal";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminTasks from "./pages/admin/AdminTasks";
+import AdminMessages from "./pages/admin/AdminMessages";
+import AdminNewsletter from "./pages/admin/AdminNewsletter";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +60,17 @@ const AppRoutes = () => {
         <Route path="/legal/privacy" element={<PrivacyPolicy />} />
         <Route path="/legal/terms" element={<TermsOfService />} />
         <Route path="/legal/cookies" element={<CookiePolicy />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="tasks" element={<AdminTasks />} />
+          <Route path="messages" element={<AdminMessages />} />
+          <Route path="newsletter" element={<AdminNewsletter />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

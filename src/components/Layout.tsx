@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import AIChatbot from "@/components/AIChatbot";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -7,6 +8,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <Navbar />
       <main>{children}</main>
       <Footer />
+      <AIChatbot />
     </div>
   );
 };

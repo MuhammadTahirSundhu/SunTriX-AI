@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Quote } from "lucide-react";
+import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
 
 const testimonials = [
   {
@@ -8,18 +8,21 @@ const testimonials = [
     name: "Sarah Chen",
     role: "CTO",
     company: "DataFlow Inc.",
+    rating: 5,
   },
   {
     quote: "We went from concept to production-ready SaaS in 12 weeks. The team's ability to combine ML models with scalable infrastructure is remarkable.",
     name: "Marcus Johnson",
     role: "VP Engineering",
     company: "NeuralPath",
+    rating: 5,
   },
   {
     quote: "Their computer vision solution achieved 94% accuracy on our quality inspection system. SunTriX delivered ahead of schedule with exceptional documentation.",
     name: "Emily Rodriguez",
     role: "Head of Product",
     company: "VisionTech",
+    rating: 5,
   },
 ];
 
@@ -39,23 +42,34 @@ const TestimonialsSection = () => {
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
       <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-extrabold mb-4">
-            What Our <span className="gradient-text">Clients</span> Say
+        <motion.div
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-3xl lg:text-4xl font-display font-extrabold mb-4">
+            Client <span className="gradient-text">Testimonials</span>
           </h2>
-        </div>
+        </motion.div>
 
-        <div className="relative min-h-[280px]">
+        <div className="relative min-h-[300px]">
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.98 }}
+              transition={{ duration: 0.5 }}
               className="text-center"
             >
-              <Quote className="mx-auto mb-6 h-10 w-10 text-primary/30" />
-              <blockquote className="text-lg lg:text-xl leading-relaxed text-foreground italic mb-8">
+              <Quote className="mx-auto mb-6 h-10 w-10 text-primary/40" />
+              <div className="flex justify-center gap-1 mb-6">
+                {[...Array(testimonials[current].rating)].map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                ))}
+              </div>
+              <blockquote className="text-lg lg:text-xl leading-relaxed text-foreground italic mb-8 max-w-2xl mx-auto">
                 "{testimonials[current].quote}"
               </blockquote>
               <div>
@@ -71,7 +85,7 @@ const TestimonialsSection = () => {
         <div className="flex items-center justify-center gap-4 mt-8">
           <button
             onClick={() => setCurrent((c) => (c - 1 + testimonials.length) % testimonials.length)}
-            className="rounded-full border border-border p-2 hover:bg-muted transition-colors"
+            className="rounded-full border border-border p-2 hover:bg-primary/10 hover:border-primary/30 transition-colors"
           >
             <ChevronLeft className="h-4 w-4 text-muted-foreground" />
           </button>
@@ -86,7 +100,7 @@ const TestimonialsSection = () => {
           </div>
           <button
             onClick={() => setCurrent((c) => (c + 1) % testimonials.length)}
-            className="rounded-full border border-border p-2 hover:bg-muted transition-colors"
+            className="rounded-full border border-border p-2 hover:bg-primary/10 hover:border-primary/30 transition-colors"
           >
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
