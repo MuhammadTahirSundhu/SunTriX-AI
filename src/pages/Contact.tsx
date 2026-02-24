@@ -3,14 +3,16 @@ import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "@/hooks/use-toast";
+import { contactStore } from "@/lib/store";
 
 const Contact = () => {
-  const [form, setForm] = useState({ name: "", email: "", company: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", company: "", subject: "", message: "" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    contactStore.create({ name: form.name, email: form.email, subject: form.subject || "Website Contact", message: form.message });
     toast({ title: "Message sent!", description: "We'll get back to you within 24 hours." });
-    setForm({ name: "", email: "", company: "", message: "" });
+    setForm({ name: "", email: "", company: "", subject: "", message: "" });
   };
 
   return (

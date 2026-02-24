@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, ChevronDown, Bot, Brain, Eye, Layers, ArrowRight } from "lucide-react";
+import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const services = [
-  { icon: Bot, name: "Agentic AI & Automation", desc: "Autonomous agents & workflow automation", href: "/services/agentic-ai" },
-  { icon: Brain, name: "AI & Machine Learning", desc: "Predictive analytics & custom models", href: "/services/ai-ml" },
-  { icon: Eye, name: "Computer Vision", desc: "Object detection & image analysis", href: "/services/computer-vision" },
-  { icon: Layers, name: "AI Product / SaaS", desc: "End-to-end platform development", href: "/services/saas-platform" },
+  { name: "Agentic AI & Automation", desc: "Autonomous agents & workflow automation", href: "/services/agentic-ai" },
+  { name: "AI & Machine Learning", desc: "Predictive analytics & custom models", href: "/services/ai-ml" },
+  { name: "Computer Vision", desc: "Object detection & image analysis", href: "/services/computer-vision" },
+  { name: "AI Product / SaaS", desc: "End-to-end platform development", href: "/services/saas-platform" },
 ];
 
 const Navbar = () => {
@@ -15,14 +15,16 @@ const Navbar = () => {
   const [servicesOpen, setServicesOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/70 backdrop-blur-xl">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 lg:px-8">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="gradient-bg h-8 w-8 rounded-lg flex items-center justify-center">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="gradient-bg h-9 w-9 rounded-lg flex items-center justify-center">
             <span className="text-primary-foreground font-extrabold text-sm">S</span>
           </div>
-          <span className="text-xl font-bold text-foreground">SunTriX</span>
+          <span className="text-xl font-display font-bold text-foreground">
+            Sun<span className="text-primary">Tri</span>X
+          </span>
         </Link>
 
         {/* Desktop Nav */}
@@ -31,7 +33,7 @@ const Navbar = () => {
           
           <div className="relative" onMouseEnter={() => setServicesOpen(true)} onMouseLeave={() => setServicesOpen(false)}>
             <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Services <ChevronDown className="h-3 w-3" />
+              Services <ChevronDown className={`h-3 w-3 transition-transform ${servicesOpen ? "rotate-180" : ""}`} />
             </button>
             <AnimatePresence>
               {servicesOpen && (
@@ -39,27 +41,20 @@ const Navbar = () => {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[520px] rounded-xl border border-border bg-card/95 backdrop-blur-xl p-4 shadow-2xl"
+                  className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[400px] rounded-xl border border-border bg-card/95 backdrop-blur-xl p-3 shadow-2xl"
                 >
-                  <div className="grid grid-cols-2 gap-2">
-                    {services.map((s) => (
-                      <Link
-                        key={s.name}
-                        to={s.href}
-                        className="flex items-start gap-3 rounded-lg p-3 hover:bg-muted transition-colors group"
-                      >
-                        <div className="mt-0.5 rounded-md bg-muted p-2 group-hover:bg-primary/10">
-                          <s.icon className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{s.name}</p>
-                          <p className="text-xs text-muted-foreground">{s.desc}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                  <div className="mt-3 border-t border-border pt-3">
-                    <Link to="/request-task" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                  {services.map((s) => (
+                    <Link
+                      key={s.name}
+                      to={s.href}
+                      className="flex flex-col rounded-lg p-3 hover:bg-primary/5 transition-colors group"
+                    >
+                      <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{s.name}</p>
+                      <p className="text-xs text-muted-foreground">{s.desc}</p>
+                    </Link>
+                  ))}
+                  <div className="mt-2 border-t border-border pt-2">
+                    <Link to="/request-task" className="flex items-center gap-2 rounded-lg p-3 text-sm text-primary hover:bg-primary/5 transition-colors">
                       Not sure? Request a Custom Task <ArrowRight className="h-3 w-3" />
                     </Link>
                   </div>
@@ -79,7 +74,7 @@ const Navbar = () => {
           <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Book a Call
           </Link>
-          <Link to="/request-task" className="gradient-bg rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
+          <Link to="/request-task" className="gradient-bg rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-all hover:shadow-[0_0_20px_hsl(24_100%_50%/0.25)]">
             Request a Task
           </Link>
         </div>

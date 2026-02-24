@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, CheckCircle, Upload, Shield, Clock, Users } from "lucide-react";
 import Layout from "@/components/Layout";
 import { toast } from "@/hooks/use-toast";
+import { taskStore } from "@/lib/store";
 
 const steps = ["About You", "Project Brief", "Technical Details", "Review & Submit"];
 
@@ -18,6 +19,15 @@ const RequestTask = () => {
   const updateField = (field: string, value: string | boolean) => setForm({ ...form, [field]: value });
 
   const handleSubmit = () => {
+    taskStore.create({
+      name: form.name,
+      email: form.email,
+      company: form.company,
+      service: form.projectType,
+      budget: form.budget,
+      timeline: form.startDate,
+      description: form.description,
+    });
     toast({ title: "Task submitted!", description: "We'll send you a proposal within 24 hours." });
   };
 
