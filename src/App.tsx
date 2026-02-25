@@ -13,6 +13,7 @@ import ComputerVision from "./pages/services/ComputerVision";
 import SaaSPlatform from "./pages/services/SaaSPlatform";
 import HowWeWork from "./pages/HowWeWork";
 import Portfolio from "./pages/Portfolio";
+import PortfolioDetail from "./pages/PortfolioDetail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import RequestTask from "./pages/RequestTask";
@@ -27,6 +28,8 @@ import AdminTasks from "./pages/admin/AdminTasks";
 import AdminMessages from "./pages/admin/AdminMessages";
 import AdminNewsletter from "./pages/admin/AdminNewsletter";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminPortfolio from "./pages/admin/AdminPortfolio";
+import AdminContent from "./pages/admin/AdminContent";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +54,7 @@ const AppRoutes = () => {
         <Route path="/services/saas-platform" element={<SaaSPlatform />} />
         <Route path="/how-we-work" element={<HowWeWork />} />
         <Route path="/work" element={<Portfolio />} />
+        <Route path="/work/:slug" element={<PortfolioDetail />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/request-task" element={<RequestTask />} />
@@ -67,6 +71,8 @@ const AppRoutes = () => {
           <Route index element={<AdminDashboard />} />
           <Route path="tasks" element={<AdminTasks />} />
           <Route path="messages" element={<AdminMessages />} />
+          <Route path="portfolio" element={<AdminPortfolio />} />
+          <Route path="content" element={<AdminContent />} />
           <Route path="newsletter" element={<AdminNewsletter />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

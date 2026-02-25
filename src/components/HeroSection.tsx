@@ -1,15 +1,37 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Play, CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 import heroBanner from "@/assets/hero-banner.png";
-
-const trustPills = [
-  "50+ Projects Delivered",
-  "Fortune 500 Clients",
-  "24hr Response SLA",
-];
+import { heroStore, type HeroContent } from "@/lib/cms-store";
 
 const HeroSection = () => {
+  const [content, setContent] = useState<HeroContent>(heroStore.get());
+
+  useEffect(() => {
+    setContent(heroStore.get());
+  }, []);
+
+  const renderHeadline = () => {
+    return content.headline.map((line, i) => {
+      const words = line.split(" ");
+      return (
+        <span key={i}>
+          {words.map((word, j) => {
+            const isGradient = content.gradientWords.some((gw) => word.includes(gw));
+            return (
+              <span key={j}>
+                {isGradient ? <span className="gradient-text">{word}</span> : <span className="text-foreground">{word}</span>}
+                {j < words.length - 1 && " "}
+              </span>
+            );
+          })}
+          {i < content.headline.length - 1 && <br />}
+        </span>
+      );
+    });
+  };
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Full-bleed background image */}
@@ -21,19 +43,43 @@ const HeroSection = () => {
 
       {/* Animated particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute h-1 w-1 rounded-full bg-primary/60"
-            style={{ left: `${15 + i * 15}%`, top: `${20 + i * 10}%` }}
-            animate={{
-              y: [0, -30, 0],
-              opacity: [0.3, 0.8, 0.3],
-              scale: [1, 1.5, 1],
+            className="absolute rounded-full"
+            style={{
+              left: `${10 + i * 12}%`,
+              top: `${15 + (i % 3) * 25}%`,
+              width: i % 2 === 0 ? 4 : 2,
+              height: i % 2 === 0 ? 4 : 2,
+              background: i % 3 === 0
+                ? "hsl(var(--primary))"
+                : i % 3 === 1
+                ? "hsl(var(--secondary))"
+                : "hsl(var(--accent-gold))",
             }}
-            transition={{ duration: 3 + i * 0.5, repeat: Infinity, delay: i * 0.4 }}
+            animate={{
+              y: [0, -40, 0],
+              opacity: [0.2, 0.9, 0.2],
+              scale: [1, 1.8, 1],
+            }}
+            transition={{ duration: 3 + i * 0.6, repeat: Infinity, delay: i * 0.5 }}
           />
         ))}
+      </div>
+
+      {/* Floating orbs */}
+      <div className="absolute inset-0 pointer-events-none">
+        <motion.div
+          className="absolute top-1/4 right-1/4 h-64 w-64 rounded-full bg-primary/5 blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 8, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute bottom-1/3 left-1/3 h-48 w-48 rounded-full bg-secondary/5 blur-3xl"
+          animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.5, 0.2] }}
+          transition={{ duration: 6, repeat: Infinity, delay: 2 }}
+        />
       </div>
 
       <div className="container mx-auto px-4 lg:px-8 pt-32 pb-24 relative z-10">
@@ -50,23 +96,15 @@ const HeroSection = () => {
             transition={{ delay: 0.3 }}
           >
             <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <span className="text-xs font-medium text-primary">Accepting new AI & SaaS project briefs</span>
+            <span className="text-xs font-medium text-primary">{content.badge}</span>
           </motion.div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-extrabold leading-[1.08]">
-            <span className="text-foreground">Engineering</span>
-            <br />
-            <span className="gradient-text">Intelligence</span>{" "}
-            <span className="text-foreground">That</span>
-            <br />
-            <span className="text-foreground">Perceives, Reasons,</span>
-            <br />
-            <span className="text-foreground">and </span>
-            <span className="gradient-text">Acts</span>
+            {renderHeadline()}
           </h1>
 
           <p className="max-w-xl text-lg text-muted-foreground leading-relaxed">
-            From agentic AI workflows to production-grade SaaS platforms — SunTriX delivers end-to-end AI engineering with a 24-hour proposal guarantee.
+            {content.subheadline}
           </p>
 
           <motion.div
@@ -76,13 +114,13 @@ const HeroSection = () => {
             transition={{ delay: 0.5 }}
           >
             <Link
-              to="/request-task"
+              to={content.ctaPrimary.link}
               className="gradient-bg inline-flex items-center gap-2 rounded-lg px-7 py-4 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-all hover:shadow-[0_0_30px_hsl(24_100%_50%/0.3)] glow-orange"
             >
-              Request a Demo <ArrowRight className="h-4 w-4" />
+              {content.ctaPrimary.text} <ArrowRight className="h-4 w-4" />
             </Link>
             <button className="inline-flex items-center gap-2 rounded-lg border border-border/50 bg-background/30 backdrop-blur-sm px-6 py-4 text-sm font-medium text-foreground hover:bg-muted/50 transition-all">
-              <Play className="h-4 w-4 text-primary" /> Watch Overview
+              <Play className="h-4 w-4 text-primary" /> {content.ctaSecondary.text}
             </button>
           </motion.div>
 
@@ -92,7 +130,7 @@ const HeroSection = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
           >
-            {trustPills.map((pill) => (
+            {content.trustPills.map((pill) => (
               <div key={pill} className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CheckCircle className="h-4 w-4 text-success" />
                 {pill}

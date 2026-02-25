@@ -1,40 +1,25 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
-
-const testimonials = [
-  {
-    quote: "SunTriX transformed our data pipeline with an agentic AI system that cut processing time by 10x. Their architectural depth is unmatched.",
-    name: "Sarah Chen",
-    role: "CTO",
-    company: "DataFlow Inc.",
-    rating: 5,
-  },
-  {
-    quote: "We went from concept to production-ready SaaS in 12 weeks. The team's ability to combine ML models with scalable infrastructure is remarkable.",
-    name: "Marcus Johnson",
-    role: "VP Engineering",
-    company: "NeuralPath",
-    rating: 5,
-  },
-  {
-    quote: "Their computer vision solution achieved 94% accuracy on our quality inspection system. SunTriX delivered ahead of schedule with exceptional documentation.",
-    name: "Emily Rodriguez",
-    role: "Head of Product",
-    company: "VisionTech",
-    rating: 5,
-  },
-];
+import { testimonialStore, type TestimonialItem } from "@/lib/cms-store";
 
 const TestimonialsSection = () => {
   const [current, setCurrent] = useState(0);
+  const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
 
   useEffect(() => {
+    setTestimonials(testimonialStore.getPublished());
+  }, []);
+
+  useEffect(() => {
+    if (testimonials.length === 0) return;
     const interval = setInterval(() => {
       setCurrent((c) => (c + 1) % testimonials.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [testimonials.length]);
+
+  if (testimonials.length === 0) return null;
 
   return (
     <section className="py-24 lg:py-32 bg-card/30 relative overflow-hidden">
@@ -65,17 +50,17 @@ const TestimonialsSection = () => {
             >
               <Quote className="mx-auto mb-6 h-10 w-10 text-primary/40" />
               <div className="flex justify-center gap-1 mb-6">
-                {[...Array(testimonials[current].rating)].map((_, i) => (
+                {[...Array(testimonials[current]?.rating || 5)].map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-primary text-primary" />
                 ))}
               </div>
               <blockquote className="text-lg lg:text-xl leading-relaxed text-foreground italic mb-8 max-w-2xl mx-auto">
-                "{testimonials[current].quote}"
+                "{testimonials[current]?.quote}"
               </blockquote>
               <div>
-                <p className="font-semibold text-foreground">{testimonials[current].name}</p>
+                <p className="font-semibold text-foreground">{testimonials[current]?.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {testimonials[current].role}, {testimonials[current].company}
+                  {testimonials[current]?.role}, {testimonials[current]?.company}
                 </p>
               </div>
             </motion.div>
