@@ -3,13 +3,15 @@ import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { authStore } from "@/lib/store";
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Users, Settings,
-  LogOut, Menu, X, ChevronRight
+  LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone
 } from "lucide-react";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
   { icon: ClipboardList, label: "Task Requests", href: "/admin/tasks" },
   { icon: MessageSquare, label: "Messages", href: "/admin/messages" },
+  { icon: Briefcase, label: "Portfolio", href: "/admin/portfolio" },
+  { icon: FileText, label: "Content", href: "/admin/content" },
   { icon: Users, label: "Newsletter", href: "/admin/newsletter" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ];
@@ -42,7 +44,7 @@ const AdminLayout = () => {
               <div className="h-8 w-8 rounded-lg gradient-bg flex items-center justify-center">
                 <span className="text-primary-foreground font-extrabold text-xs">S</span>
               </div>
-              <span className="text-sm font-bold text-foreground">SunTriX Admin</span>
+              <span className="text-sm font-bold text-foreground">SunTriX CMS</span>
             </Link>
           )}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
@@ -70,6 +72,11 @@ const AdminLayout = () => {
         </nav>
 
         <div className="p-3 border-t border-border">
+          {sidebarOpen && (
+            <Link to="/" target="_blank" className="flex items-center gap-2 mb-3 px-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+              <Megaphone className="h-3.5 w-3.5" /> View Live Site →
+            </Link>
+          )}
           {sidebarOpen && user && (
             <div className="flex items-center gap-2 mb-3 px-2">
               <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
