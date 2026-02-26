@@ -3,7 +3,7 @@ import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { authStore } from "@/lib/store";
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Users, Settings,
-  LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone
+  LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone, Layers
 } from "lucide-react";
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { icon: ClipboardList, label: "Task Requests", href: "/admin/tasks" },
   { icon: MessageSquare, label: "Messages", href: "/admin/messages" },
   { icon: Briefcase, label: "Portfolio", href: "/admin/portfolio" },
+  { icon: Layers, label: "Departments", href: "/admin/departments" },
   { icon: FileText, label: "Content", href: "/admin/content" },
   { icon: Users, label: "Newsletter", href: "/admin/newsletter" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },

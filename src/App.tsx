@@ -30,6 +30,7 @@ import AdminNewsletter from "./pages/admin/AdminNewsletter";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminPortfolio from "./pages/admin/AdminPortfolio";
 import AdminContent from "./pages/admin/AdminContent";
+import AdminDepartments from "./pages/admin/AdminDepartments";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ const AppRoutes = () => {
           <Route path="tasks" element={<AdminTasks />} />
           <Route path="messages" element={<AdminMessages />} />
           <Route path="portfolio" element={<AdminPortfolio />} />
+          <Route path="departments" element={<AdminDepartments />} />
           <Route path="content" element={<AdminContent />} />
           <Route path="newsletter" element={<AdminNewsletter />} />
           <Route path="settings" element={<AdminSettings />} />

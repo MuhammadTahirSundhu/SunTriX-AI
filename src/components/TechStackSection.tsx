@@ -4,19 +4,45 @@ import deptPlatform from "@/assets/dept-platform.png";
 const techCategories = [
   {
     category: "AI & ML",
-    items: ["TensorFlow", "PyTorch", "LangChain", "OpenAI", "Hugging Face", "scikit-learn"],
+    items: [
+      { name: "TensorFlow", icon: "🧠" },
+      { name: "PyTorch", icon: "🔥" },
+      { name: "LangChain", icon: "🔗" },
+      { name: "OpenAI", icon: "🤖" },
+      { name: "Hugging Face", icon: "🤗" },
+      { name: "scikit-learn", icon: "📊" },
+    ],
   },
   {
     category: "Frontend",
-    items: ["React", "Next.js", "TypeScript", "Tailwind CSS", "Framer Motion"],
+    items: [
+      { name: "React", icon: "⚛️" },
+      { name: "Next.js", icon: "▲" },
+      { name: "TypeScript", icon: "📘" },
+      { name: "Tailwind CSS", icon: "🎨" },
+      { name: "Framer Motion", icon: "✨" },
+    ],
   },
   {
     category: "Backend",
-    items: ["Node.js", "Python", "FastAPI", "Express", "GraphQL"],
+    items: [
+      { name: "Node.js", icon: "💚" },
+      { name: "Python", icon: "🐍" },
+      { name: "FastAPI", icon: "⚡" },
+      { name: "Express", icon: "🚂" },
+      { name: "GraphQL", icon: "◆" },
+    ],
   },
   {
     category: "Data & Cloud",
-    items: ["MongoDB", "PostgreSQL", "Redis", "AWS", "Docker", "Kubernetes"],
+    items: [
+      { name: "MongoDB", icon: "🍃" },
+      { name: "PostgreSQL", icon: "🐘" },
+      { name: "Redis", icon: "🔴" },
+      { name: "AWS", icon: "☁️" },
+      { name: "Docker", icon: "🐳" },
+      { name: "Kubernetes", icon: "☸️" },
+    ],
   },
 ];
 
@@ -30,7 +56,8 @@ const TechStackSection = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl lg:text-4xl font-display font-extrabold mb-4">
+            <span className="inline-block text-xs font-mono text-secondary uppercase tracking-widest mb-4">Technology</span>
+            <h2 className="text-3xl lg:text-5xl font-display font-extrabold mb-4">
               The Stack Behind <span className="gradient-text">Our Work</span>
             </h2>
             <p className="text-muted-foreground mb-10">Battle-tested tools and frameworks for production-grade systems.</p>
@@ -47,12 +74,13 @@ const TechStackSection = () => {
                   <p className="text-xs font-mono text-primary mb-2 uppercase tracking-wider">{cat.category}</p>
                   <div className="flex flex-wrap gap-2">
                     {cat.items.map((tech) => (
-                      <span
-                        key={tech}
-                        className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-mono text-muted-foreground hover:text-primary hover:border-primary/30 glow-hover transition-all cursor-default"
+                      <motion.span
+                        key={tech.name}
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-mono text-muted-foreground hover:text-primary hover:border-primary/30 glow-hover transition-all cursor-default"
                       >
-                        {tech}
-                      </span>
+                        <span>{tech.icon}</span> {tech.name}
+                      </motion.span>
                     ))}
                   </div>
                 </motion.div>
@@ -66,12 +94,25 @@ const TechStackSection = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <img
-              src={deptPlatform}
-              alt="SunTriX Cloud Platform"
-              className="w-full rounded-2xl border border-border"
-            />
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-background/50 to-transparent" />
+            <div className="relative rounded-2xl border border-border overflow-hidden">
+              <img
+                src={deptPlatform}
+                alt="SunTriX Cloud Platform"
+                className="w-full"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+            </div>
+            {/* Floating stat */}
+            <motion.div
+              className="absolute -bottom-4 -left-4 rounded-xl border border-primary/30 bg-card p-4 shadow-xl"
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.5 }}
+            >
+              <p className="text-2xl font-extrabold gradient-text">50+</p>
+              <p className="text-[10px] text-muted-foreground">Tools Mastered</p>
+            </motion.div>
           </motion.div>
         </div>
       </div>

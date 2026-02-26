@@ -6,17 +6,20 @@ import HowWeWorkSection from "@/components/HowWeWorkSection";
 import TechStackSection from "@/components/TechStackSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
+import PageTransition from "@/components/PageTransition";
 
 const Index = () => {
   return (
     <Layout>
-      <HeroSection />
-      <SocialProofBar />
-      <DepartmentsSection />
-      <HowWeWorkSection />
-      <TechStackSection />
-      <TestimonialsSection />
-      <CTASection />
+      <PageTransition>
+        <HeroSection />
+        <SocialProofBar />
+        <DepartmentsSection />
+        <HowWeWorkSection />
+        <TechStackSection />
+        <TestimonialsSection />
+        <CTASection />
+      </PageTransition>
     </Layout>
   );
 };

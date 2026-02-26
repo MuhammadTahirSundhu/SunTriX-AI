@@ -190,6 +190,109 @@ function setObject<T>(key: string, data: T): void {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
+// ─── Department Store ───────────────────────────────────────────
+
+const SEED_DEPARTMENTS: Omit<Department, "id" | "updatedAt">[] = [
+  {
+    name: "SunTriX Agents",
+    subtitle: "Agentic AI & Automation",
+    description: "Deploy autonomous agents that reason, plan, and execute complex tasks — from customer support to multi-agent orchestration.",
+    image: "",
+    href: "/services/agentic-ai",
+    order: 1,
+    enabled: true,
+  },
+  {
+    name: "SunTriX Automate",
+    subtitle: "AI Workflow Automation",
+    description: "Intelligent automation systems that streamline operations, reduce manual effort, and boost efficiency across your organization.",
+    image: "",
+    href: "/services/ai-ml",
+    order: 2,
+    enabled: true,
+  },
+  {
+    name: "SunTriX Vision",
+    subtitle: "Computer Vision",
+    description: "Object detection, image classification, video analytics, OCR, anomaly detection with real-time edge inference.",
+    image: "",
+    href: "/services/computer-vision",
+    order: 3,
+    enabled: true,
+  },
+  {
+    name: "SunTriX Intelligence",
+    subtitle: "AI & Machine Learning",
+    description: "Custom models, predictive analytics, NLP, recommendation systems, and full MLOps lifecycle management.",
+    image: "",
+    href: "/services/saas-platform",
+    order: 4,
+    enabled: true,
+  },
+];
+
+export const departmentStore = {
+  _seeded: false,
+
+  _seed() {
+    if (this._seeded) return;
+    const existing = getCollection<Department>("suntrix_departments");
+    if (existing.length === 0) {
+      const items = SEED_DEPARTMENTS.map((d) => ({
+        ...d,
+        id: generateId(),
+        updatedAt: new Date().toISOString(),
+      }));
+      setCollection("suntrix_departments", items);
+    }
+    this._seeded = true;
+  },
+
+  getAll(): Department[] {
+    this._seed();
+    return getCollection<Department>("suntrix_departments");
+  },
+
+  getEnabled(): Department[] {
+    return this.getAll().filter((d) => d.enabled).sort((a, b) => a.order - b.order);
+  },
+
+  create(data: Partial<Department>): Department {
+    const dept: Department = {
+      id: generateId(),
+      name: data.name || "",
+      subtitle: data.subtitle || "",
+      description: data.description || "",
+      image: data.image || "",
+      href: data.href || "",
+      order: data.order || 0,
+      enabled: data.enabled !== false,
+      updatedAt: new Date().toISOString(),
+    };
+    const all = this.getAll();
+    all.push(dept);
+    setCollection("suntrix_departments", all);
+    return dept;
+  },
+
+  update(id: string, updates: Partial<Department>): Department | null {
+    const all = this.getAll();
+    const idx = all.findIndex((d) => d.id === id);
+    if (idx === -1) return null;
+    all[idx] = { ...all[idx], ...updates, updatedAt: new Date().toISOString() };
+    setCollection("suntrix_departments", all);
+    return all[idx];
+  },
+
+  delete(id: string): boolean {
+    const all = this.getAll();
+    const filtered = all.filter((d) => d.id !== id);
+    if (filtered.length === all.length) return false;
+    setCollection("suntrix_departments", filtered);
+    return true;
+  },
+};
+
 // ─── Portfolio Store ────────────────────────────────────────────
 
 const SEED_PROJECTS: Omit<PortfolioProject, "id" | "createdAt" | "updatedAt">[] = [
