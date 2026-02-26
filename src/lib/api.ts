@@ -67,6 +67,12 @@ export const ENDPOINTS = {
   SEO_SETTINGS: `${BASE_URL}/cms/seo`,
   SEO_BY_PAGE: (page: string) => `${BASE_URL}/cms/seo/${page}`,
 
+  // Departments
+  DEPARTMENTS_LIST: `${BASE_URL}/departments`,
+  DEPARTMENTS_CREATE: `${BASE_URL}/departments`,
+  DEPARTMENTS_UPDATE: (id: string) => `${BASE_URL}/departments/${id}`,
+  DEPARTMENTS_DELETE: (id: string) => `${BASE_URL}/departments/${id}`,
+
   // Admin
   ADMIN_DASHBOARD_STATS: `${BASE_URL}/admin/stats`,
   ADMIN_TASKS: `${BASE_URL}/admin/tasks`,

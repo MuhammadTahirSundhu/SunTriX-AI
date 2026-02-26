@@ -1,15 +1,15 @@
 import { motion } from "framer-motion";
 
 const logos = [
-  "Google", "Microsoft", "AWS", "Meta", "Tesla", "OpenAI", "NVIDIA", "Stripe"
+  "Google", "Microsoft", "AWS", "Meta", "Tesla", "OpenAI", "NVIDIA", "Stripe", "Anthropic", "Vercel"
 ];
 
 const SocialProofBar = () => {
   return (
-    <section className="border-y border-border bg-card/50 py-10 overflow-hidden">
+    <section className="border-y border-border/50 bg-card/30 backdrop-blur-sm py-10 overflow-hidden">
       <div className="container mx-auto px-4 lg:px-8">
         <motion.p
-          className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-8"
+          className="text-center text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/60 mb-8"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -18,16 +18,17 @@ const SocialProofBar = () => {
         </motion.p>
       </div>
       <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-card/50 to-transparent z-10" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-card/50 to-transparent z-10" />
-        <div className="flex animate-marquee gap-20 whitespace-nowrap">
+        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background to-transparent z-10" />
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background to-transparent z-10" />
+        <div className="flex animate-marquee gap-24 whitespace-nowrap">
           {[...logos, ...logos, ...logos].map((logo, i) => (
-            <span
+            <motion.span
               key={i}
-              className="text-xl font-display font-bold text-muted-foreground/20 hover:text-primary/40 transition-colors duration-500 cursor-default select-none"
+              className="text-xl font-display font-bold text-muted-foreground/15 hover:text-primary/30 transition-colors duration-500 cursor-default select-none"
+              whileHover={{ scale: 1.1 }}
             >
               {logo}
-            </span>
+            </motion.span>
           ))}
         </div>
       </div>
