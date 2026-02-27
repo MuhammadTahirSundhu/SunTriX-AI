@@ -3,45 +3,61 @@ import deptPlatform from "@/assets/dept-platform.png";
 
 const techCategories = [
   {
-    category: "AI & ML",
+    category: "Agentic AI & Automation",
     items: [
-      { name: "TensorFlow", icon: "🧠" },
-      { name: "PyTorch", icon: "🔥" },
       { name: "LangChain", icon: "🔗" },
-      { name: "OpenAI", icon: "🤖" },
+      { name: "CrewAI", icon: "🤖" },
+      { name: "AutoGen", icon: "⚡" },
+      { name: "OpenAI GPT-4o", icon: "🧠" },
+      { name: "Claude 3.5", icon: "🟣" },
+      { name: "n8n", icon: "🔄" },
+      { name: "Zapier AI", icon: "⚙️" },
+    ],
+  },
+  {
+    category: "AI & Machine Learning",
+    items: [
+      { name: "PyTorch", icon: "🔥" },
+      { name: "TensorFlow", icon: "📐" },
       { name: "Hugging Face", icon: "🤗" },
-      { name: "scikit-learn", icon: "📊" },
+      { name: "MLflow", icon: "📊" },
+      { name: "Vertex AI", icon: "☁️" },
+      { name: "scikit-learn", icon: "📈" },
+      { name: "ONNX", icon: "🔷" },
     ],
   },
   {
-    category: "Frontend",
+    category: "Computer Vision",
     items: [
+      { name: "YOLOv8", icon: "👁️" },
+      { name: "OpenCV", icon: "📷" },
+      { name: "NVIDIA Triton", icon: "💚" },
+      { name: "TensorRT", icon: "🚀" },
+      { name: "MediaPipe", icon: "🎯" },
+      { name: "Roboflow", icon: "🏷️" },
+    ],
+  },
+  {
+    category: "SaaS & Platform",
+    items: [
+      { name: "Next.js 14", icon: "▲" },
       { name: "React", icon: "⚛️" },
-      { name: "Next.js", icon: "▲" },
-      { name: "TypeScript", icon: "📘" },
-      { name: "Tailwind CSS", icon: "🎨" },
-      { name: "Framer Motion", icon: "✨" },
-    ],
-  },
-  {
-    category: "Backend",
-    items: [
       { name: "Node.js", icon: "💚" },
-      { name: "Python", icon: "🐍" },
-      { name: "FastAPI", icon: "⚡" },
-      { name: "Express", icon: "🚂" },
-      { name: "GraphQL", icon: "◆" },
+      { name: "TypeScript", icon: "📘" },
+      { name: "Stripe", icon: "💳" },
+      { name: "Vercel", icon: "▼" },
     ],
   },
   {
-    category: "Data & Cloud",
+    category: "Data & Infrastructure",
     items: [
-      { name: "MongoDB", icon: "🍃" },
+      { name: "MongoDB Atlas", icon: "🍃" },
       { name: "PostgreSQL", icon: "🐘" },
       { name: "Redis", icon: "🔴" },
       { name: "AWS", icon: "☁️" },
       { name: "Docker", icon: "🐳" },
       { name: "Kubernetes", icon: "☸️" },
+      { name: "Cloudinary", icon: "🌤️" },
     ],
   },
 ];
@@ -60,7 +76,7 @@ const TechStackSection = () => {
             <h2 className="text-3xl lg:text-5xl font-display font-extrabold mb-4">
               The Stack Behind <span className="gradient-text">Our Work</span>
             </h2>
-            <p className="text-muted-foreground mb-10">Battle-tested tools and frameworks for production-grade systems.</p>
+            <p className="text-muted-foreground mb-10">Cutting-edge tools chosen for each domain to deliver production-grade AI systems.</p>
 
             <div className="space-y-6">
               {techCategories.map((cat, ci) => (
@@ -95,14 +111,9 @@ const TechStackSection = () => {
             viewport={{ once: true }}
           >
             <div className="relative rounded-2xl border border-border overflow-hidden">
-              <img
-                src={deptPlatform}
-                alt="SunTriX Cloud Platform"
-                className="w-full"
-              />
+              <img src={deptPlatform} alt="SunTriX Cloud Platform" className="w-full" />
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
             </div>
-            {/* Floating stat */}
             <motion.div
               className="absolute -bottom-4 -left-4 rounded-xl border border-primary/30 bg-card p-4 shadow-xl"
               initial={{ opacity: 0, scale: 0.8 }}
@@ -110,7 +121,7 @@ const TechStackSection = () => {
               viewport={{ once: true }}
               transition={{ delay: 0.5 }}
             >
-              <p className="text-2xl font-extrabold gradient-text">50+</p>
+              <p className="text-2xl font-extrabold gradient-text">60+</p>
               <p className="text-[10px] text-muted-foreground">Tools Mastered</p>
             </motion.div>
           </motion.div>
