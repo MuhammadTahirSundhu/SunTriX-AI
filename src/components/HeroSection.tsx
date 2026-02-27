@@ -44,7 +44,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section ref={ref} className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
+    <section ref={ref} className="relative min-h-[100vh] flex items-center justify-center overflow-hidden -mt-16 pt-16">
       {/* Parallax background */}
       <motion.div className="absolute inset-0" style={{ y: bgY }}>
         <img src={heroBanner} alt="SunTriX AI Hero" className="w-full h-[120%] object-cover object-center" />

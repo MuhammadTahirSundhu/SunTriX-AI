@@ -4,15 +4,15 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { departmentStore, type Department } from "@/lib/cms-store";
 import deptAgents from "@/assets/dept-agents.png";
-import deptAutomate from "@/assets/dept-automate.png";
-import deptVision from "@/assets/dept-vision.png";
 import deptIntelligence from "@/assets/dept-intelligence.png";
+import deptVision from "@/assets/dept-vision.png";
+import deptPlatform from "@/assets/dept-platform.png";
 
 const defaultImages: Record<string, string> = {
   "SunTriX Agents": deptAgents,
-  "SunTriX Automate": deptAutomate,
-  "SunTriX Vision": deptVision,
   "SunTriX Intelligence": deptIntelligence,
+  "SunTriX Vision": deptVision,
+  "SunTriX Platform": deptPlatform,
 };
 
 const DepartmentsSection = () => {
