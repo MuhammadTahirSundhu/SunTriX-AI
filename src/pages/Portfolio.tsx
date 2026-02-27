@@ -34,7 +34,7 @@ const Portfolio = () => {
   return (
     <Layout>
       <PageTransition>
-        <section className="pt-28 pb-14 relative">
+        <section className="pt-32 pb-20 relative">
           <div className="absolute inset-0 bg-neural-grid opacity-15" />
           <div className="container mx-auto px-4 lg:px-8 pt-16 relative z-10">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-3xl mx-auto mb-16">

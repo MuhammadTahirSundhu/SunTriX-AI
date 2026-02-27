@@ -1,126 +1,131 @@
 import { motion } from "framer-motion";
+import deptPlatform from "@/assets/dept-platform.png";
 
 const techCategories = [
   {
     category: "Agentic AI & Automation",
     items: [
-      { name: "LangChain", icon: "https://cdn.simpleicons.org/langchain/ffffff" },
-      { name: "OpenAI", icon: "https://cdn.simpleicons.org/openai/ffffff" },
-      { name: "Anthropic", icon: "https://cdn.simpleicons.org/anthropic/ffffff" },
-      { name: "n8n", icon: "https://cdn.simpleicons.org/n8n/ffffff" },
-      { name: "Zapier", icon: "https://cdn.simpleicons.org/zapier/ffffff" },
-      { name: "CrewAI", icon: "https://cdn.simpleicons.org/robot/ffffff" },
-      { name: "AutoGen", icon: "https://cdn.simpleicons.org/microsoftazure/ffffff" },
+      { name: "LangChain", icon: "🔗" },
+      { name: "CrewAI", icon: "🤖" },
+      { name: "AutoGen", icon: "⚡" },
+      { name: "OpenAI GPT-4o", icon: "🧠" },
+      { name: "Claude 3.5", icon: "🟣" },
+      { name: "n8n", icon: "🔄" },
+      { name: "Zapier AI", icon: "⚙️" },
     ],
   },
   {
     category: "AI & Machine Learning",
     items: [
-      { name: "PyTorch", icon: "https://cdn.simpleicons.org/pytorch/ffffff" },
-      { name: "TensorFlow", icon: "https://cdn.simpleicons.org/tensorflow/ffffff" },
-      { name: "Hugging Face", icon: "https://cdn.simpleicons.org/huggingface/ffffff" },
-      { name: "scikit-learn", icon: "https://cdn.simpleicons.org/scikitlearn/ffffff" },
-      { name: "Weights & Biases", icon: "https://cdn.simpleicons.org/weightsandbiases/ffffff" },
-      { name: "MLflow", icon: "https://cdn.simpleicons.org/mlflow/ffffff" },
-      { name: "ONNX", icon: "https://cdn.simpleicons.org/onnx/ffffff" },
+      { name: "PyTorch", icon: "🔥" },
+      { name: "TensorFlow", icon: "📐" },
+      { name: "Hugging Face", icon: "🤗" },
+      { name: "MLflow", icon: "📊" },
+      { name: "Vertex AI", icon: "☁️" },
+      { name: "scikit-learn", icon: "📈" },
+      { name: "ONNX", icon: "🔷" },
     ],
   },
   {
     category: "Computer Vision",
     items: [
-      { name: "OpenCV", icon: "https://cdn.simpleicons.org/opencv/ffffff" },
-      { name: "NVIDIA", icon: "https://cdn.simpleicons.org/nvidia/ffffff" },
-      { name: "YOLO", icon: "https://cdn.simpleicons.org/darkreader/ffffff" },
-      { name: "TensorRT", icon: "https://cdn.simpleicons.org/nvidia/ffffff" },
-      { name: "Roboflow", icon: "https://cdn.simpleicons.org/probot/ffffff" },
-      { name: "MediaPipe", icon: "https://cdn.simpleicons.org/google/ffffff" },
+      { name: "YOLOv8", icon: "👁️" },
+      { name: "OpenCV", icon: "📷" },
+      { name: "NVIDIA Triton", icon: "💚" },
+      { name: "TensorRT", icon: "🚀" },
+      { name: "MediaPipe", icon: "🎯" },
+      { name: "Roboflow", icon: "🏷️" },
     ],
   },
   {
     category: "SaaS & Platform",
     items: [
-      { name: "Next.js", icon: "https://cdn.simpleicons.org/nextdotjs/ffffff" },
-      { name: "React", icon: "https://cdn.simpleicons.org/react/ffffff" },
-      { name: "Node.js", icon: "https://cdn.simpleicons.org/nodedotjs/ffffff" },
-      { name: "TypeScript", icon: "https://cdn.simpleicons.org/typescript/ffffff" },
-      { name: "Stripe", icon: "https://cdn.simpleicons.org/stripe/ffffff" },
-      { name: "Vercel", icon: "https://cdn.simpleicons.org/vercel/ffffff" },
+      { name: "Next.js 14", icon: "▲" },
+      { name: "React", icon: "⚛️" },
+      { name: "Node.js", icon: "💚" },
+      { name: "TypeScript", icon: "📘" },
+      { name: "Stripe", icon: "💳" },
+      { name: "Vercel", icon: "▼" },
     ],
   },
   {
     category: "Data & Infrastructure",
     items: [
-      { name: "MongoDB", icon: "https://cdn.simpleicons.org/mongodb/ffffff" },
-      { name: "PostgreSQL", icon: "https://cdn.simpleicons.org/postgresql/ffffff" },
-      { name: "Redis", icon: "https://cdn.simpleicons.org/redis/ffffff" },
-      { name: "AWS", icon: "https://cdn.simpleicons.org/amazonaws/ffffff" },
-      { name: "Docker", icon: "https://cdn.simpleicons.org/docker/ffffff" },
-      { name: "Kubernetes", icon: "https://cdn.simpleicons.org/kubernetes/ffffff" },
-      { name: "GitHub Actions", icon: "https://cdn.simpleicons.org/githubactions/ffffff" },
+      { name: "MongoDB Atlas", icon: "🍃" },
+      { name: "PostgreSQL", icon: "🐘" },
+      { name: "Redis", icon: "🔴" },
+      { name: "AWS", icon: "☁️" },
+      { name: "Docker", icon: "🐳" },
+      { name: "Kubernetes", icon: "☸️" },
+      { name: "Cloudinary", icon: "🌤️" },
     ],
   },
 ];
 
 const TechStackSection = () => {
   return (
-    <section className="py-16 lg:py-20 relative overflow-hidden">
-      <div className="absolute inset-0 bg-grid-pattern opacity-10" />
-      <div className="container mx-auto px-4 lg:px-8 relative z-10">
-        <motion.div
-          className="text-center mb-10"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <span className="inline-block text-xs font-mono text-secondary uppercase tracking-widest mb-3">Technology</span>
-          <h2 className="text-3xl lg:text-5xl font-display font-extrabold mb-3">
-            The Stack Behind <span className="gradient-text">Our Work</span>
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-sm">Cutting-edge tools chosen for each domain to deliver production-grade AI systems.</p>
-        </motion.div>
+    <section className="py-24 lg:py-32 relative overflow-hidden">
+      <div className="container mx-auto px-4 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+          >
+            <span className="inline-block text-xs font-mono text-secondary uppercase tracking-widest mb-4">Technology</span>
+            <h2 className="text-3xl lg:text-5xl font-display font-extrabold mb-4">
+              The Stack Behind <span className="gradient-text">Our Work</span>
+            </h2>
+            <p className="text-muted-foreground mb-10">Cutting-edge tools chosen for each domain to deliver production-grade AI systems.</p>
 
-        <div className="space-y-8">
-          {techCategories.map((cat, ci) => (
+            <div className="space-y-6">
+              {techCategories.map((cat, ci) => (
+                <motion.div
+                  key={cat.category}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: ci * 0.1 }}
+                >
+                  <p className="text-xs font-mono text-primary mb-2 uppercase tracking-wider">{cat.category}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {cat.items.map((tech) => (
+                      <motion.span
+                        key={tech.name}
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-mono text-muted-foreground hover:text-primary hover:border-primary/30 glow-hover transition-all cursor-default"
+                      >
+                        <span>{tech.icon}</span> {tech.name}
+                      </motion.span>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+          >
+            <div className="relative rounded-2xl border border-border overflow-hidden">
+              <img src={deptPlatform} alt="SunTriX Cloud Platform" className="w-full" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+            </div>
             <motion.div
-              key={cat.category}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              className="absolute -bottom-4 -left-4 rounded-xl border border-primary/30 bg-card p-4 shadow-xl"
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: ci * 0.08 }}
+              transition={{ delay: 0.5 }}
             >
-              <p className="text-xs font-mono text-primary mb-3 uppercase tracking-wider">{cat.category}</p>
-              <div className="flex flex-wrap gap-2">
-                {cat.items.map((tech) => (
-                  <motion.div
-                    key={tech.name}
-                    whileHover={{ scale: 1.05, y: -3 }}
-                    className="group inline-flex items-center gap-2.5 rounded-xl border border-border bg-card/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-card transition-all cursor-default"
-                  >
-                    <img
-                      src={tech.icon}
-                      alt={tech.name}
-                      className="h-4 w-4 opacity-60 group-hover:opacity-100 transition-opacity"
-                      loading="lazy"
-                    />
-                    {tech.name}
-                  </motion.div>
-                ))}
-              </div>
+              <p className="text-2xl font-extrabold gradient-text">60+</p>
+              <p className="text-[10px] text-muted-foreground">Tools Mastered</p>
             </motion.div>
-          ))}
+          </motion.div>
         </div>
-
-        <motion.div
-          className="mt-8 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          <p className="text-sm text-muted-foreground">
-            <span className="text-2xl font-extrabold gradient-text mr-2">60+</span>
-            tools & frameworks mastered across our departments
-          </p>
-        </motion.div>
       </div>
     </section>
   );
