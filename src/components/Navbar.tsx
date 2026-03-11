@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 
 const services = [
   { name: "Agentic AI & Automation", desc: "Autonomous agents & workflow automation", href: "/services/agentic-ai" },
@@ -13,6 +16,7 @@ const services = [
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
+  const { t } = useI18n();
 
   return (
     <nav className="sticky top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/70 backdrop-blur-xl">
@@ -29,11 +33,11 @@ const Navbar = () => {
 
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-8">
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Home</Link>
+          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.home")}</Link>
           
           <div className="relative" onMouseEnter={() => setServicesOpen(true)} onMouseLeave={() => setServicesOpen(false)}>
             <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Services <ChevronDown className={`h-3 w-3 transition-transform ${servicesOpen ? "rotate-180" : ""}`} />
+              {t("nav.services")} <ChevronDown className={`h-3 w-3 transition-transform ${servicesOpen ? "rotate-180" : ""}`} />
             </button>
             <AnimatePresence>
               {servicesOpen && (
@@ -63,26 +67,32 @@ const Navbar = () => {
             </AnimatePresence>
           </div>
 
-          <Link to="/how-we-work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">How We Work</Link>
-          <Link to="/work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Portfolio</Link>
-          <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
-          <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
+          <Link to="/how-we-work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.howWeWork")}</Link>
+          <Link to="/work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.portfolio")}</Link>
+          <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.about")}</Link>
+          <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.contact")}</Link>
         </div>
 
-        {/* Desktop CTA */}
+        {/* Desktop CTA + Toggles */}
         <div className="hidden lg:flex items-center gap-3">
+          <LanguageSwitcher />
+          <ThemeToggle />
           <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Book a Call
+            {t("nav.bookCall")}
           </Link>
           <Link to="/request-task" className="gradient-bg rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-all hover:shadow-[0_0_20px_hsl(24_100%_50%/0.25)]">
-            Request a Task
+            {t("nav.requestTask")}
           </Link>
         </div>
 
         {/* Mobile toggle */}
-        <button className="lg:hidden text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <div className="lg:hidden flex items-center gap-2">
+          <LanguageSwitcher />
+          <ThemeToggle />
+          <button className="text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}
@@ -95,15 +105,15 @@ const Navbar = () => {
             className="lg:hidden border-t border-border bg-background/95 backdrop-blur-xl overflow-hidden"
           >
             <div className="flex flex-col gap-1 p-4">
-              <Link to="/" className="rounded-lg px-4 py-3 text-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>Home</Link>
+              <Link to="/" className="rounded-lg px-4 py-3 text-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>{t("nav.home")}</Link>
               {services.map(s => (
                 <Link key={s.name} to={s.href} className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>{s.name}</Link>
               ))}
-              <Link to="/how-we-work" className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>How We Work</Link>
-              <Link to="/work" className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>Portfolio</Link>
-              <Link to="/about" className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>About</Link>
-              <Link to="/contact" className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>Contact</Link>
-              <Link to="/request-task" className="gradient-bg mt-2 rounded-lg px-4 py-3 text-center font-semibold text-primary-foreground" onClick={() => setMobileOpen(false)}>Request a Task</Link>
+              <Link to="/how-we-work" className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>{t("nav.howWeWork")}</Link>
+              <Link to="/work" className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>{t("nav.portfolio")}</Link>
+              <Link to="/about" className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>{t("nav.about")}</Link>
+              <Link to="/contact" className="rounded-lg px-4 py-3 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(false)}>{t("nav.contact")}</Link>
+              <Link to="/request-task" className="gradient-bg mt-2 rounded-lg px-4 py-3 text-center font-semibold text-primary-foreground" onClick={() => setMobileOpen(false)}>{t("nav.requestTask")}</Link>
             </div>
           </motion.div>
         )}
