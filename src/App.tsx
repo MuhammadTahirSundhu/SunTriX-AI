@@ -31,6 +31,10 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminPortfolio from "./pages/admin/AdminPortfolio";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminDepartments from "./pages/admin/AdminDepartments";
+import AdminMedia from "./pages/admin/AdminMedia";
+import AdminSEO from "./pages/admin/AdminSEO";
+import AdminPages from "./pages/admin/AdminPages";
+import AdminTranslations from "./pages/admin/AdminTranslations";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +79,10 @@ const AppRoutes = () => {
           <Route path="portfolio" element={<AdminPortfolio />} />
           <Route path="departments" element={<AdminDepartments />} />
           <Route path="content" element={<AdminContent />} />
+          <Route path="pages" element={<AdminPages />} />
+          <Route path="media" element={<AdminMedia />} />
+          <Route path="seo" element={<AdminSEO />} />
+          <Route path="translations" element={<AdminTranslations />} />
           <Route path="newsletter" element={<AdminNewsletter />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

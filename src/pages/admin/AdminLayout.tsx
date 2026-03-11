@@ -3,7 +3,8 @@ import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { authStore } from "@/lib/store";
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Users, Settings,
-  LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone, Layers
+  LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone, Layers,
+  Image, Search, Globe, Languages, FileCode
 } from "lucide-react";
 
 const navItems = [
@@ -13,6 +14,10 @@ const navItems = [
   { icon: Briefcase, label: "Portfolio", href: "/admin/portfolio" },
   { icon: Layers, label: "Departments", href: "/admin/departments" },
   { icon: FileText, label: "Content", href: "/admin/content" },
+  { icon: FileCode, label: "Page Manager", href: "/admin/pages" },
+  { icon: Image, label: "Media Library", href: "/admin/media" },
+  { icon: Search, label: "SEO Settings", href: "/admin/seo" },
+  { icon: Languages, label: "Translations", href: "/admin/translations" },
   { icon: Users, label: "Newsletter", href: "/admin/newsletter" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ];
@@ -53,7 +58,7 @@ const AdminLayout = () => {
           </button>
         </div>
 
-        <nav className="flex-1 p-2 space-y-1">
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.href;
             return (
