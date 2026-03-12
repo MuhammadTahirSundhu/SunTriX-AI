@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { ThemeProvider } from "next-themes";
+import { I18nProvider } from "@/lib/i18n";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ServicesOverview from "./pages/ServicesOverview";
@@ -31,6 +33,7 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminPortfolio from "./pages/admin/AdminPortfolio";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminDepartments from "./pages/admin/AdminDepartments";
+import AdminMedia from "./pages/admin/AdminMedia";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +78,7 @@ const AppRoutes = () => {
           <Route path="portfolio" element={<AdminPortfolio />} />
           <Route path="departments" element={<AdminDepartments />} />
           <Route path="content" element={<AdminContent />} />
+          <Route path="media" element={<AdminMedia />} />
           <Route path="newsletter" element={<AdminNewsletter />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
@@ -86,15 +90,19 @@ const AppRoutes = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <I18nProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </I18nProvider>
+  </ThemeProvider>
 );
 
 export default App;

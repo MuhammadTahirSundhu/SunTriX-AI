@@ -3,9 +3,12 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { newsletterStore } from "@/lib/store";
 import { toast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
+import suntrixLogo from "@/assets/suntrix-logo.png";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
+  const { t } = useI18n();
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,25 +29,18 @@ const Footer = () => {
           {/* Brand */}
           <div className="lg:col-span-2 space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="gradient-bg h-8 w-8 rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-extrabold text-sm">S</span>
-              </div>
+              <img src={suntrixLogo} alt="SunTriX" className="h-8 w-8 rounded-lg object-contain" />
               <span className="text-lg font-display font-bold text-foreground">
                 Sun<span className="text-primary">Tri</span>X
               </span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Engineering Intelligence That Perceives, Reasons, and Acts. Your AI-first technology partner.
+              {t("footer.tagline")}
             </p>
-            {/* Newsletter */}
             <form onSubmit={handleSubscribe} className="flex gap-2 mt-4">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Subscribe to AI insights"
-                className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("footer.subscribe")}
+                className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary" />
               <button type="submit" className="gradient-bg rounded-lg px-3 py-2 text-primary-foreground hover:opacity-90 transition-opacity">
                 <ArrowRight className="h-4 w-4" />
               </button>
@@ -53,7 +49,7 @@ const Footer = () => {
 
           {/* Services */}
           <div>
-            <h4 className="text-sm font-semibold text-foreground mb-4">Services</h4>
+            <h4 className="text-sm font-semibold text-foreground mb-4">{t("nav.services")}</h4>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li><Link to="/services/agentic-ai" className="hover:text-primary transition-colors">Agentic AI</Link></li>
               <li><Link to="/services/ai-ml" className="hover:text-primary transition-colors">AI & ML</Link></li>
@@ -67,11 +63,11 @@ const Footer = () => {
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-4">Company</h4>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li><Link to="/about" className="hover:text-primary transition-colors">About</Link></li>
-              <li><Link to="/how-we-work" className="hover:text-primary transition-colors">How We Work</Link></li>
-              <li><Link to="/work" className="hover:text-primary transition-colors">Portfolio</Link></li>
+              <li><Link to="/about" className="hover:text-primary transition-colors">{t("nav.about")}</Link></li>
+              <li><Link to="/how-we-work" className="hover:text-primary transition-colors">{t("nav.howWeWork")}</Link></li>
+              <li><Link to="/work" className="hover:text-primary transition-colors">{t("nav.portfolio")}</Link></li>
               <li><Link to="/testimonials" className="hover:text-primary transition-colors">Testimonials</Link></li>
-              <li><Link to="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
+              <li><Link to="/contact" className="hover:text-primary transition-colors">{t("nav.contact")}</Link></li>
             </ul>
           </div>
 
@@ -87,8 +83,8 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-border pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} SunTriX. All rights reserved.</span>
-          <span>Engineering Intelligence That Perceives, Reasons, and Acts.</span>
+          <span>© {new Date().getFullYear()} SunTriX. {t("footer.rights")}</span>
+          <span>{t("footer.tagline")}</span>
         </div>
       </div>
     </footer>

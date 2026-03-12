@@ -6,6 +6,58 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 226 52% 12%;
+
+    --card: 220 20% 97%;
+    --card-foreground: 226 52% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 226 52% 12%;
+
+    --primary: 24 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 161 100% 35%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent-gold: 37 100% 55%;
+    --accent-gold-foreground: 226 52% 9%;
+
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 10% 40%;
+
+    --accent: 220 14% 93%;
+    --accent-foreground: 226 52% 12%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 161 100% 35%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 37 100% 55%;
+    --warning-foreground: 226 52% 9%;
+
+    --border: 220 13% 88%;
+    --input: 220 14% 93%;
+    --ring: 24 100% 50%;
+
+    --radius: 0.5rem;
+
+    --surface-2: 220 16% 95%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 10% 40%;
+    --sidebar-primary: 24 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 93%;
+    --sidebar-accent-foreground: 226 52% 12%;
+    --sidebar-border: 220 13% 88%;
+    --sidebar-ring: 24 100% 50%;
+  }
+
+  .dark {
     --background: 226 52% 9%;
     --foreground: 0 0% 100%;
 
@@ -42,8 +94,6 @@
     --border: 222 25% 18%;
     --input: 222 30% 16%;
     --ring: 24 100% 50%;
-
-    --radius: 0.5rem;
 
     --surface-2: 224 35% 13%;
 
@@ -131,6 +181,28 @@
     background-size: 60px 60px;
   }
 
+  :root .bg-grid-pattern {
+    background-image: 
+      radial-gradient(circle, hsl(220 13% 88% / 0.6) 1px, transparent 1px);
+  }
+
+  :root .bg-neural-grid {
+    background-image: 
+      linear-gradient(hsl(220 13% 88% / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(220 13% 88% / 0.5) 1px, transparent 1px);
+  }
+
+  .dark .bg-grid-pattern {
+    background-image: 
+      radial-gradient(circle, hsl(222 25% 18% / 0.4) 1px, transparent 1px);
+  }
+
+  .dark .bg-neural-grid {
+    background-image: 
+      linear-gradient(hsl(222 25% 18% / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(222 25% 18% / 0.3) 1px, transparent 1px);
+  }
+
   .text-body {
     @apply text-muted-foreground;
   }
@@ -152,10 +224,10 @@
     width: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: hsl(226 52% 9%);
+    background: hsl(var(--background));
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(222 25% 18%);
+    background: hsl(var(--border));
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
