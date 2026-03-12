@@ -2,7 +2,9 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, FileText, Search, Cpu, Code2, Rocket, BarChart3, CheckCircle } from "lucide-react";
 import Layout from "@/components/Layout";
+import VideoDemoSection from "@/components/VideoDemoSection";
 import workflowHero from "@/assets/workflow-hero.png";
+import { useI18n } from "@/lib/i18n";
 
 const steps = [
   { icon: FileText, num: "01", title: "Discovery & Brief", desc: "We start by understanding your business goals, technical requirements, and success metrics. Submit your project brief and we respond within 24 hours.", duration: "1-2 days" },
@@ -14,6 +16,8 @@ const steps = [
 ];
 
 const HowWeWork = () => {
+  const { t } = useI18n();
+
   return (
     <Layout>
       {/* Hero */}
@@ -24,9 +28,9 @@ const HowWeWork = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/90 to-background" />
         <div className="container mx-auto px-4 lg:px-8 relative z-10 pt-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-3xl mx-auto">
-            <span className="inline-block text-xs font-mono text-primary uppercase tracking-widest mb-4">Our Process</span>
+            <span className="inline-block text-xs font-mono text-primary uppercase tracking-widest mb-4">{t("work.process")}</span>
             <h1 className="text-4xl lg:text-6xl font-extrabold mb-6">
-              How We <span className="gradient-text">Work</span>
+              {t("work.title").split(" ").slice(0, -1).join(" ")} <span className="gradient-text">{t("work.title").split(" ").pop()}</span>
             </h1>
             <p className="text-lg text-muted-foreground">
               A structured, transparent process designed for speed, quality, and trust. From brief to production in weeks, not months.
@@ -67,10 +71,13 @@ const HowWeWork = () => {
         </div>
       </section>
 
+      {/* Video Demos */}
+      <VideoDemoSection />
+
       {/* Scrum Methodology */}
       <section className="py-24 bg-card/30 border-t border-border">
         <div className="container mx-auto px-4 lg:px-8 max-w-4xl text-center">
-          <h2 className="text-3xl font-extrabold mb-6">Built on <span className="gradient-text">Scrum</span></h2>
+          <h2 className="text-3xl font-extrabold mb-6">{t("work.scrum").split(" ").slice(0, -1).join(" ")} <span className="gradient-text">{t("work.scrum").split(" ").pop()}</span></h2>
           <p className="text-muted-foreground mb-12">Every project follows agile methodology with full visibility into progress.</p>
           <div className="grid sm:grid-cols-3 gap-6">
             {[
@@ -91,10 +98,10 @@ const HowWeWork = () => {
       {/* CTA */}
       <section className="py-24 border-t border-border text-center">
         <div className="container mx-auto px-4 lg:px-8">
-          <h2 className="text-3xl lg:text-4xl font-extrabold mb-4">Ready to <span className="gradient-text">Start</span>?</h2>
+          <h2 className="text-3xl lg:text-4xl font-extrabold mb-4">{t("work.ready").split(" ").slice(0, -1).join(" ")} <span className="gradient-text">{t("work.ready").split(" ").pop()}</span></h2>
           <p className="text-muted-foreground mb-8">Submit your project brief and receive a proposal within 24 hours.</p>
           <Link to="/request-task" className="gradient-bg inline-flex items-center gap-2 rounded-lg px-8 py-4 text-base font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
-            Request a Custom Task <ArrowRight className="h-4 w-4" />
+            {t("nav.requestTask")} <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
