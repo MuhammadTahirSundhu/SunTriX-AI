@@ -4,21 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Play, Filter } from "lucide-react";
 import Layout from "@/components/Layout";
 import PageTransition from "@/components/PageTransition";
-import { portfolioStore, type PortfolioProject } from "@/lib/cms-store";
-import portfolioAgents from "@/assets/portfolio-agents.png";
-import portfolioMl from "@/assets/portfolio-ml.png";
-import portfolioVision from "@/assets/portfolio-vision.png";
-import portfolioSaas from "@/assets/portfolio-saas.png";
-import portfolioSupport from "@/assets/portfolio-support.png";
-import portfolioSurveillance from "@/assets/portfolio-surveillance.png";
+import { portfolioStore, mediaStore, type PortfolioProject } from "@/lib/cms-store";
+import { useMedia } from "@/hooks/use-media";
 
-const coverFallbacks: Record<string, string> = {
-  "ai-document-processing": portfolioAgents,
-  "predictive-maintenance": portfolioMl,
-  "quality-inspection": portfolioVision,
-  "analytics-saas": portfolioSaas,
-  "multi-agent-support": portfolioSupport,
-  "video-surveillance": portfolioSurveillance,
+const slugToMediaKey: Record<string, string> = {
+  "ai-document-processing": "portfolio-agents",
+  "predictive-maintenance": "portfolio-ml",
+  "quality-inspection": "portfolio-vision",
+  "analytics-saas": "portfolio-saas",
+  "multi-agent-support": "portfolio-support",
+  "video-surveillance": "portfolio-surveillance",
 };
 
 const categories = ["All", "Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
@@ -26,8 +21,40 @@ const categories = ["All", "Agentic AI", "AI & ML", "Computer Vision", "SaaS Pla
 const Portfolio = () => {
   const [projects, setProjects] = useState<PortfolioProject[]>([]);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [, setTick] = useState(0);
 
-  useEffect(() => { setProjects(portfolioStore.getPublished()); }, []);
+  // Preload all portfolio media fallbacks
+  const portfolioAgents = useMedia("portfolio-agents");
+  const portfolioMl = useMedia("portfolio-ml");
+  const portfolioVision = useMedia("portfolio-vision");
+  const portfolioSaas = useMedia("portfolio-saas");
+  const portfolioSupport = useMedia("portfolio-support");
+  const portfolioSurveillance = useMedia("portfolio-surveillance");
+
+  const fallbacks: Record<string, string> = {
+    "portfolio-agents": portfolioAgents,
+    "portfolio-ml": portfolioMl,
+    "portfolio-vision": portfolioVision,
+    "portfolio-saas": portfolioSaas,
+    "portfolio-support": portfolioSupport,
+    "portfolio-surveillance": portfolioSurveillance,
+  };
+
+  useEffect(() => {
+    setProjects(portfolioStore.getPublished());
+    return mediaStore.subscribe(() => setTick((t) => t + 1));
+  }, []);
+
+  const getCover = (project: PortfolioProject) => {
+    if (project.coverImage) return project.coverImage;
+    const key = slugToMediaKey[project.slug];
+    if (key) {
+      const url = mediaStore.get(key);
+      if (url) return url;
+      return fallbacks[key] || "";
+    }
+    return "";
+  };
 
   const filtered = activeCategory === "All" ? projects : projects.filter((p) => p.category === activeCategory);
 
@@ -47,7 +74,6 @@ const Portfolio = () => {
               </p>
             </motion.div>
 
-            {/* Filter */}
             <div className="flex flex-wrap justify-center gap-2 mb-12">
               {categories.map((cat) => (
                 <button
@@ -64,11 +90,10 @@ const Portfolio = () => {
               ))}
             </div>
 
-            {/* Projects */}
             <motion.div layout className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence mode="popLayout">
                 {filtered.map((project, i) => {
-                  const cover = project.coverImage || coverFallbacks[project.slug] || "";
+                  const cover = getCover(project);
                   return (
                     <motion.div
                       key={project.id}
@@ -104,7 +129,6 @@ const Portfolio = () => {
                               </div>
                             </div>
                           )}
-                          {/* Metric overlay */}
                           <div className="absolute bottom-3 left-4">
                             <span className="text-xl font-extrabold gradient-text">{project.metric}</span>
                             <p className="text-[10px] text-muted-foreground">{project.metricLabel}</p>

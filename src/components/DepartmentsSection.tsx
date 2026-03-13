@@ -2,25 +2,50 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { departmentStore, type Department } from "@/lib/cms-store";
-import deptAgents from "@/assets/dept-agents.png";
-import deptIntelligence from "@/assets/dept-intelligence.png";
-import deptVision from "@/assets/dept-vision.png";
-import deptPlatform from "@/assets/dept-platform.png";
+import { departmentStore, mediaStore, type Department } from "@/lib/cms-store";
+import { useMedia } from "@/hooks/use-media";
 
-const defaultImages: Record<string, string> = {
-  "SunTriX Agents": deptAgents,
-  "SunTriX Intelligence": deptIntelligence,
-  "SunTriX Vision": deptVision,
-  "SunTriX Platform": deptPlatform,
+const defaultImageKeys: Record<string, string> = {
+  "SunTriX Agents": "dept-agents",
+  "SunTriX Intelligence": "dept-intelligence",
+  "SunTriX Vision": "dept-vision",
+  "SunTriX Platform": "dept-platform",
 };
 
 const DepartmentsSection = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [, setTick] = useState(0);
 
+  // Subscribe to media changes
   useEffect(() => {
     setDepartments(departmentStore.getEnabled());
+    return mediaStore.subscribe(() => setTick((t) => t + 1));
   }, []);
+
+  const getImage = (dept: Department) => {
+    // First check if department has its own image set
+    if (dept.image) return dept.image;
+    // Then check media registry
+    const key = defaultImageKeys[dept.name];
+    if (key) {
+      const url = mediaStore.get(key);
+      if (url) return url;
+    }
+    return "";
+  };
+
+  // Fallback imports
+  const deptAgents = useMedia("dept-agents");
+  const deptIntelligence = useMedia("dept-intelligence");
+  const deptVision = useMedia("dept-vision");
+  const deptPlatform = useMedia("dept-platform");
+
+  const fallbacks: Record<string, string> = {
+    "SunTriX Agents": deptAgents,
+    "SunTriX Intelligence": deptIntelligence,
+    "SunTriX Vision": deptVision,
+    "SunTriX Platform": deptPlatform,
+  };
 
   return (
     <section className="py-24 lg:py-32 relative">
@@ -42,43 +67,46 @@ const DepartmentsSection = () => {
         </motion.div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {departments.map((dept, i) => (
-            <motion.div
-              key={dept.id}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
-            >
-              <Link
-                to={dept.href}
-                className="group block rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 transition-all duration-500 hover:shadow-[0_0_40px_hsl(24_100%_50%/0.12)] hover:-translate-y-1"
+          {departments.map((dept, i) => {
+            const imgSrc = getImage(dept) || fallbacks[dept.name] || deptAgents;
+            return (
+              <motion.div
+                key={dept.id}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
               >
-                <div className="relative h-48 overflow-hidden">
-                  <motion.img
-                    src={dept.image || defaultImages[dept.name] || deptAgents}
-                    alt={dept.name}
-                    className="w-full h-full object-cover"
-                    whileHover={{ scale: 1.08 }}
-                    transition={{ duration: 0.6 }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
-                  <p className="absolute bottom-3 left-4 text-lg font-display font-bold text-foreground">
-                    {dept.name}
-                  </p>
-                </div>
-                <div className="p-5">
-                  <p className="text-xs font-semibold text-primary mb-2">{dept.subtitle}</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">
-                    {dept.description}
-                  </p>
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary group-hover:gap-3 transition-all duration-300">
-                    Explore <ArrowRight className="h-3 w-3" />
-                  </span>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                <Link
+                  to={dept.href}
+                  className="group block rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 transition-all duration-500 hover:shadow-[0_0_40px_hsl(24_100%_50%/0.12)] hover:-translate-y-1"
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <motion.img
+                      src={imgSrc}
+                      alt={dept.name}
+                      className="w-full h-full object-cover"
+                      whileHover={{ scale: 1.08 }}
+                      transition={{ duration: 0.6 }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
+                    <p className="absolute bottom-3 left-4 text-lg font-display font-bold text-foreground">
+                      {dept.name}
+                    </p>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs font-semibold text-primary mb-2">{dept.subtitle}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">
+                      {dept.description}
+                    </p>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary group-hover:gap-3 transition-all duration-300">
+                      Explore <ArrowRight className="h-3 w-3" />
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
 
         <motion.div

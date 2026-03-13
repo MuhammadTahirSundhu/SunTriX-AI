@@ -2,9 +2,8 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Target, Lightbulb, Users, Globe, Award, Shield } from "lucide-react";
 import Layout from "@/components/Layout";
-import aboutHero from "@/assets/about-hero.png";
-import ceoPortrait from "@/assets/ceo-portrait.png";
 import { useI18n } from "@/lib/i18n";
+import { useMedia } from "@/hooks/use-media";
 
 const values = [
   { icon: Target, title: "Outcome-Driven", desc: "Every project is measured by business impact, not just technical delivery." },
@@ -26,6 +25,8 @@ const team = [
 
 const About = () => {
   const { t } = useI18n();
+  const aboutHero = useMedia("about-hero");
+  const ceoPortrait = useMedia("ceo-portrait");
 
   return (
     <Layout>
@@ -47,7 +48,6 @@ const About = () => {
                 SunTriX is an AI-first technology partner helping enterprises design, build, and scale intelligent systems. We combine deep technical expertise with a relentless focus on business outcomes.
               </p>
             </motion.div>
-            {/* CEO Image */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -55,12 +55,10 @@ const About = () => {
               className="flex justify-center lg:justify-end"
             >
               <div className="relative">
-                {/* Glow ring behind */}
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 via-secondary/10 to-gold/10 blur-2xl scale-110" />
                 <div className="relative h-72 w-72 lg:h-96 lg:w-96 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl">
                   <img src={ceoPortrait} alt="CEO - Alex Chen" className="w-full h-full object-cover object-top" />
                 </div>
-                {/* Name tag */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -79,33 +77,37 @@ const About = () => {
       {/* Mission / Vision */}
       <section className="py-24 border-t border-border">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-              className="rounded-xl border border-border bg-card p-8 lg:p-10">
-              <span className="text-xs font-mono text-primary uppercase tracking-widest">{t("about.mission")}</span>
-              <h2 className="text-2xl font-bold mt-3 mb-4">Democratize AI for Enterprise</h2>
-              <p className="text-muted-foreground leading-relaxed">We believe every organization should have access to world-class AI capabilities. Our mission is to make cutting-edge AI accessible, practical, and impactful for businesses of all sizes.</p>
+          <div className="grid md:grid-cols-2 gap-16">
+            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+              <span className="text-xs font-mono text-primary uppercase tracking-widest mb-3 block">Mission</span>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Democratize Enterprise AI</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                We believe every business should have access to world-class AI engineering. Our mission is to remove the complexity barrier between ambitious ideas and production-grade AI systems.
+              </p>
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-8 lg:p-10">
-              <span className="text-xs font-mono text-primary uppercase tracking-widest">{t("about.vision")}</span>
-              <h2 className="text-2xl font-bold mt-3 mb-4">AI-Powered Organizations</h2>
-              <p className="text-muted-foreground leading-relaxed">We envision a world where AI is seamlessly woven into every business process — augmenting human capabilities, driving efficiency, and unlocking new possibilities.</p>
+            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+              <span className="text-xs font-mono text-primary uppercase tracking-widest mb-3 block">Vision</span>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Intelligence Everywhere</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                A future where AI is seamlessly woven into every business process — not as a tool, but as a thinking partner that perceives, reasons, and acts alongside human teams.
+              </p>
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* Values */}
-      <section className="py-24 bg-card/30 border-t border-border">
+      <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-8">
-          <h2 className="text-3xl font-extrabold mb-12 text-center">{t("about.values").replace("Our ", "Our ")} <span className="gradient-text">Values</span></h2>
+          <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <h2 className="text-3xl font-extrabold text-foreground mb-4">Our <span className="gradient-text">Values</span></h2>
+          </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {values.map((v, i) => (
-              <motion.div key={v.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
-                className="rounded-xl border border-border bg-card p-6">
-                <v.icon className="h-6 w-6 text-primary mb-4" />
-                <h3 className="font-bold text-foreground mb-2">{v.title}</h3>
+              <motion.div key={v.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                className="rounded-xl border border-border bg-card p-6 hover:border-primary/30 transition-colors">
+                <v.icon className="h-8 w-8 text-primary mb-4" />
+                <h3 className="text-base font-bold text-foreground mb-2">{v.title}</h3>
                 <p className="text-sm text-muted-foreground">{v.desc}</p>
               </motion.div>
             ))}
@@ -114,17 +116,19 @@ const About = () => {
       </section>
 
       {/* Team */}
-      <section className="py-24 border-t border-border">
+      <section className="py-24">
         <div className="container mx-auto px-4 lg:px-8">
-          <h2 className="text-3xl font-extrabold mb-12 text-center">{t("about.team").split(" ")[0]} <span className="gradient-text">{t("about.team").split(" ").slice(1).join(" ")}</span></h2>
+          <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <h2 className="text-3xl font-extrabold text-foreground mb-4">Leadership <span className="gradient-text">Team</span></h2>
+          </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {team.map((member, i) => (
-              <motion.div key={member.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
+              <motion.div key={member.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
                 className="rounded-xl border border-border bg-card p-6 text-center">
-                <div className="w-20 h-20 mx-auto mb-4 rounded-full gradient-bg flex items-center justify-center">
-                  <span className="text-2xl font-bold text-primary-foreground">{member.name.split(" ").map(n => n[0]).join("")}</span>
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 mx-auto mb-4 flex items-center justify-center">
+                  <span className="text-lg font-bold text-primary">{member.name.split(" ").map((n) => n[0]).join("")}</span>
                 </div>
-                <h3 className="font-bold text-foreground">{member.name}</h3>
+                <h3 className="text-base font-bold text-foreground">{member.name}</h3>
                 <p className="text-sm text-primary">{member.role}</p>
                 <p className="text-xs text-muted-foreground mt-1">{member.area}</p>
               </motion.div>
@@ -134,12 +138,12 @@ const About = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-24 bg-card/30 border-t border-border text-center">
-        <div className="container mx-auto px-4 lg:px-8">
-          <h2 className="text-3xl font-extrabold mb-4">Join Us in <span className="gradient-text">Building the Future</span></h2>
-          <p className="text-muted-foreground mb-8">Let's discuss how SunTriX can accelerate your AI journey.</p>
-          <Link to="/contact" className="gradient-bg inline-flex items-center gap-2 rounded-lg px-8 py-4 text-base font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
-            {t("cta.getInTouch")} <ArrowRight className="h-4 w-4" />
+      <section className="py-24 bg-muted/30">
+        <div className="container mx-auto px-4 lg:px-8 text-center">
+          <h2 className="text-3xl font-extrabold text-foreground mb-4">Ready to Build Something <span className="gradient-text">Extraordinary</span>?</h2>
+          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">Let's discuss how AI can transform your business.</p>
+          <Link to="/request-task" className="gradient-bg inline-flex items-center gap-2 rounded-xl px-8 py-4 text-base font-bold text-primary-foreground hover:opacity-90 transition-opacity">
+            Start a Conversation <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>

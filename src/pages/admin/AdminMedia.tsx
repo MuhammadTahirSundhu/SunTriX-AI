@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Image, Video, Upload, Trash2, Copy, Search, X } from "lucide-react";
+import { Image, Video, Upload, Trash2, Copy, Search, X, Link2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { mediaStore, type MediaEntry } from "@/lib/cms-store";
 
 interface MediaItem {
   id: string;
@@ -8,6 +9,7 @@ interface MediaItem {
   url: string;
   type: "image" | "video";
   usedIn: string;
+  mediaKey: string; // links to mediaStore registry
   uploadedAt: string;
 }
 
@@ -19,18 +21,24 @@ function getMedia(): MediaItem[] {
 function setMedia(items: MediaItem[]) { localStorage.setItem(MEDIA_KEY, JSON.stringify(items)); }
 
 const SEED_MEDIA: Omit<MediaItem, "id" | "uploadedAt">[] = [
-  { name: "Hero Banner", url: "/src/assets/hero-banner.png", type: "image", usedIn: "Homepage Hero" },
-  { name: "CEO Portrait", url: "/src/assets/ceo-portrait.png", type: "image", usedIn: "About Page" },
-  { name: "SunTriX Logo", url: "/src/assets/suntrix-logo.png", type: "image", usedIn: "Navbar & Footer" },
-  { name: "Workflow Pipeline", url: "/src/assets/workflow-pipeline.png", type: "image", usedIn: "How We Work" },
-  { name: "Video Demo Thumbnail", url: "/src/assets/video-demo-thumb.png", type: "image", usedIn: "Video Demos" },
-  { name: "About Hero", url: "/src/assets/about-hero.png", type: "image", usedIn: "About Page" },
-  { name: "Services Hero", url: "/src/assets/services-hero.png", type: "image", usedIn: "Services Page" },
-  { name: "Workflow Hero", url: "/src/assets/workflow-hero.png", type: "image", usedIn: "How We Work" },
-  { name: "Dept Agents", url: "/src/assets/dept-agents.png", type: "image", usedIn: "Departments Section" },
-  { name: "Dept Intelligence", url: "/src/assets/dept-intelligence.png", type: "image", usedIn: "Departments Section" },
-  { name: "Dept Vision", url: "/src/assets/dept-vision.png", type: "image", usedIn: "Departments Section" },
-  { name: "Dept Platform", url: "/src/assets/dept-platform.png", type: "image", usedIn: "Departments Section" },
+  { name: "Hero Banner", url: "/src/assets/hero-banner.png", type: "image", usedIn: "Homepage Hero", mediaKey: "hero-banner" },
+  { name: "CEO Portrait", url: "/src/assets/ceo-portrait.png", type: "image", usedIn: "About Page", mediaKey: "ceo-portrait" },
+  { name: "SunTriX Logo", url: "/src/assets/suntrix-logo.png", type: "image", usedIn: "Navbar & Footer", mediaKey: "suntrix-logo" },
+  { name: "Workflow Pipeline", url: "/src/assets/workflow-pipeline.png", type: "image", usedIn: "How We Work", mediaKey: "workflow-pipeline" },
+  { name: "Video Demo Thumbnail", url: "/src/assets/video-demo-thumb.png", type: "image", usedIn: "Video Demos", mediaKey: "video-demo-thumb" },
+  { name: "About Hero", url: "/src/assets/about-hero.png", type: "image", usedIn: "About Page", mediaKey: "about-hero" },
+  { name: "Services Hero", url: "/src/assets/services-hero.png", type: "image", usedIn: "Services Page", mediaKey: "services-hero" },
+  { name: "Workflow Hero", url: "/src/assets/workflow-hero.png", type: "image", usedIn: "How We Work", mediaKey: "workflow-hero" },
+  { name: "Dept Agents", url: "/src/assets/dept-agents.png", type: "image", usedIn: "Departments Section", mediaKey: "dept-agents" },
+  { name: "Dept Intelligence", url: "/src/assets/dept-intelligence.png", type: "image", usedIn: "Departments Section", mediaKey: "dept-intelligence" },
+  { name: "Dept Vision", url: "/src/assets/dept-vision.png", type: "image", usedIn: "Departments Section", mediaKey: "dept-vision" },
+  { name: "Dept Platform", url: "/src/assets/dept-platform.png", type: "image", usedIn: "Departments Section", mediaKey: "dept-platform" },
+  { name: "Portfolio Agents", url: "/src/assets/portfolio-agents.png", type: "image", usedIn: "Portfolio", mediaKey: "portfolio-agents" },
+  { name: "Portfolio ML", url: "/src/assets/portfolio-ml.png", type: "image", usedIn: "Portfolio", mediaKey: "portfolio-ml" },
+  { name: "Portfolio Vision", url: "/src/assets/portfolio-vision.png", type: "image", usedIn: "Portfolio", mediaKey: "portfolio-vision" },
+  { name: "Portfolio SaaS", url: "/src/assets/portfolio-saas.png", type: "image", usedIn: "Portfolio", mediaKey: "portfolio-saas" },
+  { name: "Portfolio Support", url: "/src/assets/portfolio-support.png", type: "image", usedIn: "Portfolio", mediaKey: "portfolio-support" },
+  { name: "Portfolio Surveillance", url: "/src/assets/portfolio-surveillance.png", type: "image", usedIn: "Portfolio", mediaKey: "portfolio-surveillance" },
 ];
 
 const AdminMedia = () => {
@@ -50,6 +58,15 @@ const AdminMedia = () => {
       }));
       setMedia(items);
     }
+    // Migrate old items without mediaKey
+    items = items.map((item) => {
+      if (!item.mediaKey) {
+        const seed = SEED_MEDIA.find((s) => s.name === item.name);
+        return { ...item, mediaKey: seed?.mediaKey || "" };
+      }
+      return item;
+    });
+    setMedia(items);
     setMediaState(items);
   }, []);
 
@@ -74,6 +91,7 @@ const AdminMedia = () => {
           url: reader.result as string,
           type: file.type.startsWith("video") ? "video" : "image",
           usedIn: "Unassigned",
+          mediaKey: "",
           uploadedAt: new Date().toISOString(),
         };
         const updated = [...media, newItem];
@@ -98,8 +116,14 @@ const AdminMedia = () => {
     const updated = media.map((m) => m.id === editItem.id ? { ...m, url: editUrl } : m);
     setMedia(updated);
     setMediaState(updated);
+
+    // Sync to mediaStore so all components update live
+    if (editItem.mediaKey) {
+      mediaStore.update(editItem.mediaKey, editUrl);
+    }
+
     setEditItem(null);
-    toast({ title: "Updated", description: "Media URL updated successfully." });
+    toast({ title: "Updated", description: editItem.mediaKey ? "Media updated — changes reflected across the website instantly." : "Media URL updated." });
   };
 
   const copyUrl = (url: string) => {
@@ -112,7 +136,7 @@ const AdminMedia = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Media Library</h1>
-          <p className="text-sm text-muted-foreground">Manage all images and videos used across the website</p>
+          <p className="text-sm text-muted-foreground">Manage all images and videos — changes sync live across the website</p>
         </div>
         <button onClick={handleUpload} className="gradient-bg flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-primary-foreground">
           <Upload className="h-4 w-4" /> Upload
@@ -166,7 +190,10 @@ const AdminMedia = () => {
             </div>
             <div className="p-3">
               <p className="text-xs font-semibold text-foreground truncate">{item.name}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Used in: {item.usedIn}</p>
+              <div className="flex items-center gap-1 mt-0.5">
+                <p className="text-[10px] text-muted-foreground">Used in: {item.usedIn}</p>
+                {item.mediaKey && <Link2 className="h-2.5 w-2.5 text-primary" />}
+              </div>
             </div>
           </div>
         ))}
@@ -183,12 +210,18 @@ const AdminMedia = () => {
             <div className="aspect-video bg-muted/50 rounded-lg overflow-hidden mb-4">
               <img src={editUrl || editItem.url} alt="" className="w-full h-full object-cover" />
             </div>
+            {editItem.mediaKey && (
+              <div className="flex items-center gap-2 mb-3 px-2 py-1.5 rounded-lg bg-primary/5 border border-primary/20">
+                <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                <p className="text-[11px] text-primary">Connected to <span className="font-bold">{editItem.mediaKey}</span> — changes update live across the website</p>
+              </div>
+            )}
             <label className="text-xs text-muted-foreground">Image/Video URL</label>
             <input value={editUrl} onChange={(e) => setEditUrl(e.target.value)}
               className="w-full mt-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-            <p className="text-[10px] text-muted-foreground mt-1 mb-4">Paste an external URL or upload a new file</p>
+            <p className="text-[10px] text-muted-foreground mt-1 mb-4">Paste an external URL (Cloudinary, Unsplash, etc.)</p>
             <div className="flex gap-2">
-              <button onClick={handleUpdateUrl} className="flex-1 gradient-bg rounded-lg py-2 text-sm font-semibold text-primary-foreground">Save</button>
+              <button onClick={handleUpdateUrl} className="flex-1 gradient-bg rounded-lg py-2 text-sm font-semibold text-primary-foreground">Save & Sync</button>
               <button onClick={() => setEditItem(null)} className="flex-1 border border-border rounded-lg py-2 text-sm text-foreground hover:bg-muted transition-colors">Cancel</button>
             </div>
           </div>
