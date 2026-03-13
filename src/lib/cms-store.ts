@@ -781,6 +781,83 @@ export const seoStore = {
   },
 };
 
+// ─── Media Registry Store ───────────────────────────────────────
+
+export interface MediaEntry {
+  key: string;
+  url: string;
+  fallback: string;
+  label: string;
+  usedIn: string;
+}
+
+const MEDIA_REGISTRY_KEY = "suntrix_media_registry";
+
+const SEED_MEDIA_REGISTRY: Omit<MediaEntry, "fallback">[] = [
+  { key: "hero-banner", url: "", label: "Hero Banner", usedIn: "Homepage Hero" },
+  { key: "suntrix-logo", url: "", label: "SunTriX Logo", usedIn: "Navbar & Footer" },
+  { key: "ceo-portrait", url: "", label: "CEO Portrait", usedIn: "About Page" },
+  { key: "about-hero", url: "", label: "About Hero", usedIn: "About Page" },
+  { key: "services-hero", url: "", label: "Services Hero", usedIn: "Services Page" },
+  { key: "workflow-hero", url: "", label: "Workflow Hero", usedIn: "How We Work" },
+  { key: "workflow-pipeline", url: "", label: "Workflow Pipeline", usedIn: "How We Work" },
+  { key: "video-demo-thumb", url: "", label: "Video Demo Thumbnail", usedIn: "Video Demos" },
+  { key: "dept-agents", url: "", label: "Dept Agents", usedIn: "Departments Section" },
+  { key: "dept-intelligence", url: "", label: "Dept Intelligence", usedIn: "Departments Section" },
+  { key: "dept-vision", url: "", label: "Dept Vision", usedIn: "Departments Section" },
+  { key: "dept-platform", url: "", label: "Dept Platform", usedIn: "Departments Section" },
+  { key: "portfolio-agents", url: "", label: "Portfolio Agents", usedIn: "Portfolio" },
+  { key: "portfolio-ml", url: "", label: "Portfolio ML", usedIn: "Portfolio" },
+  { key: "portfolio-vision", url: "", label: "Portfolio Vision", usedIn: "Portfolio" },
+  { key: "portfolio-saas", url: "", label: "Portfolio SaaS", usedIn: "Portfolio" },
+  { key: "portfolio-support", url: "", label: "Portfolio Support", usedIn: "Portfolio" },
+  { key: "portfolio-surveillance", url: "", label: "Portfolio Surveillance", usedIn: "Portfolio" },
+];
+
+type MediaListener = () => void;
+const mediaListeners: Set<MediaListener> = new Set();
+
+export const mediaStore = {
+  _seeded: false,
+
+  _seed() {
+    if (this._seeded) return;
+    const existing = getCollection<MediaEntry>(MEDIA_REGISTRY_KEY);
+    if (existing.length === 0) {
+      const entries = SEED_MEDIA_REGISTRY.map((m) => ({ ...m, fallback: "" }));
+      setCollection(MEDIA_REGISTRY_KEY, entries);
+    }
+    this._seeded = true;
+  },
+
+  getAll(): MediaEntry[] {
+    this._seed();
+    return getCollection<MediaEntry>(MEDIA_REGISTRY_KEY);
+  },
+
+  get(key: string): string {
+    const entry = this.getAll().find((m) => m.key === key);
+    return entry?.url || entry?.fallback || "";
+  },
+
+  update(key: string, url: string): void {
+    const all = this.getAll();
+    const idx = all.findIndex((m) => m.key === key);
+    if (idx !== -1) {
+      all[idx] = { ...all[idx], url };
+    } else {
+      all.push({ key, url, fallback: "", label: key, usedIn: "Custom" });
+    }
+    setCollection(MEDIA_REGISTRY_KEY, all);
+    mediaListeners.forEach((fn) => fn());
+  },
+
+  subscribe(fn: MediaListener): () => void {
+    mediaListeners.add(fn);
+    return () => { mediaListeners.delete(fn); };
+  },
+};
+
 // ─── Site Content Store (Generic Key-Value) ─────────────────────
 
 export const siteContentStore = {
