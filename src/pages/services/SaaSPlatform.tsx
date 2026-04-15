@@ -4,6 +4,7 @@ import ServicePageTemplate from "@/components/ServicePageTemplate";
 const SaaSPlatform = () => (
   <ServicePageTemplate
     icon={Layers}
+    category="SaaS Platform"
     title="AI Product / SaaS Platform"
     subtitle="End-to-end platform development — from concept to scale."
     description="We design and build production-grade SaaS platforms with embedded AI capabilities. Multi-tenant architecture, API-first design, scalable infrastructure, and continuous monitoring — all engineered for growth."

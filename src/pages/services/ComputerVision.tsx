@@ -4,6 +4,7 @@ import ServicePageTemplate from "@/components/ServicePageTemplate";
 const ComputerVision = () => (
   <ServicePageTemplate
     icon={Eye}
+    category="Computer Vision"
     title="Computer Vision"
     subtitle="Object detection, image classification, and real-time video analytics."
     description="We build computer vision systems that see, understand, and act. From quality inspection on manufacturing lines to real-time video surveillance, our solutions leverage state-of-the-art models optimized for production workloads."

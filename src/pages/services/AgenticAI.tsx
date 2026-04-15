@@ -4,6 +4,7 @@ import ServicePageTemplate from "@/components/ServicePageTemplate";
 const AgenticAI = () => (
   <ServicePageTemplate
     icon={Bot}
+    category="Agentic AI"
     title="Agentic AI & Automation"
     subtitle="Deploy autonomous agents that reason, plan, and execute complex tasks."
     description="Our Agentic AI solutions go beyond simple automation. We build intelligent agents that understand context, make decisions, and orchestrate multi-step workflows — from customer support to enterprise-grade data pipelines."
