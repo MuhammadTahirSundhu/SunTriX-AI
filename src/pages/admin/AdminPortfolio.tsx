@@ -29,7 +29,7 @@ const AdminPortfolio = () => {
     setEditing({
       id: "", title: "", slug: "", category: CATEGORIES[0],
       description: "", shortDescription: "", metric: "", metricLabel: "",
-      coverImage: "", images: [], videoUrl: "", tags: [], tools: [],
+      coverImage: "", thumbnailImage: "", images: [], videoUrl: "", tags: [], tools: [],
       clientLogo: "", clientName: "", industry: "", highlights: [],
       status: "draft", featured: false, order: projects.length + 1,
       createdAt: "", updatedAt: "",
@@ -268,18 +268,27 @@ const AdminPortfolio = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Cover Image URL</label>
                     <input
                       value={editing.coverImage}
                       onChange={(e) => setEditing({ ...editing, coverImage: e.target.value })}
-                      placeholder="Cloudinary URL or path"
+                      placeholder="Main cover image"
                       className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Video URL</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Thumbnail Image URL</label>
+                    <input
+                      value={editing.thumbnailImage}
+                      onChange={(e) => setEditing({ ...editing, thumbnailImage: e.target.value })}
+                      placeholder="Card thumbnail preview"
+                      className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Demo Video URL</label>
                     <input
                       value={editing.videoUrl}
                       onChange={(e) => setEditing({ ...editing, videoUrl: e.target.value })}
