@@ -1,15 +1,23 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import { newsletterStore } from "@/lib/store";
+import { companyStore } from "@/lib/cms-store";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useMedia } from "@/hooks/use-media";
+
+const PLATFORM_ICONS: Record<string, string> = {
+  LinkedIn: "💼", Twitter: "𝕏", GitHub: "🐙", YouTube: "▶️",
+  Instagram: "📸", Upwork: "🟢", Fiverr: "🟩",
+};
 
 const Footer = () => {
   const [email, setEmail] = useState("");
   const { t } = useI18n();
   const suntrixLogo = useMedia("suntrix-logo");
+  const company = companyStore.get();
+  const activeLinks = company.socialLinks.filter((l) => l.enabled && l.url && l.url !== "#");
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,9 +88,19 @@ const Footer = () => {
         <div className="border-t border-border pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} SunTriX. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">LinkedIn</a>
-            <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">Twitter</a>
-            <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">GitHub</a>
+            {activeLinks.length > 0 ? (
+              activeLinks.map((link) => (
+                <a key={link.platform} href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                  <span>{PLATFORM_ICONS[link.platform] || "🔗"}</span> {link.platform}
+                </a>
+              ))
+            ) : (
+              <>
+                <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">LinkedIn</a>
+                <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">Twitter</a>
+                <a href="#" className="text-xs text-muted-foreground hover:text-primary transition-colors">GitHub</a>
+              </>
+            )}
           </div>
         </div>
       </div>

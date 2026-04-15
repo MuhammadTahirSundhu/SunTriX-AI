@@ -46,6 +46,7 @@ const Portfolio = () => {
   }, []);
 
   const getCover = (project: PortfolioProject) => {
+    if (project.thumbnailImage) return project.thumbnailImage;
     if (project.coverImage) return project.coverImage;
     const key = slugToMediaKey[project.slug];
     if (key) {

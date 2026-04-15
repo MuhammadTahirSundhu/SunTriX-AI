@@ -71,8 +71,34 @@ const PortfolioDetail = () => {
         </div>
       </section>
 
-      {/* Cover Image / Video */}
-      {(project.coverImage || project.videoUrl) && (
+      {/* Video Demo — ABOVE highlights & tools */}
+      {project.videoUrl && (
+        <section className="pb-16">
+          <div className="container mx-auto px-4 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <h2 className="text-2xl font-display font-bold mb-6">Project <span className="gradient-text">Demo</span></h2>
+              <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-lg">
+                <div className="aspect-video">
+                  <iframe
+                    src={project.videoUrl}
+                    className="w-full h-full"
+                    allow="autoplay; fullscreen; encrypted-media"
+                    allowFullScreen
+                    title={`${project.title} Demo`}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Cover Image (if no video but has cover) */}
+      {!project.videoUrl && project.coverImage && (
         <section className="pb-16">
           <div className="container mx-auto px-4 lg:px-8">
             <motion.div
@@ -81,18 +107,7 @@ const PortfolioDetail = () => {
               viewport={{ once: true }}
               className="rounded-2xl border border-border overflow-hidden bg-card"
             >
-              {project.videoUrl ? (
-                <div className="aspect-video relative">
-                  <iframe
-                    src={project.videoUrl}
-                    className="w-full h-full"
-                    allow="autoplay; fullscreen"
-                    title={project.title}
-                  />
-                </div>
-              ) : project.coverImage ? (
-                <img src={project.coverImage} alt={project.title} className="w-full aspect-video object-cover" />
-              ) : null}
+              <img src={project.coverImage} alt={project.title} className="w-full aspect-video object-cover" />
             </motion.div>
           </div>
         </section>
@@ -102,7 +117,6 @@ const PortfolioDetail = () => {
       <section className="pb-20">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12">
-            {/* Highlights */}
             <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
               <h2 className="text-2xl font-display font-bold mb-6">Key <span className="gradient-text">Highlights</span></h2>
               <div className="space-y-4">
@@ -122,7 +136,6 @@ const PortfolioDetail = () => {
               </div>
             </motion.div>
 
-            {/* Tools & Tags */}
             <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
               <h2 className="text-2xl font-display font-bold mb-6">Tools & <span className="gradient-text">Stack</span></h2>
               <div className="grid grid-cols-2 gap-3 mb-8">
@@ -145,40 +158,26 @@ const PortfolioDetail = () => {
         </div>
       </section>
 
-      {/* Case Study Section */}
+      {/* Case Study */}
       {caseStudy && (
         <section className="py-20 bg-card/30">
           <div className="container mx-auto px-4 lg:px-8">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="max-w-4xl mx-auto">
-              <h2 className="text-3xl font-display font-extrabold mb-12 text-center">
-                Case <span className="gradient-text">Study</span>
-              </h2>
-
+              <h2 className="text-3xl font-display font-extrabold mb-12 text-center">Case <span className="gradient-text">Study</span></h2>
               <div className="space-y-12">
-                <div className="rounded-xl border border-border bg-card p-8">
-                  <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                    <span className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive text-sm font-bold">C</span>
-                    Challenge
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">{caseStudy.challenge}</p>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-8">
-                  <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                    <span className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">S</span>
-                    Solution
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">{caseStudy.solution}</p>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-8">
-                  <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                    <span className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center text-success text-sm font-bold">R</span>
-                    Results
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">{caseStudy.results}</p>
-                </div>
-
+                {[
+                  { label: "Challenge", color: "destructive", content: caseStudy.challenge },
+                  { label: "Solution", color: "primary", content: caseStudy.solution },
+                  { label: "Results", color: "success", content: caseStudy.results },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl border border-border bg-card p-8">
+                    <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                      <span className={`h-8 w-8 rounded-lg bg-${s.color}/10 flex items-center justify-center text-${s.color} text-sm font-bold`}>{s.label[0]}</span>
+                      {s.label}
+                    </h3>
+                    <p className="text-muted-foreground leading-relaxed">{s.content}</p>
+                  </div>
+                ))}
                 {caseStudy.keyMetrics.length > 0 && (
                   <div className="grid sm:grid-cols-3 gap-4">
                     {caseStudy.keyMetrics.map((m, i) => (
@@ -196,20 +195,14 @@ const PortfolioDetail = () => {
         </section>
       )}
 
-      {/* Related Projects */}
+      {/* Related */}
       {related.length > 0 && (
         <section className="py-20">
           <div className="container mx-auto px-4 lg:px-8">
-            <h2 className="text-2xl font-display font-bold mb-8">
-              Related <span className="gradient-text">Projects</span>
-            </h2>
+            <h2 className="text-2xl font-display font-bold mb-8">Related <span className="gradient-text">Projects</span></h2>
             <div className="grid md:grid-cols-3 gap-6">
               {related.map((r) => (
-                <Link
-                  key={r.id}
-                  to={`/work/${r.slug}`}
-                  className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 glow-hover transition-all"
-                >
+                <Link key={r.id} to={`/work/${r.slug}`} className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 glow-hover transition-all">
                   <div className="h-36 bg-gradient-to-br from-primary/10 to-transparent flex items-center justify-center">
                     <span className="text-2xl font-extrabold gradient-text">{r.metric}</span>
                   </div>
@@ -227,14 +220,9 @@ const PortfolioDetail = () => {
       {/* CTA */}
       <section className="py-20 bg-card/30">
         <div className="container mx-auto px-4 lg:px-8 text-center">
-          <h2 className="text-2xl font-display font-bold mb-4">
-            Want Similar <span className="gradient-text">Results</span>?
-          </h2>
+          <h2 className="text-2xl font-display font-bold mb-4">Want Similar <span className="gradient-text">Results</span>?</h2>
           <p className="text-muted-foreground mb-8">Let's discuss how we can build something exceptional for your team.</p>
-          <Link
-            to="/request-task"
-            className="gradient-bg inline-flex items-center gap-2 rounded-lg px-8 py-4 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-all hover:shadow-[0_0_30px_hsl(24_100%_50%/0.3)]"
-          >
+          <Link to="/request-task" className="gradient-bg inline-flex items-center gap-2 rounded-lg px-8 py-4 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-all hover:shadow-[0_0_30px_hsl(24_100%_50%/0.3)]">
             Request a Task <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
