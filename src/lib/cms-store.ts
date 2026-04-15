@@ -18,6 +18,7 @@ export interface PortfolioProject {
   metric: string;
   metricLabel: string;
   coverImage: string;
+  thumbnailImage: string;
   images: string[];
   videoUrl: string;
   tags: string[];
@@ -121,6 +122,12 @@ export interface HeroContent {
   updatedAt: string;
 }
 
+export interface SocialLink {
+  platform: string;
+  url: string;
+  enabled: boolean;
+}
+
 export interface CompanyInfo {
   id: string;
   name: string;
@@ -129,8 +136,10 @@ export interface CompanyInfo {
   email: string;
   phone: string;
   address: string;
-  socialLinks: { platform: string; url: string }[];
+  socialLinks: SocialLink[];
   logo: string;
+  introVideoUrl: string;
+  introVideoEnabled: boolean;
   updatedAt: string;
 }
 
@@ -635,11 +644,17 @@ const DEFAULT_COMPANY: CompanyInfo = {
   phone: "+1 (555) 123-4567",
   address: "San Francisco, CA",
   socialLinks: [
-    { platform: "LinkedIn", url: "#" },
-    { platform: "Twitter", url: "#" },
-    { platform: "GitHub", url: "#" },
+    { platform: "LinkedIn", url: "#", enabled: true },
+    { platform: "Twitter", url: "#", enabled: true },
+    { platform: "GitHub", url: "#", enabled: true },
+    { platform: "YouTube", url: "#", enabled: false },
+    { platform: "Instagram", url: "#", enabled: false },
+    { platform: "Upwork", url: "#", enabled: true },
+    { platform: "Fiverr", url: "#", enabled: true },
   ],
   logo: "",
+  introVideoUrl: "",
+  introVideoEnabled: false,
   updatedAt: new Date().toISOString(),
 };
 
@@ -812,6 +827,7 @@ const SEED_MEDIA_REGISTRY: Omit<MediaEntry, "fallback">[] = [
   { key: "portfolio-saas", url: "", label: "Portfolio SaaS", usedIn: "Portfolio" },
   { key: "portfolio-support", url: "", label: "Portfolio Support", usedIn: "Portfolio" },
   { key: "portfolio-surveillance", url: "", label: "Portfolio Surveillance", usedIn: "Portfolio" },
+  { key: "agency-intro-video", url: "", label: "Agency Intro Video", usedIn: "Homepage" },
 ];
 
 type MediaListener = () => void;
