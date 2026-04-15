@@ -4,6 +4,7 @@ import ServicePageTemplate from "@/components/ServicePageTemplate";
 const AIML = () => (
   <ServicePageTemplate
     icon={Brain}
+    category="AI & ML"
     title="AI & Machine Learning"
     subtitle="Custom models, predictive analytics, and full MLOps lifecycle management."
     description="From data strategy to production deployment, we build ML solutions that deliver measurable business impact. Our team specializes in NLP, predictive analytics, recommendation systems, and end-to-end MLOps pipelines."

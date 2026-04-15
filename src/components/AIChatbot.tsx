@@ -2,6 +2,19 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Trash2, Bot, User } from "lucide-react";
 import { chatStore, type ChatMessage } from "@/lib/store";
+import { apiRequest, ENDPOINTS, type GrokChatMessage } from "@/lib/api";
+
+/**
+ * SunTriX AI Chatbot
+ * 
+ * Currently uses preset responses (localStorage mode).
+ * When BASE_URL is set in api.ts, it will proxy to Grok API via backend.
+ * 
+ * Backend integration:
+ * - POST /chat with { messages: GrokChatMessage[] }
+ * - Backend proxies to https://api.x.ai/v1/chat/completions
+ * - Uses model: "grok-3-mini" (free) or "grok-3" (paid)
+ */
 
 const PRESET_RESPONSES: Record<string, string> = {
   hello: "Hello! 👋 I'm the SunTriX AI assistant. I can help you with questions about our services — Agentic AI, Computer Vision, AI/ML, and SaaS Platform development. How can I help?",
@@ -10,7 +23,7 @@ const PRESET_RESPONSES: Record<string, string> = {
   contact: "You can reach us at:\n\n📧 hello@suntrix.com\n📞 Schedule a call on our Contact page\n\nOr simply submit a Request a Task form and we'll respond within 24 hours!",
 };
 
-function getAIResponse(message: string): string {
+function getPresetResponse(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) return PRESET_RESPONSES.hello;
   if (lower.includes("service") || lower.includes("offer") || lower.includes("what do you")) return PRESET_RESPONSES.services;
@@ -42,14 +55,36 @@ const AIChatbot = () => {
     if (!input.trim()) return;
     const userMsg = chatStore.addMessage("user", input.trim());
     setMessages((prev) => [...prev, userMsg]);
+    const userInput = input.trim();
     setInput("");
     setIsTyping(true);
 
-    // Simulate API delay — replace with apiRequest(ENDPOINTS.CHAT_SEND, { method: "POST", body: { message: input } })
-    await new Promise((r) => setTimeout(r, 800 + Math.random() * 1200));
+    let responseText: string;
 
-    const response = getAIResponse(input.trim());
-    const aiMsg = chatStore.addMessage("assistant", response);
+    // When backend is configured, use Grok API via proxy
+    const { data, error } = await apiRequest<{ choices: { message: { content: string } }[] }>(
+      ENDPOINTS.CHAT_SEND,
+      {
+        method: "POST",
+        body: {
+          messages: [
+            ...messages.map((m) => ({ role: m.role, content: m.content })),
+            { role: "user" as const, content: userInput },
+          ] satisfies GrokChatMessage[],
+        },
+      }
+    );
+
+    if (data && !error) {
+      // Backend returned Grok response
+      responseText = data.choices?.[0]?.message?.content || "I couldn't process that. Please try again.";
+    } else {
+      // Fallback to preset responses (localStorage mode)
+      await new Promise((r) => setTimeout(r, 800 + Math.random() * 1200));
+      responseText = getPresetResponse(userInput);
+    }
+
+    const aiMsg = chatStore.addMessage("assistant", responseText);
     setMessages((prev) => [...prev, aiMsg]);
     setIsTyping(false);
   };
@@ -61,7 +96,6 @@ const AIChatbot = () => {
 
   return (
     <>
-      {/* Floating Button */}
       <motion.button
         onClick={() => setIsOpen(true)}
         className={`fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full gradient-bg flex items-center justify-center shadow-lg glow-orange ${isOpen ? "hidden" : ""}`}
@@ -73,7 +107,6 @@ const AIChatbot = () => {
         <MessageCircle className="h-6 w-6 text-primary-foreground" />
       </motion.button>
 
-      {/* Chat Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -82,13 +115,12 @@ const AIChatbot = () => {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[600px] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden"
           >
-            {/* Header */}
             <div className="gradient-bg px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-primary-foreground" />
                 <div>
                   <p className="text-sm font-bold text-primary-foreground">SunTriX AI</p>
-                  <p className="text-xs text-primary-foreground/70">Ask about our services</p>
+                  <p className="text-xs text-primary-foreground/70">Powered by Grok</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -101,7 +133,6 @@ const AIChatbot = () => {
               </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px] max-h-[420px]">
               {messages.length === 0 && (
                 <div className="text-center py-8">
@@ -110,11 +141,7 @@ const AIChatbot = () => {
                   <p className="text-xs text-muted-foreground/60 mt-1">Ask me anything about our services.</p>
                   <div className="flex flex-wrap gap-2 justify-center mt-4">
                     {["What services do you offer?", "Tell me about pricing", "How can I contact you?"].map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => { setInput(q); }}
-                        className="text-xs rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-primary hover:bg-primary/10 transition-colors"
-                      >
+                      <button key={q} onClick={() => setInput(q)} className="text-xs rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-primary hover:bg-primary/10 transition-colors">
                         {q}
                       </button>
                     ))}
@@ -150,23 +177,15 @@ const AIChatbot = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             <div className="border-t border-border p-3">
-              <form
-                onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-                className="flex gap-2"
-              >
+              <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about our AI services..."
                   className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
                 />
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isTyping}
-                  className="gradient-bg rounded-lg p-2 text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
+                <button type="submit" disabled={!input.trim() || isTyping} className="gradient-bg rounded-lg p-2 text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50">
                   <Send className="h-4 w-4" />
                 </button>
               </form>

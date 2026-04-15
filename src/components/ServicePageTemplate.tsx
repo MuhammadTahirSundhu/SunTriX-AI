@@ -1,21 +1,25 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle, Play } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Layout from "@/components/Layout";
+import { portfolioStore, type PortfolioProject } from "@/lib/cms-store";
 
 interface ServicePageProps {
   icon: LucideIcon;
   title: string;
   subtitle: string;
   description: string;
+  category: string;
   useCases: { title: string; desc: string }[];
   process: { step: string; title: string; desc: string }[];
   techStack: string[];
   caseStudy: { title: string; metric: string; desc: string };
 }
 
-const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, useCases, process, techStack, caseStudy }: ServicePageProps) => {
+const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, category, useCases, process, techStack, caseStudy }: ServicePageProps) => {
+  const relatedProjects = portfolioStore.getPublished().filter((p) => p.category === category).slice(0, 3);
+
   return (
     <Layout>
       {/* Hero */}
@@ -81,8 +85,59 @@ const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, useCase
         </div>
       </section>
 
+      {/* Related Portfolio */}
+      {relatedProjects.length > 0 && (
+        <section className="py-24 bg-card/30 border-t border-border">
+          <div className="container mx-auto px-4 lg:px-8">
+            <h2 className="text-3xl font-extrabold mb-12">Our <span className="gradient-text">{category}</span> Work</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {relatedProjects.map((project, i) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <Link
+                    to={`/work/${project.slug}`}
+                    className="group block rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 glow-hover transition-all"
+                  >
+                    <div className="h-40 bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent flex items-center justify-center relative">
+                      {(project.thumbnailImage || project.coverImage) ? (
+                        <img src={project.thumbnailImage || project.coverImage} alt={project.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-3xl font-extrabold gradient-text">{project.metric}</span>
+                      )}
+                      {project.videoUrl && (
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="h-10 w-10 rounded-full bg-primary/90 flex items-center justify-center">
+                            <Play className="h-4 w-4 text-primary-foreground ml-0.5" />
+                          </div>
+                        </div>
+                      )}
+                      <div className="absolute bottom-2 left-3">
+                        <span className="text-lg font-extrabold gradient-text">{project.metric}</span>
+                        <p className="text-[10px] text-muted-foreground">{project.metricLabel}</p>
+                      </div>
+                    </div>
+                    <div className="p-5">
+                      <h3 className="text-sm font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{project.title}</h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{project.shortDescription}</p>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary mt-3 group-hover:gap-2 transition-all">
+                        View Project <ArrowRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Case Study Teaser */}
-      <section className="py-24 bg-card/30 border-t border-border">
+      <section className="py-24 border-t border-border">
         <div className="container mx-auto px-4 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             className="rounded-xl border border-border bg-card p-8 lg:p-12 max-w-3xl">
