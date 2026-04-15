@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { heroStore, announcementStore, companyStore, testimonialStore, type HeroContent, type AnnouncementBar, type CompanyInfo, type TestimonialItem } from "@/lib/cms-store";
+import { heroStore, announcementStore, companyStore, testimonialStore, type HeroContent, type AnnouncementBar, type CompanyInfo, type TestimonialItem, type SocialLink } from "@/lib/cms-store";
 import { toast } from "@/hooks/use-toast";
-import { Save, Globe, Megaphone, Building2, MessageSquareQuote, Plus, Trash2, Eye, EyeOff, ToggleLeft, ToggleRight } from "lucide-react";
+import { Save, Globe, Megaphone, Building2, MessageSquareQuote, Plus, Trash2, Eye, EyeOff, ToggleLeft, ToggleRight, Video, Share2 } from "lucide-react";
 
-type Tab = "hero" | "announcement" | "company" | "testimonials";
+type Tab = "hero" | "announcement" | "company" | "social" | "intro-video" | "testimonials";
 
 const AdminContent = () => {
   const [tab, setTab] = useState<Tab>("hero");
@@ -17,14 +17,22 @@ const AdminContent = () => {
 
   const tabs: { key: Tab; label: string; icon: typeof Globe }[] = [
     { key: "hero", label: "Hero Section", icon: Globe },
-    { key: "announcement", label: "Announcement Bar", icon: Megaphone },
+    { key: "announcement", label: "Announcement", icon: Megaphone },
     { key: "company", label: "Company Info", icon: Building2 },
+    { key: "social", label: "Social & Profiles", icon: Share2 },
+    { key: "intro-video", label: "Intro Video", icon: Video },
     { key: "testimonials", label: "Testimonials", icon: MessageSquareQuote },
   ];
 
   const saveHero = () => { heroStore.update(hero); toast({ title: "Hero content saved" }); };
   const saveAnnouncement = () => { announcementStore.update(announcement); toast({ title: "Announcement saved" }); };
   const saveCompany = () => { companyStore.update(company); toast({ title: "Company info saved" }); };
+
+  const updateSocialLink = (index: number, updates: Partial<SocialLink>) => {
+    const links = [...company.socialLinks];
+    links[index] = { ...links[index], ...updates };
+    setCompany({ ...company, socialLinks: links });
+  };
 
   const deleteTestimonial = (id: string) => {
     testimonialStore.delete(id);
@@ -55,7 +63,6 @@ const AdminContent = () => {
         <p className="text-sm text-muted-foreground">Edit website content dynamically</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         {tabs.map((t) => (
           <button
@@ -79,12 +86,7 @@ const AdminContent = () => {
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Headline Lines (one per line)</label>
-            <textarea
-              value={hero.headline.join("\n")}
-              onChange={(e) => setHero({ ...hero, headline: e.target.value.split("\n") })}
-              rows={4}
-              className={inputCls + " resize-none"}
-            />
+            <textarea value={hero.headline.join("\n")} onChange={(e) => setHero({ ...hero, headline: e.target.value.split("\n") })} rows={4} className={inputCls + " resize-none"} />
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Gradient Words (comma separated)</label>
@@ -189,6 +191,83 @@ const AdminContent = () => {
         </motion.div>
       )}
 
+      {/* Social & Freelance Profiles */}
+      {tab === "social" && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card p-6 space-y-5">
+          <p className="text-sm font-medium text-foreground mb-2">Manage social media and freelance platform links. Toggle visibility per platform.</p>
+          <div className="space-y-3">
+            {company.socialLinks.map((link, i) => (
+              <div key={link.platform} className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                <span className="text-sm font-medium text-foreground w-24">{link.platform}</span>
+                <input
+                  value={link.url}
+                  onChange={(e) => updateSocialLink(i, { url: e.target.value })}
+                  placeholder={`https://${link.platform.toLowerCase()}.com/...`}
+                  className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  onClick={() => updateSocialLink(i, { enabled: !link.enabled })}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    link.enabled ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {link.enabled ? <><ToggleRight className="h-3.5 w-3.5" /> On</> : <><ToggleLeft className="h-3.5 w-3.5" /> Off</>}
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <button onClick={saveCompany} className="gradient-bg inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
+              <Save className="h-4 w-4" /> Save Social Links
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Agency Intro Video */}
+      {tab === "intro-video" && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">Agency Introduction Video</p>
+            <button
+              onClick={() => {
+                const updated = { ...company, introVideoEnabled: !company.introVideoEnabled };
+                setCompany(updated);
+                companyStore.update(updated);
+                toast({ title: updated.introVideoEnabled ? "Intro video enabled" : "Intro video disabled" });
+              }}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                company.introVideoEnabled ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {company.introVideoEnabled ? <><ToggleRight className="h-4 w-4" /> Enabled</> : <><ToggleLeft className="h-4 w-4" /> Disabled</>}
+            </button>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Video Embed URL (YouTube embed, Vimeo, etc.)</label>
+            <input
+              value={company.introVideoUrl}
+              onChange={(e) => setCompany({ ...company, introVideoUrl: e.target.value })}
+              placeholder="https://www.youtube.com/embed/..."
+              className={inputCls}
+            />
+            <p className="text-xs text-muted-foreground mt-1">Use the embed URL format. For YouTube: youtube.com/embed/VIDEO_ID</p>
+          </div>
+          {company.introVideoUrl && (
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="aspect-video">
+                <iframe src={company.introVideoUrl} className="w-full h-full" allow="autoplay; fullscreen" title="Preview" />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <button onClick={saveCompany} className="gradient-bg inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
+              <Save className="h-4 w-4" /> Save Video Settings
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Testimonials Manager */}
       {tab === "testimonials" && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
@@ -208,24 +287,9 @@ const AdminContent = () => {
                     className={inputCls + " resize-none"}
                   />
                   <div className="grid grid-cols-3 gap-3">
-                    <input
-                      value={t.name}
-                      onChange={(e) => { testimonialStore.update(t.id, { name: e.target.value }); setTestimonials(testimonialStore.getAll()); }}
-                      placeholder="Name"
-                      className={inputCls}
-                    />
-                    <input
-                      value={t.role}
-                      onChange={(e) => { testimonialStore.update(t.id, { role: e.target.value }); setTestimonials(testimonialStore.getAll()); }}
-                      placeholder="Role"
-                      className={inputCls}
-                    />
-                    <input
-                      value={t.company}
-                      onChange={(e) => { testimonialStore.update(t.id, { company: e.target.value }); setTestimonials(testimonialStore.getAll()); }}
-                      placeholder="Company"
-                      className={inputCls}
-                    />
+                    <input value={t.name} onChange={(e) => { testimonialStore.update(t.id, { name: e.target.value }); setTestimonials(testimonialStore.getAll()); }} placeholder="Name" className={inputCls} />
+                    <input value={t.role} onChange={(e) => { testimonialStore.update(t.id, { role: e.target.value }); setTestimonials(testimonialStore.getAll()); }} placeholder="Role" className={inputCls} />
+                    <input value={t.company} onChange={(e) => { testimonialStore.update(t.id, { company: e.target.value }); setTestimonials(testimonialStore.getAll()); }} placeholder="Company" className={inputCls} />
                   </div>
                 </div>
                 <div className="flex items-center gap-1 ml-3">

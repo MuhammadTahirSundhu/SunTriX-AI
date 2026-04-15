@@ -8,6 +8,7 @@
  * 1. Set BASE_URL to your backend (e.g., "https://api.suntrix.com/v1")
  * 2. Replace localStorage store calls with apiRequest() calls
  * 3. Update Cloudinary endpoints for asset uploads
+ * 4. Set GROK_API_KEY in your backend environment for chatbot
  */
 
 // Change this to your backend URL when ready (e.g., "https://api.suntrix.com/v1")
@@ -15,6 +16,61 @@ const BASE_URL = "";
 
 // Cloudinary config (update when ready)
 const CLOUDINARY_URL = "";
+
+// ─── Grok AI Configuration ─────────────────────────────────────
+// Grok uses an OpenAI-compatible API format (https://api.x.ai/v1)
+// The backend should proxy chat requests to Grok to keep the API key server-side.
+//
+// Models available:
+//   - grok-3        (most capable, paid)
+//   - grok-3-mini   (free tier, good for most use cases)
+//
+// Required env vars on backend:
+//   GROK_API_KEY=xai-xxxxxxxxxxxxxxxxxxxxxxxx
+//
+// Backend proxy pattern (Node.js/Express):
+//   app.post("/chat", async (req, res) => {
+//     const { messages } = req.body;
+//     const response = await fetch("https://api.x.ai/v1/chat/completions", {
+//       method: "POST",
+//       headers: {
+//         "Authorization": `Bearer ${process.env.GROK_API_KEY}`,
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({
+//         model: "grok-3-mini",  // or "grok-3"
+//         messages: [
+//           { role: "system", content: "You are SunTriX AI assistant..." },
+//           ...messages,
+//         ],
+//         temperature: 0.7,
+//         max_tokens: 1024,
+//       }),
+//     });
+//     const data = await response.json();
+//     res.json(data);
+//   });
+//
+// Request format (OpenAI-compatible):
+//   POST /chat/completions
+//   {
+//     "model": "grok-3-mini",
+//     "messages": [
+//       { "role": "system", "content": "..." },
+//       { "role": "user", "content": "..." }
+//     ],
+//     "temperature": 0.7,
+//     "max_tokens": 1024,
+//     "stream": false
+//   }
+//
+// Response format:
+//   {
+//     "choices": [{ "message": { "role": "assistant", "content": "..." } }],
+//     "usage": { "prompt_tokens": 10, "completion_tokens": 50, "total_tokens": 60 }
+//   }
+
+const GROK_API_URL = "https://api.x.ai/v1";
 
 // ─── Endpoint Definitions ─────────────────────────────────────────
 export const ENDPOINTS = {
@@ -31,7 +87,8 @@ export const ENDPOINTS = {
   TASK_REQUEST_BY_ID: (id: string) => `${BASE_URL}/task-requests/${id}`,
   TASK_REQUEST_UPDATE: (id: string) => `${BASE_URL}/task-requests/${id}`,
 
-  // AI Chatbot
+  // AI Chatbot (proxied through backend → Grok API)
+  // Backend forwards to: https://api.x.ai/v1/chat/completions
   CHAT_SEND: `${BASE_URL}/chat`,
   CHAT_HISTORY: `${BASE_URL}/chat/history`,
 
@@ -64,6 +121,8 @@ export const ENDPOINTS = {
   HERO_CONTENT: `${BASE_URL}/cms/hero`,
   ANNOUNCEMENT: `${BASE_URL}/cms/announcement`,
   COMPANY_INFO: `${BASE_URL}/cms/company`,
+  SOCIAL_LINKS: `${BASE_URL}/cms/social-links`,
+  INTRO_VIDEO: `${BASE_URL}/cms/intro-video`,
   SEO_SETTINGS: `${BASE_URL}/cms/seo`,
   SEO_BY_PAGE: (page: string) => `${BASE_URL}/cms/seo/${page}`,
 
@@ -84,6 +143,26 @@ export const ENDPOINTS = {
   UPLOAD_VIDEO: `${CLOUDINARY_URL || BASE_URL}/upload/video`,
   UPLOAD_DELETE: (publicId: string) => `${BASE_URL}/upload/${publicId}`,
 } as const;
+
+// ─── Grok Chat Helper Types ──────────────────────────────────────
+
+export interface GrokChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface GrokChatRequest {
+  model: string;
+  messages: GrokChatMessage[];
+  temperature?: number;
+  max_tokens?: number;
+  stream?: boolean;
+}
+
+export interface GrokChatResponse {
+  choices: { message: { role: string; content: string } }[];
+  usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+}
 
 // ─── HTTP Client ─────────────────────────────────────────────────
 interface RequestOptions {
