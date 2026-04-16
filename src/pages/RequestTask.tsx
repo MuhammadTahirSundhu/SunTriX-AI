@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, CheckCircle, Upload, Shield, Clock, Users } from "lucide-react";
 import Layout from "@/components/Layout";
 import { toast } from "@/hooks/use-toast";
-import { taskStore } from "@/lib/store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 
 const steps = ["About You", "Project Brief", "Technical Details", "Review & Submit"];
 
 const RequestTask = () => {
   const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "", email: "", phone: "", company: "", role: "",
     projectTitle: "", projectType: "", description: "", startDate: "", duration: "", budget: "", priority: "Medium",
@@ -18,17 +19,37 @@ const RequestTask = () => {
 
   const updateField = (field: string, value: string | boolean) => setForm({ ...form, [field]: value });
 
-  const handleSubmit = () => {
-    taskStore.create({
-      name: form.name,
-      email: form.email,
-      company: form.company,
-      service: form.projectType,
-      budget: form.budget,
-      timeline: form.startDate,
-      description: form.description,
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    const { error } = await apiRequest(ENDPOINTS.TASK_REQUEST_SUBMIT, {
+      method: "POST",
+      body: {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        company: form.company,
+        role: form.role,
+        projectTitle: form.projectTitle,
+        service: form.projectType,
+        budget: form.budget,
+        timeline: form.startDate,
+        description: form.description,
+        priority: form.priority,
+        techStack: form.techStack,
+        existingCode: form.existingCode,
+        codeDetails: form.codeDetails,
+        integrations: form.integrations,
+        notes: form.notes,
+      },
     });
-    toast({ title: "Task submitted!", description: "We'll send you a proposal within 24 hours." });
+    setSubmitting(false);
+    if (!error) {
+      toast({ title: "Task submitted!", description: "We'll send you a proposal within 24 hours." });
+      setStep(0);
+      setForm({ name: "", email: "", phone: "", company: "", role: "", projectTitle: "", projectType: "", description: "", startDate: "", duration: "", budget: "", priority: "Medium", techStack: "", existingCode: "No", codeDetails: "", integrations: "", notes: "", consent: false });
+    } else {
+      toast({ title: "Submission failed", description: error, variant: "destructive" });
+    }
   };
 
   const canNext = () => {
@@ -188,9 +209,9 @@ const RequestTask = () => {
                       Next <ArrowRight className="h-4 w-4" />
                     </button>
                   ) : (
-                    <button onClick={handleSubmit} disabled={!form.consent}
+                    <button onClick={handleSubmit} disabled={!form.consent || submitting}
                       className="gradient-bg inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50 hover:opacity-90 transition-opacity">
-                      Submit Task <CheckCircle className="h-4 w-4" />
+                      {submitting ? "Submitting…" : <><span>Submit Task</span> <CheckCircle className="h-4 w-4" /></>}
                     </button>
                   )}
                 </div>

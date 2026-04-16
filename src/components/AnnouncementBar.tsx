@@ -2,15 +2,18 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { announcementStore, type AnnouncementBar as AnnouncementBarType } from "@/lib/cms-store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
+
+interface AnnouncementBarData { text: string; link: string; linkText: string; enabled: boolean; }
 
 const AnnouncementBar = () => {
-  const [announcement, setAnnouncement] = useState<AnnouncementBarType | null>(null);
+  const [announcement, setAnnouncement] = useState<AnnouncementBarData | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    const data = announcementStore.get();
-    if (data.enabled) setAnnouncement(data);
+    apiRequest<AnnouncementBarData>(ENDPOINTS.CMS_ANNOUNCEMENT).then(({ data }) => {
+      if (data?.enabled) setAnnouncement(data);
+    });
   }, []);
 
   if (!announcement || dismissed) return null;

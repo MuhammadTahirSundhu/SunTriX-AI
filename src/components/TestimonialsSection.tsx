@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
-import { testimonialStore, type TestimonialItem } from "@/lib/cms-store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
+
+interface TestimonialItem { _id: string; quote: string; name: string; role: string; company: string; rating: number; }
 
 const TestimonialsSection = () => {
   const [current, setCurrent] = useState(0);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
 
   useEffect(() => {
-    setTestimonials(testimonialStore.getPublished());
+    apiRequest<TestimonialItem[]>(ENDPOINTS.TESTIMONIALS_LIST).then(({ data }) => {
+      if (data) setTestimonials(data);
+    });
   }, []);
 
   useEffect(() => {

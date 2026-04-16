@@ -1,60 +1,81 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { departmentStore, type Department } from "@/lib/cms-store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import {
-  Plus, Pencil, Trash2, Eye, EyeOff, X, Save, GripVertical, ArrowUp, ArrowDown
-} from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, X, Save, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+
+interface Department {
+  _id: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  image: string;
+  href: string;
+  order: number;
+  enabled: boolean;
+}
+
+type EditState = Omit<Department, "_id"> & { _id?: string };
+
+const EMPTY_DEPT: EditState = {
+  name: "", subtitle: "", description: "", image: "",
+  href: "/services/agentic-ai", order: 1, enabled: true,
+};
 
 const AdminDepartments = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [editing, setEditing] = useState<Department | null>(null);
+  const [editing, setEditing] = useState<EditState | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const reload = () => setDepartments(departmentStore.getAll());
-  useEffect(reload, []);
+  const reload = async () => {
+    const { data } = await apiRequest<Department[]>(ENDPOINTS.DEPARTMENTS_LIST + "?all=true");
+    if (data) setDepartments(data);
+  };
+
+  useEffect(() => { reload(); }, []);
 
   const handleNew = () => {
     setIsNew(true);
-    setEditing({
-      id: "", name: "", subtitle: "", description: "",
-      image: "", href: "/services/agentic-ai", order: departments.length + 1,
-      enabled: true, updatedAt: "",
-    });
+    setEditing({ ...EMPTY_DEPT, order: departments.length + 1 });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editing) return;
     if (!editing.name) { toast({ title: "Name required" }); return; }
+    setSaving(true);
     if (isNew) {
-      departmentStore.create(editing);
-      toast({ title: "Department created" });
-    } else {
-      departmentStore.update(editing.id, editing);
-      toast({ title: "Department updated" });
+      const { error } = await apiRequest(ENDPOINTS.DEPARTMENTS_CREATE, { method: "POST", body: editing });
+      if (error) toast({ title: "Error", description: error });
+      else toast({ title: "Department created ✅" });
+    } else if (editing._id) {
+      const { error } = await apiRequest(ENDPOINTS.DEPARTMENTS_UPDATE(editing._id), { method: "PUT", body: editing });
+      if (error) toast({ title: "Error", description: error });
+      else toast({ title: "Department updated ✅" });
     }
+    setSaving(false);
     setEditing(null);
     setIsNew(false);
     reload();
   };
 
-  const handleDelete = (id: string) => {
-    departmentStore.delete(id);
+  const handleDelete = async (id: string) => {
+    await apiRequest(ENDPOINTS.DEPARTMENTS_DELETE(id), { method: "DELETE" });
     toast({ title: "Department deleted" });
     reload();
   };
 
-  const toggleEnabled = (dept: Department) => {
-    departmentStore.update(dept.id, { enabled: !dept.enabled });
+  const toggleEnabled = async (dept: Department) => {
+    await apiRequest(ENDPOINTS.DEPARTMENTS_UPDATE(dept._id), { method: "PUT", body: { enabled: !dept.enabled } });
     reload();
   };
 
-  const moveOrder = (dept: Department, dir: -1 | 1) => {
-    departmentStore.update(dept.id, { order: dept.order + dir });
+  const moveOrder = async (dept: Department, dir: -1 | 1) => {
+    await apiRequest(ENDPOINTS.DEPARTMENTS_UPDATE(dept._id), { method: "PUT", body: { order: dept.order + dir } });
     reload();
   };
 
-  const inputCls = "w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
+  const inp = "w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
 
   return (
     <div className="p-6 lg:p-8">
@@ -69,9 +90,9 @@ const AdminDepartments = () => {
       </div>
 
       <div className="space-y-3">
-        {departments.sort((a, b) => a.order - b.order).map((dept) => (
+        {[...departments].sort((a, b) => a.order - b.order).map((dept) => (
           <motion.div
-            key={dept.id}
+            key={dept._id}
             layout
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -95,21 +116,13 @@ const AdminDepartments = () => {
             </span>
 
             <div className="flex items-center gap-1">
-              <button onClick={() => moveOrder(dept, -1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
-                <ArrowUp className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => moveOrder(dept, 1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
-                <ArrowDown className="h-3.5 w-3.5" />
-              </button>
+              <button onClick={() => moveOrder(dept, -1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"><ArrowUp className="h-3.5 w-3.5" /></button>
+              <button onClick={() => moveOrder(dept, 1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"><ArrowDown className="h-3.5 w-3.5" /></button>
               <button onClick={() => toggleEnabled(dept)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
                 {dept.enabled ? <Eye className="h-3.5 w-3.5 text-success" /> : <EyeOff className="h-3.5 w-3.5" />}
               </button>
-              <button onClick={() => { setEditing(dept); setIsNew(false); }} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => handleDelete(dept.id)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              <button onClick={() => { setEditing(dept); setIsNew(false); }} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+              <button onClick={() => handleDelete(dept._id)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           </motion.div>
         ))}
@@ -119,16 +132,12 @@ const AdminDepartments = () => {
       <AnimatePresence>
         {editing && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center"
             onClick={(e) => { if (e.target === e.currentTarget) { setEditing(null); setIsNew(false); } }}
           >
             <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
               className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-6">
@@ -138,34 +147,36 @@ const AdminDepartments = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Name *</label>
-                  <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} className={inputCls} />
+                  <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} className={inp} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Subtitle</label>
-                  <input value={editing.subtitle} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} className={inputCls} />
+                  <input value={editing.subtitle} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} className={inp} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Description</label>
-                  <textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={3} className={inputCls + " resize-none"} />
+                  <textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={3} className={inp + " resize-none"} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Link (href)</label>
-                    <input value={editing.href} onChange={(e) => setEditing({ ...editing, href: e.target.value })} className={inputCls} />
+                    <input value={editing.href} onChange={(e) => setEditing({ ...editing, href: e.target.value })} className={inp} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Order</label>
-                    <input type="number" value={editing.order} onChange={(e) => setEditing({ ...editing, order: Number(e.target.value) })} className={inputCls} />
+                    <input type="number" value={editing.order} onChange={(e) => setEditing({ ...editing, order: Number(e.target.value) })} className={inp} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Image URL</label>
-                  <input value={editing.image} onChange={(e) => setEditing({ ...editing, image: e.target.value })} placeholder="Cloudinary URL" className={inputCls} />
+                  <input value={editing.image} onChange={(e) => setEditing({ ...editing, image: e.target.value })} placeholder="Cloudinary URL" className={inp} />
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
                 <button onClick={() => { setEditing(null); setIsNew(false); }} className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
-                <button onClick={handleSave} className="gradient-bg inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"><Save className="h-4 w-4" /> {isNew ? "Create" : "Save"}</button>
+                <button onClick={handleSave} disabled={saving} className="gradient-bg inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+                  <Save className="h-4 w-4" /> {saving ? "Saving..." : isNew ? "Create" : "Save"}
+                </button>
               </div>
             </motion.div>
           </motion.div>

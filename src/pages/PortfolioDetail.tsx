@@ -1,9 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink, Play, CheckCircle, ArrowRight } from "lucide-react";
+import { ArrowLeft, CheckCircle, ArrowRight } from "lucide-react";
 import Layout from "@/components/Layout";
-import { portfolioStore, caseStudyStore, type PortfolioProject, type CaseStudy } from "@/lib/cms-store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
+
+interface PortfolioProject { _id: string; title: string; slug: string; category: string; description: string; metric: string; metricLabel: string; clientName: string; industry: string; coverImage: string; videoUrl: string; highlights: string[]; tools: { name: string; icon: string }[]; tags: string[]; }
+interface CaseStudy { _id: string; challenge: string; solution: string; results: string; keyMetrics: { label: string; value: string; description: string }[]; }
 
 const PortfolioDetail = () => {
   const { slug } = useParams();
@@ -13,17 +16,14 @@ const PortfolioDetail = () => {
 
   useEffect(() => {
     if (!slug) return;
-    const p = portfolioStore.getBySlug(slug);
-    if (p) {
+    apiRequest<PortfolioProject>(ENDPOINTS.PORTFOLIO_BY_SLUG(slug)).then(({ data: p }) => {
+      if (!p) return;
       setProject(p);
-      const cs = caseStudyStore.getByProjectId(p.id);
-      if (cs) setCaseStudy(cs);
-      setRelated(
-        portfolioStore.getPublished()
-          .filter((r) => r.category === p.category && r.id !== p.id)
-          .slice(0, 3)
-      );
-    }
+      // Fetch related projects
+      apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO_LIST).then(({ data: all }) => {
+        if (all) setRelated(all.filter((r) => r.category === p.category && r._id !== p._id).slice(0, 3));
+      });
+    });
   }, [slug]);
 
   if (!project) {
@@ -202,7 +202,7 @@ const PortfolioDetail = () => {
             <h2 className="text-2xl font-display font-bold mb-8">Related <span className="gradient-text">Projects</span></h2>
             <div className="grid md:grid-cols-3 gap-6">
               {related.map((r) => (
-                <Link key={r.id} to={`/work/${r.slug}`} className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 glow-hover transition-all">
+                <Link key={r._id} to={`/work/${r.slug}`} className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 glow-hover transition-all">
                   <div className="h-36 bg-gradient-to-br from-primary/10 to-transparent flex items-center justify-center">
                     <span className="text-2xl font-extrabold gradient-text">{r.metric}</span>
                   </div>

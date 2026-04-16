@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
-import { authStore } from "@/lib/store";
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Users, Settings,
   LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone, Layers, Image
@@ -21,18 +20,18 @@ const navItems = [
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
-  const user = authStore.getSession();
 
-  useEffect(() => {
-    authStore.init();
-  }, []);
+  const token = localStorage.getItem("auth_token");
+  const userRaw = localStorage.getItem("suntrix_admin_session");
+  const user = userRaw ? JSON.parse(userRaw) as { name: string; email: string } : null;
 
-  if (!authStore.isAuthenticated()) {
+  if (!token) {
     return <Navigate to="/admin/login" replace />;
   }
 
   const handleLogout = () => {
-    authStore.logout();
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("suntrix_admin_session");
     window.location.href = "/admin/login";
   };
 

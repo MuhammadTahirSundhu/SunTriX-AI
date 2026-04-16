@@ -1,13 +1,28 @@
 import { useState, useEffect } from "react";
-import { newsletterStore } from "@/lib/store";
-import { Users, Mail } from "lucide-react";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
+import { Users, Mail, Trash2 } from "lucide-react";
+
+interface Subscriber {
+  _id: string;
+  email: string;
+  subscribed: boolean;
+  createdAt: string;
+}
 
 const AdminNewsletter = () => {
-  const [subs, setSubs] = useState<{ email: string; date: string }[]>([]);
+  const [subs, setSubs] = useState<Subscriber[]>([]);
 
-  useEffect(() => {
-    setSubs(newsletterStore.getAll());
-  }, []);
+  const fetchSubs = async () => {
+    const { data } = await apiRequest<Subscriber[]>(ENDPOINTS.NEWSLETTER_LIST);
+    if (data) setSubs(data);
+  };
+
+  useEffect(() => { fetchSubs(); }, []);
+
+  const remove = async (id: string) => {
+    await apiRequest(`${ENDPOINTS.NEWSLETTER_LIST}/${id}`, { method: "DELETE" });
+    fetchSubs();
+  };
 
   return (
     <div className="p-6 lg:p-8">
@@ -28,15 +43,21 @@ const AdminNewsletter = () => {
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Subscribed</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {subs.map((s, i) => (
-                <tr key={i} className="hover:bg-muted/20">
+              {subs.map((s) => (
+                <tr key={s._id} className="hover:bg-muted/20">
                   <td className="px-4 py-3 flex items-center gap-2">
                     <Mail className="h-3.5 w-3.5 text-primary" /> {s.email}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{new Date(s.date).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{new Date(s.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button onClick={() => remove(s._id)} className="p-1 rounded hover:bg-destructive/10">
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

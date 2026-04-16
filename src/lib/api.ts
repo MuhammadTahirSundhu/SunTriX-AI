@@ -11,8 +11,8 @@
  * 4. Set GROK_API_KEY in your backend environment for chatbot
  */
 
-// Change this to your backend URL when ready (e.g., "https://api.suntrix.com/v1")
-const BASE_URL = "";
+// Backend URL — reads from VITE_API_URL env var in production, falls back to local dev
+const BASE_URL = (import.meta.env.VITE_API_URL as string) || "http://localhost:4000/v1";
 
 // Cloudinary config (update when ready)
 const CLOUDINARY_URL = "";
@@ -117,14 +117,12 @@ export const ENDPOINTS = {
   NEWSLETTER_LIST: `${BASE_URL}/newsletter`,
 
   // CMS Content
-  SITE_CONTENT: `${BASE_URL}/cms/content`,
-  HERO_CONTENT: `${BASE_URL}/cms/hero`,
-  ANNOUNCEMENT: `${BASE_URL}/cms/announcement`,
-  COMPANY_INFO: `${BASE_URL}/cms/company`,
-  SOCIAL_LINKS: `${BASE_URL}/cms/social-links`,
-  INTRO_VIDEO: `${BASE_URL}/cms/intro-video`,
-  SEO_SETTINGS: `${BASE_URL}/cms/seo`,
-  SEO_BY_PAGE: (page: string) => `${BASE_URL}/cms/seo/${page}`,
+  CMS_ANNOUNCEMENT: `${BASE_URL}/cms/announcement`,
+  CMS_HERO: `${BASE_URL}/cms/hero`,
+  CMS_COMPANY: `${BASE_URL}/cms/company`,
+  CMS_SOCIAL_LINKS: `${BASE_URL}/cms/social-links`,
+  CMS_INTRO_VIDEO: `${BASE_URL}/cms/intro-video`,
+  CMS_SEO_BY_PAGE: (page: string) => `${BASE_URL}/cms/seo/${page}`,
 
   // Departments
   DEPARTMENTS_LIST: `${BASE_URL}/departments`,
@@ -134,13 +132,13 @@ export const ENDPOINTS = {
 
   // Admin
   ADMIN_DASHBOARD_STATS: `${BASE_URL}/admin/stats`,
-  ADMIN_TASKS: `${BASE_URL}/admin/tasks`,
-  ADMIN_CONTACTS: `${BASE_URL}/admin/contacts`,
+  ADMIN_TASKS: `${BASE_URL}/task-requests`,
+  ADMIN_CONTACTS: `${BASE_URL}/contact`,
   ADMIN_USERS: `${BASE_URL}/admin/users`,
 
-  // Assets (Cloudinary)
-  UPLOAD_IMAGE: `${CLOUDINARY_URL || BASE_URL}/upload/image`,
-  UPLOAD_VIDEO: `${CLOUDINARY_URL || BASE_URL}/upload/video`,
+  // Assets (Cloudinary via backend)
+  UPLOAD_IMAGE: `${BASE_URL}/upload/image`,
+  UPLOAD_VIDEO: `${BASE_URL}/upload/video`,
   UPLOAD_DELETE: (publicId: string) => `${BASE_URL}/upload/${publicId}`,
 } as const;
 
@@ -176,11 +174,6 @@ export async function apiRequest<T = unknown>(
   options: RequestOptions = {}
 ): Promise<{ data: T | null; error: string | null }> {
   const { method = "GET", body, headers = {} } = options;
-
-  // If no BASE_URL, we're in localStorage mode — return null
-  if (!BASE_URL) {
-    return { data: null, error: "API not configured — using local storage" };
-  }
 
   try {
     const token = localStorage.getItem("auth_token");

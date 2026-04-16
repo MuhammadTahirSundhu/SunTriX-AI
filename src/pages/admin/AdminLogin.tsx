@@ -1,25 +1,35 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { authStore } from "@/lib/store";
 import { motion } from "framer-motion";
 import { Lock, Mail } from "lucide-react";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  if (authStore.isAuthenticated()) {
+  const isAuthenticated = !!localStorage.getItem("auth_token");
+  if (isAuthenticated) {
     return <Navigate to="/admin" replace />;
   }
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = authStore.login(email, password);
-    if (user) {
+    setError("");
+    setLoading(true);
+    const { data, error: apiErr } = await apiRequest<{ token: string; user: { id: string; email: string; name: string; role: string } }>(
+      ENDPOINTS.AUTH_LOGIN,
+      { method: "POST", body: { email, password } }
+    );
+    setLoading(false);
+    if (data?.token) {
+      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem("suntrix_admin_session", JSON.stringify(data.user));
       window.location.href = "/admin";
     } else {
-      setError("Invalid email or password");
+      setError(apiErr || "Invalid email or password");
     }
   };
 
@@ -74,8 +84,8 @@ const AdminLogin = () => {
                 />
               </div>
             </div>
-            <button type="submit" className="w-full gradient-bg rounded-lg py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
-              Sign In
+            <button type="submit" disabled={loading} className="w-full gradient-bg rounded-lg py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60">
+              {loading ? "Signing in…" : "Sign In"}
             </button>
           </form>
 

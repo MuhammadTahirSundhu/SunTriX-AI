@@ -2,18 +2,43 @@ import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, Sparkles, CheckCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { heroStore, type HeroContent } from "@/lib/cms-store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { useMedia } from "@/hooks/use-media";
 
+interface HeroContent {
+  badge: string;
+  headline: string[];
+  gradientWords: string[];
+  subheadline: string;
+  ctaPrimary: { text: string; link: string };
+  ctaSecondary: { text: string; link: string };
+  trustPills: string[];
+  backgroundImage?: string;
+}
+
+const DEFAULT_HERO: HeroContent = {
+  badge: "Accepting new AI & SaaS project briefs",
+  headline: ["Engineering", "Intelligence That", "Perceives, Reasons,", "and Acts"],
+  gradientWords: ["Intelligence", "Acts"],
+  subheadline: "From agentic AI workflows to production-grade SaaS platforms — SunTriX delivers end-to-end AI engineering with a 24-hour proposal guarantee.",
+  ctaPrimary: { text: "Request a Demo", link: "/request-task" },
+  ctaSecondary: { text: "Watch Overview", link: "#" },
+  trustPills: ["50+ Projects Delivered", "Fortune 500 Clients", "24hr Response SLA"],
+};
+
 const HeroSection = () => {
-  const [content, setContent] = useState<HeroContent>(heroStore.get());
+  const [content, setContent] = useState<HeroContent>(DEFAULT_HERO);
   const heroBanner = useMedia("hero-banner");
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
-  useEffect(() => { setContent(heroStore.get()); }, []);
+  useEffect(() => {
+    apiRequest<HeroContent>(ENDPOINTS.CMS_HERO).then(({ data }) => {
+      if (data) setContent(data);
+    });
+  }, []);
 
   const renderHeadline = () => {
     return content.headline.map((line, i) => {
@@ -46,7 +71,7 @@ const HeroSection = () => {
     <section ref={ref} className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
       {/* Background */}
       <motion.div className="absolute inset-0 z-0" style={{ y: bgY }}>
-        <img src={heroBanner} alt="SunTriX AI Hero" className="w-full h-[120%] object-cover object-center" />
+        <img src={content.backgroundImage || heroBanner} alt="SunTriX AI Hero" className="w-full h-[120%] object-cover object-center" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background" />
         <div className="absolute inset-0 bg-background/40" />
       </motion.div>
@@ -81,21 +106,10 @@ const HeroSection = () => {
               top: `${10 + (i % 4) * 22}%`,
               width: i % 3 === 0 ? 3 : 2,
               height: i % 3 === 0 ? 3 : 2,
-              background: i % 3 === 0
-                ? "hsl(var(--primary))"
-                : i % 3 === 1
-                ? "hsl(var(--secondary))"
-                : "hsl(var(--gold))",
+              background: i % 3 === 0 ? "hsl(var(--primary))" : i % 3 === 1 ? "hsl(var(--secondary))" : "hsl(var(--gold))",
             }}
-            animate={{
-              y: [0, -60, 0],
-              opacity: [0, 0.8, 0],
-            }}
-            transition={{
-              duration: 4 + i * 0.5,
-              repeat: Infinity,
-              delay: i * 0.4,
-            }}
+            animate={{ y: [0, -60, 0], opacity: [0, 0.8, 0] }}
+            transition={{ duration: 4 + i * 0.5, repeat: Infinity, delay: i * 0.4 }}
           />
         ))}
       </div>

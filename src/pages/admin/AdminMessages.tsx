@@ -1,24 +1,38 @@
 import { useState, useEffect } from "react";
-import { contactStore, type ContactMessage } from "@/lib/store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { Trash2, Mail, MailOpen } from "lucide-react";
+
+interface ContactMessage {
+  _id: string;
+  name: string;
+  email: string;
+  company: string;
+  subject: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
 
 const AdminMessages = () => {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [selected, setSelected] = useState<ContactMessage | null>(null);
 
-  useEffect(() => {
-    setMessages(contactStore.getAll());
-  }, []);
-
-  const markRead = (id: string) => {
-    contactStore.markRead(id);
-    setMessages(contactStore.getAll());
+  const fetchMessages = async () => {
+    const { data } = await apiRequest<ContactMessage[]>(ENDPOINTS.ADMIN_CONTACTS);
+    if (data) setMessages(data);
   };
 
-  const deleteMessage = (id: string) => {
-    contactStore.delete(id);
-    setMessages(contactStore.getAll());
-    if (selected?.id === id) setSelected(null);
+  useEffect(() => { fetchMessages(); }, []);
+
+  const markRead = async (id: string) => {
+    await apiRequest(`${ENDPOINTS.ADMIN_CONTACTS}/${id}/read`, { method: "PUT" });
+    setMessages((prev) => prev.map((m) => m._id === id ? { ...m, read: true } : m));
+  };
+
+  const deleteMessage = async (id: string) => {
+    await apiRequest(`${ENDPOINTS.ADMIN_CONTACTS}/${id}`, { method: "DELETE" });
+    fetchMessages();
+    if (selected?._id === id) setSelected(null);
   };
 
   return (
@@ -39,9 +53,9 @@ const AdminMessages = () => {
           ) : (
             messages.map((msg) => (
               <div
-                key={msg.id}
-                onClick={() => { setSelected(msg); markRead(msg.id); }}
-                className={`p-4 cursor-pointer hover:bg-muted/30 transition-colors ${selected?.id === msg.id ? "bg-muted/40" : ""}`}
+                key={msg._id}
+                onClick={() => { setSelected(msg); if (!msg.read) markRead(msg._id); }}
+                className={`p-4 cursor-pointer hover:bg-muted/30 transition-colors ${selected?._id === msg._id ? "bg-muted/40" : ""}`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -50,7 +64,7 @@ const AdminMessages = () => {
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">{new Date(msg.createdAt).toLocaleDateString()}</span>
-                    <button onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id); }} className="p-1 rounded hover:bg-destructive/10">
+                    <button onClick={(e) => { e.stopPropagation(); deleteMessage(msg._id); }} className="p-1 rounded hover:bg-destructive/10">
                       <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
                     </button>
                   </div>
@@ -66,6 +80,7 @@ const AdminMessages = () => {
           <div className="w-96 rounded-xl border border-border bg-card p-6 shrink-0 self-start">
             <h3 className="text-lg font-semibold text-foreground mb-1">{selected.subject}</h3>
             <p className="text-xs text-muted-foreground mb-4">From: {selected.name} ({selected.email})</p>
+            {selected.company && <p className="text-xs text-muted-foreground mb-4">Company: {selected.company}</p>}
             <div className="border-t border-border pt-4">
               <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{selected.message}</p>
             </div>

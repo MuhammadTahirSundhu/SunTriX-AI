@@ -1,7 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { statsStore, taskStore, contactStore, type DashboardStats, type TaskRequest, type ContactMessage } from "@/lib/store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { BarChart3, ClipboardList, MessageSquare, DollarSign, TrendingUp, Clock, CheckCircle, AlertCircle } from "lucide-react";
+
+interface DashboardStats {
+  totalTasks: number;
+  pendingTasks: number;
+  completedTasks: number;
+  totalContacts: number;
+  unreadContacts: number;
+  revenue: number;
+}
+interface TaskRequest { _id: string; name: string; service: string; company: string; status: string; createdAt: string }
+interface ContactMessage { _id: string; name: string; subject: string; message: string; read: boolean; createdAt: string }
 
 const statCards = [
   { key: "totalTasks" as const, label: "Total Tasks", icon: ClipboardList, color: "text-primary" },
@@ -12,14 +23,14 @@ const statCards = [
 ];
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState<DashboardStats>(statsStore.getStats());
+  const [stats, setStats] = useState<DashboardStats>({ totalTasks: 0, pendingTasks: 0, completedTasks: 0, totalContacts: 0, unreadContacts: 0, revenue: 0 });
   const [recentTasks, setRecentTasks] = useState<TaskRequest[]>([]);
   const [recentMessages, setRecentMessages] = useState<ContactMessage[]>([]);
 
   useEffect(() => {
-    setStats(statsStore.getStats());
-    setRecentTasks(taskStore.getAll().slice(0, 5));
-    setRecentMessages(contactStore.getAll().slice(0, 5));
+    apiRequest<DashboardStats>(ENDPOINTS.ADMIN_DASHBOARD_STATS).then(({ data }) => { if (data) setStats(data); });
+    apiRequest<{ tasks: TaskRequest[] }>(ENDPOINTS.TASK_REQUEST_LIST + "?limit=5").then(({ data }) => { if (data?.tasks) setRecentTasks(data.tasks); });
+    apiRequest<ContactMessage[]>(ENDPOINTS.ADMIN_CONTACTS + "?limit=5").then(({ data }) => { if (data) setRecentMessages(data.slice(0, 5)); });
   }, []);
 
   const statusColors: Record<string, string> = {
@@ -78,7 +89,7 @@ const AdminDashboard = () => {
               </div>
             ) : (
               recentTasks.map((task) => (
-                <div key={task.id} className="p-4 hover:bg-muted/30 transition-colors">
+                <div key={task._id} className="p-4 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-medium text-foreground">{task.name}</p>
                     <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${statusColors[task.status] || ""}`}>
@@ -110,7 +121,7 @@ const AdminDashboard = () => {
               </div>
             ) : (
               recentMessages.map((msg) => (
-                <div key={msg.id} className="p-4 hover:bg-muted/30 transition-colors">
+                <div key={msg._id} className="p-4 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-medium text-foreground flex items-center gap-2">
                       {!msg.read && <span className="h-2 w-2 rounded-full bg-primary" />}

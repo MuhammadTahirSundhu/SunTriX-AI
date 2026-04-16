@@ -3,16 +3,26 @@ import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "@/hooks/use-toast";
-import { contactStore } from "@/lib/store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 
 const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", company: "", subject: "", message: "" });
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    contactStore.create({ name: form.name, email: form.email, subject: form.subject || "Website Contact", message: form.message });
-    toast({ title: "Message sent!", description: "We'll get back to you within 24 hours." });
-    setForm({ name: "", email: "", company: "", subject: "", message: "" });
+    setLoading(true);
+    const { error } = await apiRequest(ENDPOINTS.CONTACT_SUBMIT, {
+      method: "POST",
+      body: { name: form.name, email: form.email, company: form.company, subject: form.subject || "Website Contact", message: form.message },
+    });
+    setLoading(false);
+    if (!error) {
+      toast({ title: "Message sent!", description: "We'll get back to you within 24 hours." });
+      setForm({ name: "", email: "", company: "", subject: "", message: "" });
+    } else {
+      toast({ title: "Error", description: error, variant: "destructive" });
+    }
   };
 
   return (
@@ -59,8 +69,8 @@ const Contact = () => {
                     className="w-full rounded-lg border border-border bg-surface2 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                     placeholder="Tell us about your project..." />
                 </div>
-                <button type="submit" className="gradient-bg inline-flex items-center gap-2 rounded-lg px-6 py-3.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity w-full justify-center">
-                  Send Message <Send className="h-4 w-4" />
+                <button type="submit" disabled={loading} className="gradient-bg inline-flex items-center gap-2 rounded-lg px-6 py-3.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity w-full justify-center disabled:opacity-60">
+                  {loading ? "Sending…" : <><span>Send Message</span> <Send className="h-4 w-4" /></>}
                 </button>
               </form>
             </motion.div>

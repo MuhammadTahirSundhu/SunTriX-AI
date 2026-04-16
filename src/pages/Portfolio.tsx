@@ -1,63 +1,30 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Play, Filter } from "lucide-react";
+import { ArrowRight, Filter } from "lucide-react";
 import Layout from "@/components/Layout";
 import PageTransition from "@/components/PageTransition";
-import { portfolioStore, mediaStore, type PortfolioProject } from "@/lib/cms-store";
-import { useMedia } from "@/hooks/use-media";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 
-const slugToMediaKey: Record<string, string> = {
-  "ai-document-processing": "portfolio-agents",
-  "predictive-maintenance": "portfolio-ml",
-  "quality-inspection": "portfolio-vision",
-  "analytics-saas": "portfolio-saas",
-  "multi-agent-support": "portfolio-support",
-  "video-surveillance": "portfolio-surveillance",
-};
+
+interface PortfolioProject { _id: string; title: string; slug: string; category: string; shortDescription: string; metric: string; metricLabel: string; thumbnailImage: string; coverImage: string; videoUrl: string; tools: { name: string; icon: string }[]; }
 
 const categories = ["All", "Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
 
 const Portfolio = () => {
   const [projects, setProjects] = useState<PortfolioProject[]>([]);
   const [activeCategory, setActiveCategory] = useState("All");
-  const [, setTick] = useState(0);
-
-  // Preload all portfolio media fallbacks
-  const portfolioAgents = useMedia("portfolio-agents");
-  const portfolioMl = useMedia("portfolio-ml");
-  const portfolioVision = useMedia("portfolio-vision");
-  const portfolioSaas = useMedia("portfolio-saas");
-  const portfolioSupport = useMedia("portfolio-support");
-  const portfolioSurveillance = useMedia("portfolio-surveillance");
-
-  const fallbacks: Record<string, string> = {
-    "portfolio-agents": portfolioAgents,
-    "portfolio-ml": portfolioMl,
-    "portfolio-vision": portfolioVision,
-    "portfolio-saas": portfolioSaas,
-    "portfolio-support": portfolioSupport,
-    "portfolio-surveillance": portfolioSurveillance,
-  };
 
   useEffect(() => {
-    setProjects(portfolioStore.getPublished());
-    return mediaStore.subscribe(() => setTick((t) => t + 1));
+    apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO_LIST).then(({ data }) => {
+      if (data) setProjects(data);
+    });
   }, []);
 
-  const getCover = (project: PortfolioProject) => {
-    if (project.thumbnailImage) return project.thumbnailImage;
-    if (project.coverImage) return project.coverImage;
-    const key = slugToMediaKey[project.slug];
-    if (key) {
-      const url = mediaStore.get(key);
-      if (url) return url;
-      return fallbacks[key] || "";
-    }
-    return "";
-  };
+  const getCover = (project: PortfolioProject) => project.thumbnailImage || project.coverImage || "";
 
   const filtered = activeCategory === "All" ? projects : projects.filter((p) => p.category === activeCategory);
+
 
   return (
     <Layout>
@@ -97,7 +64,7 @@ const Portfolio = () => {
                   const cover = getCover(project);
                   return (
                     <motion.div
-                      key={project.id}
+                      key={project._id}
                       layout
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}

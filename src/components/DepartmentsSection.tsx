@@ -2,50 +2,21 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { departmentStore, mediaStore, type Department } from "@/lib/cms-store";
-import { useMedia } from "@/hooks/use-media";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 
-const defaultImageKeys: Record<string, string> = {
-  "SunTriX Agents": "dept-agents",
-  "SunTriX Intelligence": "dept-intelligence",
-  "SunTriX Vision": "dept-vision",
-  "SunTriX Platform": "dept-platform",
-};
+interface Department { _id: string; name: string; subtitle: string; description: string; image: string; href: string; }
 
 const DepartmentsSection = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [, setTick] = useState(0);
 
-  // Subscribe to media changes
   useEffect(() => {
-    setDepartments(departmentStore.getEnabled());
-    return mediaStore.subscribe(() => setTick((t) => t + 1));
+    apiRequest<Department[]>(ENDPOINTS.DEPARTMENTS_LIST).then(({ data }) => {
+      if (data) setDepartments(data);
+    });
   }, []);
 
-  const getImage = (dept: Department) => {
-    // First check if department has its own image set
-    if (dept.image) return dept.image;
-    // Then check media registry
-    const key = defaultImageKeys[dept.name];
-    if (key) {
-      const url = mediaStore.get(key);
-      if (url) return url;
-    }
-    return "";
-  };
+  const getImage = (dept: Department) => dept.image || "";
 
-  // Fallback imports
-  const deptAgents = useMedia("dept-agents");
-  const deptIntelligence = useMedia("dept-intelligence");
-  const deptVision = useMedia("dept-vision");
-  const deptPlatform = useMedia("dept-platform");
-
-  const fallbacks: Record<string, string> = {
-    "SunTriX Agents": deptAgents,
-    "SunTriX Intelligence": deptIntelligence,
-    "SunTriX Vision": deptVision,
-    "SunTriX Platform": deptPlatform,
-  };
 
   return (
     <section className="py-24 lg:py-32 relative">
@@ -68,10 +39,10 @@ const DepartmentsSection = () => {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {departments.map((dept, i) => {
-            const imgSrc = getImage(dept) || fallbacks[dept.name] || deptAgents;
+            const imgSrc = getImage(dept);
             return (
               <motion.div
-                key={dept.id}
+                key={dept._id}
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}

@@ -1,9 +1,26 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { taskStore, type TaskRequest } from "@/lib/store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { Search, Filter, Trash2, Eye, ChevronDown } from "lucide-react";
 
-const statusOptions: TaskRequest["status"][] = ["new", "in_review", "proposal_sent", "in_progress", "completed", "cancelled"];
+type TaskStatus = "new" | "in_review" | "proposal_sent" | "in_progress" | "completed" | "cancelled";
+
+interface TaskRequest {
+  _id: string;
+  id?: string;
+  name: string;
+  email: string;
+  company: string;
+  service: string;
+  budget: string;
+  timeline: string;
+  description: string;
+  priority: string;
+  status: TaskStatus;
+  createdAt: string;
+}
+
+const statusOptions: TaskStatus[] = ["new", "in_review", "proposal_sent", "in_progress", "completed", "cancelled"];
 
 const statusColors: Record<string, string> = {
   new: "bg-primary/10 text-primary",
@@ -20,26 +37,29 @@ const AdminTasks = () => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedTask, setSelectedTask] = useState<TaskRequest | null>(null);
 
-  useEffect(() => {
-    setTasks(taskStore.getAll());
-  }, []);
+  const fetchTasks = async () => {
+    const { data } = await apiRequest<{ tasks: TaskRequest[] }>(ENDPOINTS.TASK_REQUEST_LIST);
+    if (data?.tasks) setTasks(data.tasks);
+  };
+
+  useEffect(() => { fetchTasks(); }, []);
 
   const filteredTasks = tasks.filter((t) => {
-    const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.email.toLowerCase().includes(search.toLowerCase()) || t.company.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.email.toLowerCase().includes(search.toLowerCase()) || (t.company || "").toLowerCase().includes(search.toLowerCase());
     const matchesStatus = filterStatus === "all" || t.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
-  const updateStatus = (id: string, status: TaskRequest["status"]) => {
-    taskStore.update(id, { status });
-    setTasks(taskStore.getAll());
-    if (selectedTask?.id === id) setSelectedTask({ ...selectedTask, status });
+  const updateStatus = async (id: string, status: TaskStatus) => {
+    await apiRequest(ENDPOINTS.TASK_REQUEST_UPDATE(id), { method: "PUT", body: { status } });
+    fetchTasks();
+    if (selectedTask && (selectedTask._id === id)) setSelectedTask({ ...selectedTask, status });
   };
 
-  const deleteTask = (id: string) => {
-    taskStore.delete(id);
-    setTasks(taskStore.getAll());
-    if (selectedTask?.id === id) setSelectedTask(null);
+  const deleteTask = async (id: string) => {
+    await apiRequest(ENDPOINTS.TASK_REQUEST_BY_ID(id), { method: "DELETE" });
+    fetchTasks();
+    if (selectedTask && selectedTask._id === id) setSelectedTask(null);
   };
 
   return (
@@ -95,7 +115,7 @@ const AdminTasks = () => {
                   </tr>
                 ) : (
                   filteredTasks.map((task) => (
-                    <tr key={task.id} className="hover:bg-muted/20 transition-colors">
+                    <tr key={task._id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
                         <p className="font-medium text-foreground">{task.name}</p>
                         <p className="text-xs text-muted-foreground">{task.email}</p>
@@ -104,7 +124,7 @@ const AdminTasks = () => {
                       <td className="px-4 py-3">
                         <select
                           value={task.status}
-                          onChange={(e) => updateStatus(task.id, e.target.value as TaskRequest["status"])}
+                          onChange={(e) => updateStatus(task._id, e.target.value as TaskStatus)}
                           className={`text-xs rounded-full px-2 py-1 border-0 ${statusColors[task.status]} cursor-pointer`}
                         >
                           {statusOptions.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
@@ -116,7 +136,7 @@ const AdminTasks = () => {
                           <button onClick={() => setSelectedTask(task)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
                             <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                           </button>
-                          <button onClick={() => deleteTask(task.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
+                          <button onClick={() => deleteTask(task._id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
                             <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                           </button>
                         </div>
@@ -134,7 +154,7 @@ const AdminTasks = () => {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="w-80 rounded-xl border border-border bg-card p-5 shrink-0 self-start">
             <h3 className="text-sm font-semibold text-foreground mb-4">Task Details</h3>
             <div className="space-y-3 text-sm">
-              {Object.entries({ Name: selectedTask.name, Email: selectedTask.email, Company: selectedTask.company, Service: selectedTask.service, Budget: selectedTask.budget, Timeline: selectedTask.timeline }).map(([k, v]) => (
+              {Object.entries({ Name: selectedTask.name, Email: selectedTask.email, Company: selectedTask.company, Service: selectedTask.service, Budget: selectedTask.budget, Timeline: selectedTask.timeline, Priority: selectedTask.priority }).map(([k, v]) => (
                 <div key={k}>
                   <p className="text-xs text-muted-foreground">{k}</p>
                   <p className="text-foreground">{v || "—"}</p>
