@@ -19,11 +19,11 @@ const Index = () => {
         <SocialProofBar />
         <DepartmentsSection />
         <AgencyIntroVideo />
-        <VideoDemoSection />
         <HowWeWorkSection />
         <TechStackSection />
         <TestimonialsSection />
         <SocialBranding />
+        <VideoDemoSection />
         <CTASection />
       </PageTransition>
     </Layout>

@@ -34,6 +34,7 @@ import AdminPortfolio from "./pages/admin/AdminPortfolio";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminDepartments from "./pages/admin/AdminDepartments";
 import AdminMedia from "./pages/admin/AdminMedia";
+import { DynamicFavicon } from "@/components/DynamicFavicon";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,7 @@ const App = () => (
     <I18nProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
+          <DynamicFavicon />
           <Toaster />
           <Sonner />
           <BrowserRouter>

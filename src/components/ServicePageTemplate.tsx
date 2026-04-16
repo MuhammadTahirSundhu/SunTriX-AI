@@ -20,8 +20,11 @@ interface ServicePageProps {
   caseStudy: { title: string; metric: string; desc: string };
 }
 
+interface Department { _id: string; name: string; image: string; enabled: boolean; }
+
 const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, category, useCases, process, techStack, caseStudy }: ServicePageProps) => {
   const [relatedProjects, setRelatedProjects] = useState<PortfolioProject[]>([]);
+  const [deptInfo, setDeptInfo] = useState<Department | null>(null);
 
   useEffect(() => {
     apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO).then(({ data }) => {
@@ -29,25 +32,64 @@ const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, categor
         setRelatedProjects(data.filter((p) => p.status === "Published" && p.category === category).slice(0, 3));
       }
     });
+
+    apiRequest<Department[]>(ENDPOINTS.DEPARTMENTS_LIST).then(({ data }) => {
+      if (data) {
+        const found = data.find(d => d.name === category || d.name.includes(category));
+        if (found) setDeptInfo(found);
+      }
+    });
   }, [category]);
 
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative pt-32 pb-20 bg-grid-pattern">
-        <div className="absolute top-1/4 -left-32 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
+      <section className="relative pt-32 pb-20 bg-grid-pattern overflow-hidden">
+        <div className="absolute top-1/4 -right-32 h-96 w-96 rounded-full bg-primary/10 blur-[100px] opacity-50" />
+        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-secondary/5 blur-[80px]" />
+        
         <div className="container mx-auto px-4 lg:px-8 relative z-10">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl">
-            <div className="inline-flex rounded-lg gradient-bg p-3 mb-6">
-              <Icon className="h-8 w-8 text-primary-foreground" />
-            </div>
-            <h1 className="text-4xl lg:text-5xl font-extrabold mb-4">{title}</h1>
-            <p className="text-xl text-muted-foreground mb-6">{subtitle}</p>
-            <p className="text-muted-foreground leading-relaxed mb-8">{description}</p>
-            <Link to="/request-task" className="gradient-bg inline-flex items-center gap-2 rounded-lg px-6 py-3.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
-              Request a Custom Task <ArrowRight className="h-4 w-4" />
-            </Link>
-          </motion.div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }} className="max-w-xl">
+              <div className="inline-flex rounded-xl gradient-bg p-3 mb-6 shadow-lg shadow-primary/20">
+                <Icon className="h-8 w-8 text-primary-foreground" />
+              </div>
+              <span className="block text-xs font-mono text-primary uppercase tracking-widest mb-4">{category} Solutions</span>
+              <h1 className="text-4xl lg:text-6xl font-display font-black text-foreground mb-6 leading-tight whitespace-pre-line">{title}</h1>
+              <p className="text-xl text-muted-foreground/80 mb-6 font-medium leading-relaxed">{subtitle}</p>
+              <p className="text-base text-muted-foreground leading-relaxed mb-10 border-l-2 border-primary/20 pl-6 italic">{description}</p>
+              <Link to="/request-task" className="gradient-bg inline-flex items-center gap-2 rounded-xl px-8 py-4 text-sm font-bold text-primary-foreground hover:opacity-90 transition-all shadow-xl shadow-primary/20 active:scale-95">
+                Request a Custom Task <ArrowRight className="h-4 w-4" />
+              </Link>
+            </motion.div>
+
+            {deptInfo?.image && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, x: 30 }} 
+                animate={{ opacity: 1, scale: 1, x: 0 }} 
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="relative group lg:block hidden"
+              >
+                <div className="absolute -inset-4 bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-[2.5rem] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700" />
+                <div className="relative rounded-3xl border border-white/10 overflow-hidden bg-card/50 backdrop-blur-sm shadow-[0_20px_50px_rgba(0,0,0,0.5)] rotate-2 group-hover:rotate-0 transition-all duration-700">
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent z-10" />
+                  <img src={deptInfo.image} alt={title} className="w-full h-auto object-cover aspect-[4/3]" />
+                </div>
+                {/* Micro-interaction element */}
+                <div className="absolute -bottom-6 -left-6 bg-card border border-border p-4 rounded-xl shadow-2xl z-20 animate-bounce-subtle">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg gradient-bg flex items-center justify-center">
+                      <Icon className="h-5 w-5 text-primary-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Certified</p>
+                      <p className="text-xs font-bold text-foreground">AI Engineering</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
       </section>
 

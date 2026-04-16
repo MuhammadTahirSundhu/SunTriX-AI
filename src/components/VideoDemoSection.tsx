@@ -1,40 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, X } from "lucide-react";
-import videoDemoThumb from "@/assets/video-demo-thumb.png";
+import { Play, X, Video } from "lucide-react";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 
-const demos = [
-  {
-    id: "1",
-    title: "Agentic AI Workflow",
-    description: "Watch autonomous agents handle document processing end-to-end",
-    thumbnail: videoDemoThumb,
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    duration: "3:24",
-    category: "Agents",
-  },
-  {
-    id: "2",
-    title: "Computer Vision Pipeline",
-    description: "Real-time object detection and quality inspection in action",
-    thumbnail: videoDemoThumb,
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    duration: "2:48",
-    category: "Vision",
-  },
-  {
-    id: "3",
-    title: "SaaS Platform Demo",
-    description: "Multi-tenant analytics dashboard with embedded ML models",
-    thumbnail: videoDemoThumb,
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    duration: "4:12",
-    category: "Platform",
-  },
-];
+interface DemoVideo {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  videoUrl: string;
+  duration: string;
+  category: string;
+}
 
 const VideoDemoSection = () => {
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
+  const [demos, setDemos] = useState<DemoVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiRequest<any[]>(ENDPOINTS.PORTFOLIO).then(({ data }) => {
+      if (data) {
+        const filtered = data
+          .filter(p => p.status === "published" && p.featured && p.videoUrl)
+          .map(p => ({
+            id: p._id,
+            title: p.title,
+            description: p.shortDescription || p.description,
+            thumbnail: p.thumbnailImage || p.coverImage || "/placeholder.svg",
+            videoUrl: p.videoUrl,
+            duration: p.metric || "3:00", // Fallback duration if metric used for it
+            category: p.category
+          }));
+        setDemos(filtered);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  if (!loading && demos.length === 0) return null;
 
   return (
     <section className="py-24 lg:py-32 relative">
@@ -46,9 +50,9 @@ const VideoDemoSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <span className="inline-block text-xs font-mono text-secondary uppercase tracking-widest mb-4">See It In Action</span>
+          <span className="inline-block text-xs font-mono text-secondary uppercase tracking-widest mb-4">Video Demos</span>
           <h2 className="text-3xl lg:text-5xl font-display font-extrabold mb-4">
-            Video <span className="gradient-text">Demos</span>
+            See It In <span className="gradient-text">Action</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Watch how our AI solutions work in real-world production environments.

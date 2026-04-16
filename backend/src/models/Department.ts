@@ -6,6 +6,7 @@ export interface IDepartment extends Document {
   description: string;
   image: string;
   href: string;
+  capabilities: string[];
   order: number;
   enabled: boolean;
   updatedAt: Date;
@@ -18,6 +19,7 @@ const DepartmentSchema = new Schema<IDepartment>(
     description: { type: String, default: "" },
     image: { type: String, default: "" },
     href: { type: String, default: "" },
+    capabilities: [{ type: String }],
     order: { type: Number, default: 0 },
     enabled: { type: Boolean, default: true },
   },

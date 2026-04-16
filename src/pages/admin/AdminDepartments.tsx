@@ -11,6 +11,7 @@ interface Department {
   description: string;
   image: string;
   href: string;
+  capabilities: string[];
   order: number;
   enabled: boolean;
 }
@@ -19,7 +20,7 @@ type EditState = Omit<Department, "_id"> & { _id?: string };
 
 const EMPTY_DEPT: EditState = {
   name: "", subtitle: "", description: "", image: "",
-  href: "/services/agentic-ai", order: 1, enabled: true,
+  href: "/services/agentic-ai", capabilities: [], order: 1, enabled: true,
 };
 
 const AdminDepartments = () => {
@@ -170,6 +171,16 @@ const AdminDepartments = () => {
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Image URL</label>
                   <input value={editing.image} onChange={(e) => setEditing({ ...editing, image: e.target.value })} placeholder="Cloudinary URL" className={inp} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Capabilities (one per line)</label>
+                  <textarea 
+                    value={editing.capabilities?.join("\n")} 
+                    onChange={(e) => setEditing({ ...editing, capabilities: e.target.value.split("\n").filter(v => v.trim()) })} 
+                    rows={4} 
+                    className={inp + " resize-none"}
+                    placeholder="e.g. Workflow Automation&#10;Agentic AI"
+                  />
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
