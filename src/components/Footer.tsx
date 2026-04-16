@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { newsletterStore } from "@/lib/store";
-import { companyStore } from "@/lib/cms-store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useMedia } from "@/hooks/use-media";
@@ -13,21 +13,41 @@ const PLATFORM_ICONS: Record<string, string> = {
 };
 
 const Footer = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [interest, setInterest] = useState("General News");
   const { t } = useI18n();
   const suntrixLogo = useMedia("suntrix-logo");
-  const company = companyStore.get();
-  const activeLinks = company.socialLinks.filter((l) => l.enabled && l.url && l.url !== "#");
+  const [socialLinks, setSocialLinks] = useState<{platform: string, url: string, enabled: boolean}[]>([]);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  useEffect(() => {
+    apiRequest<{links: {platform: string, url: string, enabled: boolean}[]}>(ENDPOINTS.CMS_SOCIAL_LINKS).then(({ data }) => {
+      if (data && data.links) setSocialLinks(data.links);
+    });
+  }, []);
+
+  const activeLinks = socialLinks.filter((l) => l.enabled && l.url && l.url !== "#");
+
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    const success = newsletterStore.subscribe(email);
-    if (success) {
-      toast({ title: "Subscribed!", description: "You'll receive our AI insights newsletter." });
-      setEmail("");
-    } else {
-      toast({ title: "Already subscribed", description: "This email is already on our list." });
+    if (!name || !email || !interest) return;
+    
+    try {
+      const res = await apiRequest(ENDPOINTS.NEWSLETTER_SUBSCRIBE, {
+        method: "POST",
+        body: { name, email, interest }
+      });
+      
+      if (res.error) {
+        toast({ title: "Already subscribed", description: "This email is already on our list." });
+      } else {
+        toast({ title: "Subscribed!", description: "You've successfully joined our newsletter." });
+        setEmail("");
+        setName("");
+        setInterest("General News");
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to connect to the server.", variant: "destructive" });
     }
   };
 
@@ -45,13 +65,27 @@ const Footer = () => {
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t("footer.tagline")}
             </p>
-            <form onSubmit={handleSubscribe} className="flex gap-2 mt-4">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("footer.subscribe")}
-                className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary" />
-              <button type="submit" className="gradient-bg rounded-lg px-3 py-2 text-primary-foreground hover:opacity-90 transition-opacity">
-                <ArrowRight className="h-4 w-4" />
-              </button>
+            <form onSubmit={handleSubscribe} className="flex flex-col gap-3 mt-6 bg-muted/20 p-5 rounded-xl border border-border">
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                placeholder="Full Name" required
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary" />
+              
+              <select value={interest} onChange={(e) => setInterest(e.target.value)} required
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                <option value="General News">General News</option>
+                <option value="Call to Action">Call to Action</option>
+                <option value="Platform Updates">Platform Updates</option>
+                <option value="All">All Topics</option>
+              </select>
+
+              <div className="flex gap-2">
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email Address" required
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary" />
+                <button type="submit" className="gradient-bg rounded-lg px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity whitespace-nowrap">
+                  Subscribe
+                </button>
+              </div>
             </form>
           </div>
 
@@ -66,17 +100,17 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-foreground mb-4">{t("footer.company")}</h4>
+            <h4 className="text-sm font-bold text-foreground mb-4">Company</h4>
             <ul className="space-y-2">
               <li><Link to="/about" className="text-sm text-muted-foreground hover:text-primary transition-colors">{t("nav.about")}</Link></li>
-              <li><Link to="/work" className="text-sm text-muted-foreground hover:text-primary transition-colors">{t("nav.work")}</Link></li>
+              <li><Link to="/work" className="text-sm text-muted-foreground hover:text-primary transition-colors">{t("nav.portfolio")}</Link></li>
               <li><Link to="/how-we-work" className="text-sm text-muted-foreground hover:text-primary transition-colors">{t("nav.howWeWork")}</Link></li>
               <li><Link to="/contact" className="text-sm text-muted-foreground hover:text-primary transition-colors">{t("nav.contact")}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-foreground mb-4">{t("footer.legal")}</h4>
+            <h4 className="text-sm font-bold text-foreground mb-4">Legal</h4>
             <ul className="space-y-2">
               <li><Link to="/legal" className="text-sm text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link></li>
               <li><Link to="/legal" className="text-sm text-muted-foreground hover:text-primary transition-colors">Terms of Service</Link></li>

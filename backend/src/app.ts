@@ -61,6 +61,7 @@ const formLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20,
   message: { error: "Too many submissions, please try again later." },
+  skip: (req) => req.method !== "POST",
 });
 
 const chatLimiter = rateLimit({

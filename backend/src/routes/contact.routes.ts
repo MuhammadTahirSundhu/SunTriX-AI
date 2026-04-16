@@ -58,6 +58,27 @@ router.put("/:id/read", requireAuth, async (req: Request, res: Response, next: N
   }
 });
 
+// POST /contact/reply — admin
+router.post("/reply", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { toEmail, subject, body, messageId } = req.body;
+    if (!toEmail || !subject || !body) {
+      return next(createError("Email, subject, and body are required", 400));
+    }
+
+    const { sendDirectReply } = await import("../services/email");
+    await sendDirectReply(toEmail, subject, body);
+
+    if (messageId) {
+      await ContactMessage.findByIdAndUpdate(messageId, { read: true });
+    }
+
+    res.json({ message: "Reply sent successfully" });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // DELETE /contact/:id — admin
 router.delete("/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {

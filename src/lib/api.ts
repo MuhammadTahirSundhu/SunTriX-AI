@@ -82,6 +82,7 @@ export const ENDPOINTS = {
 
   // Contact & Requests
   CONTACT_SUBMIT: `${BASE_URL}/contact`,
+  CONTACT_REPLY: `${BASE_URL}/contact/reply`,
   TASK_REQUEST_SUBMIT: `${BASE_URL}/task-requests`,
   TASK_REQUEST_LIST: `${BASE_URL}/task-requests`,
   TASK_REQUEST_BY_ID: (id: string) => `${BASE_URL}/task-requests/${id}`,
@@ -115,6 +116,8 @@ export const ENDPOINTS = {
   // Newsletter
   NEWSLETTER_SUBSCRIBE: `${BASE_URL}/newsletter`,
   NEWSLETTER_LIST: `${BASE_URL}/newsletter`,
+  NEWSLETTER_BROADCAST: `${BASE_URL}/newsletter/broadcast`,
+  NEWSLETTER_GENERATE: `${BASE_URL}/newsletter/generate-template`,
 
   // CMS Content
   CMS_ANNOUNCEMENT: `${BASE_URL}/cms/announcement`,

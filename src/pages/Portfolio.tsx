@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Filter } from "lucide-react";
+import { ArrowRight, Filter, Play } from "lucide-react";
 import Layout from "@/components/Layout";
 import PageTransition from "@/components/PageTransition";
 import { apiRequest, ENDPOINTS } from "@/lib/api";

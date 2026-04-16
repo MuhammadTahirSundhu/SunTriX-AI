@@ -3,7 +3,10 @@ import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle, Play } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Layout from "@/components/Layout";
-import { portfolioStore, type PortfolioProject } from "@/lib/cms-store";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
+import { useState, useEffect } from "react";
+
+interface PortfolioProject { _id: string; title: string; slug: string; category: string; shortDescription: string; metric: string; metricLabel: string; thumbnailImage: string; coverImage: string; videoUrl: string; tools: { name: string; icon: string }[]; status: string; }
 
 interface ServicePageProps {
   icon: LucideIcon;
@@ -18,7 +21,15 @@ interface ServicePageProps {
 }
 
 const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, category, useCases, process, techStack, caseStudy }: ServicePageProps) => {
-  const relatedProjects = portfolioStore.getPublished().filter((p) => p.category === category).slice(0, 3);
+  const [relatedProjects, setRelatedProjects] = useState<PortfolioProject[]>([]);
+
+  useEffect(() => {
+    apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO).then(({ data }) => {
+      if (data) {
+        setRelatedProjects(data.filter((p) => p.status === "Published" && p.category === category).slice(0, 3));
+      }
+    });
+  }, [category]);
 
   return (
     <Layout>
@@ -93,7 +104,7 @@ const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, categor
             <div className="grid md:grid-cols-3 gap-6">
               {relatedProjects.map((project, i) => (
                 <motion.div
-                  key={project.id}
+                  key={project._id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}

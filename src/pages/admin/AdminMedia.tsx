@@ -49,7 +49,7 @@ const AdminMedia = () => {
       const formData = new FormData();
       formData.append("file", file);
       const endpoint = type === "image" ? ENDPOINTS.UPLOAD_IMAGE : ENDPOINTS.UPLOAD_VIDEO;
-      const token = localStorage.getItem("suntrix_token");
+      const token = localStorage.getItem("auth_token");
       try {
         const res = await fetch(endpoint, {
           method: "POST",

@@ -1,6 +1,17 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { companyStore, type SocialLink } from "@/lib/cms-store";
 import { ExternalLink } from "lucide-react";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
+
+interface SocialLink {
+  platform: string;
+  url: string;
+  enabled: boolean;
+}
+
+interface SocialLinksResponse {
+  links: SocialLink[];
+}
 
 const PLATFORM_ICONS: Record<string, string> = {
   LinkedIn: "💼",
@@ -23,8 +34,15 @@ const PLATFORM_COLORS: Record<string, string> = {
 };
 
 const SocialBranding = () => {
-  const company = companyStore.get();
-  const activeLinks = company.socialLinks.filter((l) => l.enabled && l.url && l.url !== "#");
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+
+  useEffect(() => {
+    apiRequest<SocialLinksResponse>(ENDPOINTS.CMS_SOCIAL_LINKS).then(({ data }) => {
+      if (data && data.links) setSocialLinks(data.links);
+    });
+  }, []);
+
+  const activeLinks = socialLinks.filter((l) => l.enabled && l.url && l.url !== "#");
 
   if (activeLinks.length === 0) return null;
 

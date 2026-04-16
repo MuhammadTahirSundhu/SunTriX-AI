@@ -53,7 +53,7 @@ const Navbar = () => {
                   ))}
                   <div className="border-t border-border mt-2 pt-2">
                     <Link to="/services" className="flex items-center gap-2 rounded-lg p-3 text-sm text-primary hover:bg-primary/5 transition-colors font-semibold">
-                      {t("nav.allServices")} <ArrowRight className="h-3 w-3" />
+                      {t("nav.services")} — All <ArrowRight className="h-3 w-3" />
                     </Link>
                   </div>
                 </motion.div>
@@ -61,7 +61,7 @@ const Navbar = () => {
             </AnimatePresence>
           </div>
 
-          <Link to="/work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.work")}</Link>
+          <Link to="/work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.portfolio")}</Link>
           <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.about")}</Link>
           <Link to="/how-we-work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.howWeWork")}</Link>
           <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.contact")}</Link>
@@ -71,7 +71,7 @@ const Navbar = () => {
           <LanguageSwitcher />
           <ThemeToggle />
           <Link to="/request-task" className="gradient-bg rounded-lg px-5 py-2 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity">
-            {t("nav.cta")}
+            {t("nav.requestTask")}
           </Link>
         </div>
 
@@ -92,7 +92,7 @@ const Navbar = () => {
               {[
                 { to: "/", label: t("nav.home") },
                 { to: "/services", label: t("nav.services") },
-                { to: "/work", label: t("nav.work") },
+                { to: "/work", label: t("nav.portfolio") },
                 { to: "/about", label: t("nav.about") },
                 { to: "/how-we-work", label: t("nav.howWeWork") },
                 { to: "/contact", label: t("nav.contact") },
@@ -105,7 +105,7 @@ const Navbar = () => {
                 <ThemeToggle />
               </div>
               <Link to="/request-task" onClick={() => setMobileOpen(false)}
-                className="block gradient-bg rounded-lg px-4 py-3 text-sm font-bold text-primary-foreground text-center mt-2">{t("nav.cta")}</Link>
+                className="block gradient-bg rounded-lg px-4 py-3 text-sm font-bold text-primary-foreground text-center mt-2">{t("nav.requestTask")}</Link>
             </div>
           </motion.div>
         )}

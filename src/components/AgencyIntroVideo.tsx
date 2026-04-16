@@ -1,15 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause } from "lucide-react";
-import { companyStore } from "@/lib/cms-store";
+import { Play } from "lucide-react";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { useMedia } from "@/hooks/use-media";
 
+interface CompanyInfo {
+  introVideoUrl: string;
+  introVideoEnabled: boolean;
+}
+
 const AgencyIntroVideo = () => {
-  const company = companyStore.get();
+  const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [playing, setPlaying] = useState(false);
   const videoThumb = useMedia("agency-intro-video");
 
-  if (!company.introVideoEnabled || !company.introVideoUrl) return null;
+  useEffect(() => {
+    apiRequest<CompanyInfo>(ENDPOINTS.CMS_COMPANY).then(({ data }) => {
+      if (data) setCompany(data);
+    });
+  }, []);
+
+  if (!company || !company.introVideoEnabled || !company.introVideoUrl) return null;
 
   const isYouTube = company.introVideoUrl.includes("youtube") || company.introVideoUrl.includes("youtu.be");
 

@@ -14,7 +14,7 @@ const RequestTask = () => {
     name: "", email: "", phone: "", company: "", role: "",
     projectTitle: "", projectType: "", description: "", startDate: "", duration: "", budget: "", priority: "Medium",
     techStack: "", existingCode: "No", codeDetails: "", integrations: "",
-    notes: "", consent: false,
+    notes: "", consent: false, projectLink: "",
   });
 
   const updateField = (field: string, value: string | boolean) => setForm({ ...form, [field]: value });
@@ -39,7 +39,7 @@ const RequestTask = () => {
         existingCode: form.existingCode,
         codeDetails: form.codeDetails,
         integrations: form.integrations,
-        notes: form.notes,
+        notes: form.projectLink ? `${form.notes}\n\nProject Link: ${form.projectLink}` : form.notes,
       },
     });
     setSubmitting(false);
@@ -167,10 +167,10 @@ const RequestTask = () => {
                           <div><label className={labelClass}>Codebase Details</label><textarea rows={3} value={form.codeDetails} onChange={(e) => updateField("codeDetails", e.target.value)} className={`${inputClass} resize-none`} placeholder="Describe your current tech stack and codebase..." /></div>
                         )}
                         <div><label className={labelClass}>Integration Needs</label><textarea rows={3} value={form.integrations} onChange={(e) => updateField("integrations", e.target.value)} className={`${inputClass} resize-none`} placeholder="APIs, databases, third-party services..." /></div>
-                        <div className="rounded-lg border border-dashed border-border bg-muted/50 p-8 text-center">
-                          <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                          <p className="text-sm text-muted-foreground">Drag & drop files or click to upload</p>
-                          <p className="text-xs text-muted-foreground/60 mt-1">PDF, DOCX, PNG, XLSX — max 25MB</p>
+                        <div>
+                          <label className={labelClass}>Project Files / Assets Link (Optional)</label>
+                          <input type="text" value={form.projectLink} onChange={(e) => updateField("projectLink", e.target.value)} className={inputClass} placeholder="Google Drive, Figma, Dropbox, or GitHub link..." />
+                          <p className="text-xs text-muted-foreground mt-1">Please ensure link sharing permissions are set to 'Anyone with the link'.</p>
                         </div>
                       </>
                     )}

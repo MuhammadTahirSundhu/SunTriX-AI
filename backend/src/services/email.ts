@@ -12,7 +12,7 @@ export async function sendContactNotification(data: {
   message: string;
 }): Promise<void> {
   try {
-    await resend.emails.send({
+    const { data: resData, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [ADMIN_EMAIL],
       subject: `[SunTriX] New Contact: ${data.subject}`,
@@ -33,8 +33,9 @@ export async function sendContactNotification(data: {
         </div>
       `,
     });
-  } catch (err) {
-    console.error("Failed to send contact notification email:", err);
+    if (error) console.error("Resend Notification Error (Contact):", error.message);
+  } catch (err: any) {
+    console.error("Failed to send contact notification email:", err.message || err);
     // Non-fatal — don't throw
   }
 }
@@ -50,7 +51,7 @@ export async function sendTaskNotification(data: {
   description: string;
 }): Promise<void> {
   try {
-    await resend.emails.send({
+    const { data: resData, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [ADMIN_EMAIL],
       subject: `[SunTriX] New Task Request: ${data.projectTitle || data.service}`,
@@ -74,7 +75,51 @@ export async function sendTaskNotification(data: {
         </div>
       `,
     });
-  } catch (err) {
-    console.error("Failed to send task notification email:", err);
+    if (error) console.error("Resend Notification Error (Task):", error.message);
+  } catch (err: any) {
+    console.error("Failed to send task notification email:", err.message || err);
+  }
+}
+export async function sendNewsletterBroadcast(subject: string, htmlBody: string, recipients: string[]): Promise<void> {
+  if (!recipients.length) return;
+  const emails = recipients.map(email => ({
+    from: FROM_EMAIL,
+    to: [email],
+    subject: subject,
+    html: htmlBody,
+  }));
+  
+  try {
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      const batch = emails.slice(i, i + BATCH_SIZE);
+      const { data, error } = await resend.batch.send(batch);
+      if (error) {
+        console.error("Resend Batch Error:", error);
+        throw new Error(error.message);
+      }
+    }
+  } catch (err: any) {
+    console.error("Broadcast failed:", err);
+    throw new Error(err.message || "Failed to broadcast");
+  }
+}
+
+export async function sendDirectReply(toEmail: string, subject: string, htmlBody: string): Promise<void> {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [toEmail],
+      subject: subject,
+      html: htmlBody,
+    });
+    
+    if (error) {
+      console.error("Resend Direct Reply Error:", error);
+      throw new Error(error.message);
+    }
+  } catch (err: any) {
+    console.error("Failed to send direct reply:", err);
+    throw new Error(err.message || "Failed to send reply");
   }
 }
