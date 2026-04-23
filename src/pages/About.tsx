@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Target, Lightbulb, Users, Globe, Award, Shield } from "lucide-react";
@@ -5,6 +6,7 @@ import Layout from "@/components/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useMedia } from "@/hooks/use-media";
 import { useSEO } from "@/hooks/useSEO";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 
 const values = [
   { icon: Target, title: "Outcome-Driven", desc: "Every project is measured by business impact, not just technical delivery." },
@@ -15,16 +17,19 @@ const values = [
   { icon: Shield, title: "Trust & Security", desc: "SOC 2 compliant practices, encrypted communications, and NDA-first engagements." },
 ];
 
-const team = [
-  { name: "Alex Chen", role: "CEO & Co-Founder", area: "AI Strategy & Business" },
-  { name: "Sarah Mitchell", role: "CTO", area: "ML Architecture & Engineering" },
-  { name: "David Park", role: "Head of AI", area: "NLP & Agentic Systems" },
-  { name: "Priya Sharma", role: "Head of CV", area: "Computer Vision & Edge AI" },
-  { name: "Marcus Johnson", role: "VP Engineering", area: "Platform & Infrastructure" },
-  { name: "Elena Rodriguez", role: "Head of Design", area: "UX & Product Design" },
-];
-
 const About = () => {
+  const [team, setTeam] = useState<any[]>([]);
+  const [loadingTeam, setLoadingTeam] = useState(true);
+
+  useEffect(() => {
+    const fetchTeam = async () => {
+      const { data } = await apiRequest<any[]>(ENDPOINTS.TEAM_LIST);
+      if (data) setTeam(data);
+      setLoadingTeam(false);
+    };
+    fetchTeam();
+  }, []);
+
   useSEO({
     title: "About Us — SunTriX AI Solutions",
     description: "SunTriX is an AI-first technology partner helping enterprises design, build, and scale intelligent systems.",
@@ -128,19 +133,27 @@ const About = () => {
           <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <h2 className="text-3xl font-extrabold text-foreground mb-4">Leadership <span className="gradient-text">Team</span></h2>
           </motion.div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {team.map((member, i) => (
-              <motion.div key={member.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="rounded-xl border border-border bg-card p-6 text-center">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 mx-auto mb-4 flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary">{member.name.split(" ").map((n) => n[0]).join("")}</span>
-                </div>
-                <h3 className="text-base font-bold text-foreground">{member.name}</h3>
-                <p className="text-sm text-primary">{member.role}</p>
-                <p className="text-xs text-muted-foreground mt-1">{member.area}</p>
-              </motion.div>
-            ))}
-          </div>
+          {loadingTeam ? (
+            <div className="flex justify-center"><div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div></div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {team.map((member, i) => (
+                <motion.div key={member._id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                  className="rounded-xl border border-border bg-card p-6 text-center">
+                  {member.imageUrl ? (
+                    <img src={member.imageUrl} alt={member.name} className="h-16 w-16 rounded-full object-cover mx-auto mb-4 border-2 border-primary/20" />
+                  ) : (
+                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 mx-auto mb-4 flex items-center justify-center">
+                      <span className="text-lg font-bold text-primary">{member.name.split(" ").map((n: string) => n[0]).join("")}</span>
+                    </div>
+                  )}
+                  <h3 className="text-base font-bold text-foreground">{member.name}</h3>
+                  <p className="text-sm text-primary">{member.role}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{member.department}</p>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

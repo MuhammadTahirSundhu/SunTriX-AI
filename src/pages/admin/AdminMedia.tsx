@@ -46,8 +46,15 @@ const AdminMedia = () => {
 
   const fetch_ = async () => {
     setLoading(true);
-    const { data } = await apiRequest<{ assets: Asset[] }>(ENDPOINTS.UPLOAD_LIST);
-    if (data?.assets) setAssets(data.assets);
+    const { data } = await apiRequest<any[]>(ENDPOINTS.UPLOAD_LIST);
+    if (data) {
+      setAssets(data.map(d => ({
+        ...d,
+        name: d.publicId.split("/").pop() || d.publicId,
+        type: d.resourceType === "video" ? "video" : "image",
+        size: d.bytes || 0
+      })));
+    }
     setLoading(false);
   };
 

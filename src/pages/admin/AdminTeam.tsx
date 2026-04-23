@@ -43,8 +43,8 @@ const AdminTeam = () => {
 
   const fetchMembers = async () => {
     setLoading(true);
-    const { data } = await apiRequest<{ members: TeamMember[] }>(ENDPOINTS.TEAM_LIST);
-    if (data?.members) setMembers(data.members);
+    const { data } = await apiRequest<TeamMember[]>(`${ENDPOINTS.TEAM_LIST}?all=true`);
+    if (data) setMembers(data);
     setLoading(false);
   };
 

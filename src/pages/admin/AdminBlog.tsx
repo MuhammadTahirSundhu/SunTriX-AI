@@ -47,7 +47,7 @@ const AdminBlog = () => {
 
   const fetch_ = async () => {
     setLoading(true);
-    const { data } = await apiRequest<{ posts: BlogPost[] }>(ENDPOINTS.BLOG_LIST);
+    const { data } = await apiRequest<{ posts: BlogPost[] }>(`${ENDPOINTS.BLOG_LIST}?all=true`);
     if (data?.posts) setPosts(data.posts);
     setLoading(false);
   };
