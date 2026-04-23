@@ -21,6 +21,8 @@ export interface IPortfolioProject extends Document {
   status: "published" | "draft";
   featured: boolean;
   order: number;
+  displayType: "video" | "images";
+  liveUrl: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +40,8 @@ const PortfolioSchema = new Schema<IPortfolioProject>(
     thumbnailImage: { type: String, default: "" },
     images: [{ type: String }],
     videoUrl: { type: String, default: "" },
+    liveUrl: { type: String, default: "" },
+    displayType: { type: String, enum: ["video", "images"], default: "video" },
     tags: [{ type: String }],
     tools: [{ name: String, icon: String }],
     clientLogo: { type: String, default: "" },

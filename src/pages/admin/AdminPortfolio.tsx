@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import {
-  Plus, Pencil, Trash2, Eye, EyeOff, Star, StarOff, X, Save,
+  Plus, Pencil, Trash2, Eye, EyeOff, Star, StarOff, X, Save, Video, Image,
 } from "lucide-react";
 
 const CATEGORIES = ["Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
@@ -26,8 +26,8 @@ interface PortfolioProject {
   clientName: string;
   clientLogo: string;
   industry: string;
-  status: "published" | "draft";
-  featured: boolean;
+  displayType: "video" | "images";
+  liveUrl: string;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -40,7 +40,7 @@ const EMPTY_PROJECT: EditState = {
   description: "", shortDescription: "", metric: "", metricLabel: "",
   coverImage: "", thumbnailImage: "", videoUrl: "", tags: [], tools: [],
   clientLogo: "", clientName: "", industry: "", highlights: [],
-  status: "draft", featured: false, order: 1,
+  status: "draft", featured: false, liveUrl: "", displayType: "video", order: 1,
   createdAt: "", updatedAt: "",
 };
 
@@ -110,6 +110,61 @@ const AdminPortfolio = () => {
   };
 
   const inp = "w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
+  const btn = "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all";
+
+  const UploadButton = ({ onUpload, onUploadMultiple, type = "image", multiple = false }: { 
+    onUpload?: (url: string) => void, 
+    onUploadMultiple?: (urls: string[]) => void,
+    type?: "image" | "video",
+    multiple?: boolean
+  }) => {
+    const [up, setUp] = useState(false);
+    const handlePick = () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = type === "image" ? "image/*" : "video/*";
+      input.multiple = multiple;
+      input.onchange = async (e) => {
+        const files = Array.from((e.target as HTMLInputElement).files || []);
+        if (files.length === 0) return;
+        setUp(true);
+        
+        const token = localStorage.getItem("auth_token");
+        const endpoint = type === "image" ? ENDPOINTS.UPLOAD_IMAGE : ENDPOINTS.UPLOAD_VIDEO;
+
+        try {
+          const uploadPromises = files.map(async (file) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await fetch(endpoint, {
+              method: "POST",
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+              body: formData,
+            });
+            const data = await res.json();
+            return data.secureUrl || data.url;
+          });
+
+          const urls = await Promise.all(uploadPromises);
+          
+          if (multiple && onUploadMultiple) {
+            onUploadMultiple(urls);
+          } else if (onUpload) {
+            onUpload(urls[0]);
+          }
+          toast({ title: files.length > 1 ? `Uploaded ${files.length} files ✅` : "Uploaded ✅" });
+        } catch {
+          toast({ title: "Upload failed" });
+        } finally { setUp(false); }
+      };
+      input.click();
+    };
+    return (
+      <button onClick={handlePick} disabled={up} className={`${btn} bg-primary/10 text-primary hover:bg-primary/20 shrink-0`}>
+        <Plus className="h-3 w-3" /> {up ? "..." : multiple ? "Upload Multiple" : "Upload"}
+      </button>
+    );
+  };
 
   return (
     <div className="p-6 lg:p-8">
@@ -174,7 +229,7 @@ const AdminPortfolio = () => {
                 ))}
               </div>
               <div className="flex items-center gap-1.5 border-t border-border pt-3">
-                <button onClick={() => { setEditing(project); setIsNew(false); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors">
+                <button onClick={() => { setEditing({ ...project, images: project.images || [] }); setIsNew(false); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors">
                   <Pencil className="h-3 w-3" /> Edit
                 </button>
                 <button onClick={() => toggleStatus(project)} className="flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors">
@@ -269,20 +324,106 @@ const AdminPortfolio = () => {
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Full Description</label>
                   <textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={4} className={inp + " resize-none"} />
-                </div>
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">Project Media & Display</label>
+                      <div className="flex gap-4 p-4 rounded-xl border border-border bg-muted/30">
+                        {(["video", "images"] as const).map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => setEditing({ ...editing, displayType: t })}
+                            className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all flex flex-center gap-2 font-bold uppercase text-xs ${
+                              editing.displayType === t 
+                                ? "border-primary bg-primary/10 text-primary shadow-[0_0_20px_rgba(var(--primary),0.1)]" 
+                                : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                            }`}
+                          >
+                            {t === "video" ? <Video className="h-4 w-4" /> : <Image className="h-4 w-4" />}
+                            {t} Demo
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Cover Image URL</label>
-                    <input value={editing.coverImage} onChange={(e) => setEditing({ ...editing, coverImage: e.target.value })} placeholder="Cloudinary or external URL" className={inp} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-1">
+                        Cover Image URL
+                        <UploadButton onUpload={(url) => setEditing({ ...editing, coverImage: url })} />
+                      </label>
+                      <input value={editing.coverImage} onChange={(e) => setEditing({ ...editing, coverImage: e.target.value })} placeholder="Cloudinary or external URL" className={inp} />
+                    </div>
+                    <div>
+                      <label className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-1">
+                        Thumbnail URL
+                        <UploadButton onUpload={(url) => setEditing({ ...editing, thumbnailImage: url })} />
+                      </label>
+                      <input value={editing.thumbnailImage} onChange={(e) => setEditing({ ...editing, thumbnailImage: e.target.value })} placeholder="Card thumbnail" className={inp} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Thumbnail URL</label>
-                    <input value={editing.thumbnailImage} onChange={(e) => setEditing({ ...editing, thumbnailImage: e.target.value })} placeholder="Card thumbnail" className={inp} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Demo Video URL</label>
-                    <input value={editing.videoUrl} onChange={(e) => setEditing({ ...editing, videoUrl: e.target.value })} placeholder="YouTube embed URL" className={inp} />
+
+                  {editing.displayType === "video" ? (
+                    <div>
+                      <label className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-1">
+                        Demo Video URL
+                        <UploadButton type="video" onUpload={(url) => setEditing({ ...editing, videoUrl: url })} />
+                      </label>
+                      <input value={editing.videoUrl} onChange={(e) => setEditing({ ...editing, videoUrl: e.target.value })} placeholder="YouTube or local video URL" className={inp} />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Project Gallery (Min 3, Max 6 images)</label>
+                        <UploadButton 
+                          multiple 
+                          onUploadMultiple={(urls) => {
+                            const newImgs = [...(editing.images || [])];
+                            urls.forEach((url, i) => {
+                              if (i < 6) newImgs[i] = url;
+                            });
+                            setEditing({ ...editing, images: newImgs });
+                          }} 
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[0, 1, 2, 3, 4, 5].map((idx) => (
+                          <div key={idx} className="relative aspect-video rounded-lg border border-border bg-muted/50 overflow-hidden group">
+                            {(editing.images || [])[idx] ? (
+                              <>
+                                <img 
+                                  src={editing.images[idx]} 
+                                  alt={`Gallery ${idx + 1}`} 
+                                  className="w-full h-full object-cover" 
+                                />
+                                <button
+                                  onClick={() => {
+                                    const newImgs = [...(editing.images || [])];
+                                    newImgs[idx] = "";
+                                    setEditing({ ...editing, images: newImgs });
+                                  }}
+                                  className="absolute top-1 right-1 p-1 rounded-full bg-background/80 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                                <div className="absolute bottom-0 inset-x-0 bg-background/60 backdrop-blur-sm py-1 text-[10px] text-center font-medium text-foreground">
+                                  Img {idx + 1}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[10px] font-medium">
+                                Slot {idx + 1}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Live Project URL (Optional)</label>
+                    <input value={editing.liveUrl} onChange={(e) => setEditing({ ...editing, liveUrl: e.target.value })} placeholder="https://external-project-link.com" className={inp} />
                   </div>
                 </div>
 
