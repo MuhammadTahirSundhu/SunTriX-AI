@@ -87,6 +87,9 @@ export const ENDPOINTS = {
   TASK_REQUEST_LIST: `${BASE_URL}/task-requests`,
   TASK_REQUEST_BY_ID: (id: string) => `${BASE_URL}/task-requests/${id}`,
   TASK_REQUEST_UPDATE: (id: string) => `${BASE_URL}/task-requests/${id}`,
+  TASK_REQUEST_UPDATE_STATUS: (id: string) => `${BASE_URL}/task-requests/${id}/status`,
+  TASK_REQUEST_BULK_DELETE: `${BASE_URL}/task-requests/bulk`,
+  TASK_REQUEST_TRACK: (token: string) => `${BASE_URL}/task-requests/track/${token}`,
 
   // AI Chatbot (proxied through backend → Grok API)
   // Backend forwards to: https://api.x.ai/v1/chat/completions
@@ -135,14 +138,54 @@ export const ENDPOINTS = {
 
   // Admin
   ADMIN_DASHBOARD_STATS: `${BASE_URL}/admin/stats`,
+  ADMIN_NOTIFICATIONS: `${BASE_URL}/admin/notifications`,
   ADMIN_TASKS: `${BASE_URL}/task-requests`,
   ADMIN_CONTACTS: `${BASE_URL}/contact`,
   ADMIN_USERS: `${BASE_URL}/admin/users`,
 
+  // Team
+  TEAM_LIST: `${BASE_URL}/team`,
+  TEAM_CREATE: `${BASE_URL}/team`,
+  TEAM_UPDATE: (id: string) => `${BASE_URL}/team/${id}`,
+  TEAM_DELETE: (id: string) => `${BASE_URL}/team/${id}`,
+  TEAM_REORDER: `${BASE_URL}/team/reorder`,
+
+  // Clients (Logo Wall)
+  CLIENTS_LIST: `${BASE_URL}/clients`,
+  CLIENTS_CREATE: `${BASE_URL}/clients`,
+  CLIENTS_UPDATE: (id: string) => `${BASE_URL}/clients/${id}`,
+  CLIENTS_DELETE: (id: string) => `${BASE_URL}/clients/${id}`,
+
+  // Pricing
+  PRICING_LIST: `${BASE_URL}/pricing`,
+  PRICING_CREATE: `${BASE_URL}/pricing`,
+  PRICING_UPDATE: (id: string) => `${BASE_URL}/pricing/${id}`,
+  PRICING_DELETE: (id: string) => `${BASE_URL}/pricing/${id}`,
+
+  // Blog / Posts
+  BLOG_LIST: `${BASE_URL}/posts`,
+  BLOG_BY_SLUG: (slug: string) => `${BASE_URL}/posts/slug/${slug}`,
+  BLOG_CREATE: `${BASE_URL}/posts`,
+  BLOG_UPDATE: (id: string) => `${BASE_URL}/posts/${id}`,
+  BLOG_DELETE: (id: string) => `${BASE_URL}/posts/${id}`,
+  BLOG_BULK_DELETE: `${BASE_URL}/posts/bulk`,
+
+  // Audit Log
+  AUDIT_LIST: `${BASE_URL}/audit`,
+
+  // Campaigns
+  CAMPAIGN_LIST: `${BASE_URL}/campaigns`,
+  CAMPAIGN_CREATE: `${BASE_URL}/campaigns`,
+  CAMPAIGN_UPDATE: (id: string) => `${BASE_URL}/campaigns/${id}`,
+  CAMPAIGN_DELETE: (id: string) => `${BASE_URL}/campaigns/${id}`,
+  CAMPAIGN_SEND: (id: string) => `${BASE_URL}/campaigns/${id}/send`,
+
   // Assets (Cloudinary via backend)
   UPLOAD_IMAGE: `${BASE_URL}/upload/image`,
   UPLOAD_VIDEO: `${BASE_URL}/upload/video`,
+  UPLOAD_LIST: `${BASE_URL}/upload`,
   UPLOAD_DELETE: (publicId: string) => `${BASE_URL}/upload/${publicId}`,
+  UPLOAD_BULK_DELETE: `${BASE_URL}/upload/bulk`,
 } as const;
 
 // ─── Grok Chat Helper Types ──────────────────────────────────────

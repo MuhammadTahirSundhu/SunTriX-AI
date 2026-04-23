@@ -4,6 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import mongoSanitize from "express-mongo-sanitize";
 import { connectDB } from "./config/db";
 import { errorHandler } from "./middleware/errorHandler";
 
@@ -20,6 +21,12 @@ import cmsRoutes from "./routes/cms.routes";
 import departmentRoutes from "./routes/department.routes";
 import uploadRoutes from "./routes/upload.routes";
 import adminRoutes from "./routes/admin.routes";
+import teamRoutes from "./routes/team.routes";
+import clientRoutes from "./routes/client.routes";
+import pricingRoutes from "./routes/pricing.routes";
+import postRoutes from "./routes/post.routes";
+import auditRoutes from "./routes/audit.routes";
+import { startScheduler } from "./lib/scheduler";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -76,6 +83,10 @@ app.use(globalLimiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// ─── NoSQL Injection Protection ──────────────────────────────────
+// Strips keys containing $ or . from req.body, req.params, req.query
+app.use(mongoSanitize({ replaceWith: "_" }));
+
 // ─── Logging ─────────────────────────────────────────────────────
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
@@ -101,6 +112,11 @@ app.use(`${V1}/cms`, cmsRoutes);
 app.use(`${V1}/departments`, departmentRoutes);
 app.use(`${V1}/upload`, uploadRoutes);
 app.use(`${V1}/admin`, adminRoutes);
+app.use(`${V1}/team`, teamRoutes);
+app.use(`${V1}/clients`, clientRoutes);
+app.use(`${V1}/pricing`, pricingRoutes);
+app.use(`${V1}/posts`, postRoutes);
+app.use(`${V1}/audit`, auditRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -113,6 +129,7 @@ app.use(errorHandler);
 // ─── Start ────────────────────────────────────────────────────────
 async function start() {
   await connectDB();
+  startScheduler();
   app.listen(PORT, () => {
     console.log(`\n🚀 SunTriX API running on http://localhost:${PORT}`);
     console.log(`   Health: http://localhost:${PORT}/health`);

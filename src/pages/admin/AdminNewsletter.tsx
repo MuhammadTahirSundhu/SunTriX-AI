@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
-import { Users, Mail, Trash2, Send, Edit3, Loader2, Sparkles } from "lucide-react";
+import { Users, Mail, Trash2, Send, Edit3, Loader2, Sparkles, History, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface Campaign {
+  _id: string;
+  subject: string;
+  targetAudience: string;
+  status: "sent" | "failed" | "pending";
+  recipientCount: number;
+  openRate?: number;
+  sentAt: string;
+  createdAt: string;
+}
 
 interface Subscriber {
   _id: string;
@@ -14,7 +26,8 @@ interface Subscriber {
 
 const AdminNewsletter = () => {
   const [subs, setSubs] = useState<Subscriber[]>([]);
-  const [tab, setTab] = useState<"subscribers" | "compose">("subscribers");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [tab, setTab] = useState<"subscribers" | "compose" | "history">("subscribers");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [targetAudience, setTargetAudience] = useState("All");
@@ -31,7 +44,12 @@ const AdminNewsletter = () => {
     if (data) setSubs(data);
   };
 
-  useEffect(() => { fetchSubs(); }, []);
+  const fetchCampaigns = async () => {
+    const { data } = await apiRequest<{ campaigns: Campaign[] }>(ENDPOINTS.CAMPAIGN_LIST);
+    if (data?.campaigns) setCampaigns(data.campaigns);
+  };
+
+  useEffect(() => { fetchSubs(); fetchCampaigns(); }, []);
 
   const remove = async (id: string) => {
     await apiRequest(`${ENDPOINTS.NEWSLETTER_LIST}/${id}`, { method: "DELETE" });
@@ -71,7 +89,8 @@ const AdminNewsletter = () => {
       setSubject("");
       setBody("");
       setTargetAudience("All");
-      setTab("subscribers");
+      setTab("history");
+      fetchCampaigns();
     }
   };
 
@@ -85,6 +104,9 @@ const AdminNewsletter = () => {
         <div className="flex bg-muted/50 p-1 rounded-lg w-fit">
           <button onClick={() => setTab("subscribers")} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${tab === "subscribers" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>Subscribers</button>
           <button onClick={() => setTab("compose")} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${tab === "compose" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>Compose</button>
+          <button onClick={() => setTab("history")} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${tab === "history" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            <History className="h-3.5 w-3.5" /> History
+          </button>
         </div>
       </div>
 
@@ -226,8 +248,79 @@ const AdminNewsletter = () => {
           </div>
         </div>
       )}
+
+      {tab === "history" && (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          {campaigns.length === 0 ? (
+            <div className="p-16 text-center">
+              <History className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+              <p className="font-medium text-foreground mb-1">No campaigns sent yet</p>
+              <p className="text-sm text-muted-foreground">Broadcast a newsletter to see campaign history here.</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Subject</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Audience</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Recipients</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Open Rate</th>
+                  <th className="text-right px-5 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sent</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {campaigns.map((c) => (
+                  <motion.tr key={c._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-5 py-4">
+                      <p className="font-medium text-foreground">{c.subject}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-md">{c.targetAudience}</span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium ${
+                        c.status === "sent" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                        c.status === "pending" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                        "bg-red-500/10 text-red-500 border-red-500/20"
+                      }`}>
+                        {c.status === "sent" && <CheckCircle2 className="h-3 w-3" />}
+                        {c.status === "pending" && <Clock className="h-3 w-3" />}
+                        {c.status === "failed" && <XCircle className="h-3 w-3" />}
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 hidden md:table-cell">
+                      <div className="flex items-center gap-1.5 text-sm text-foreground">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                        {c.recipientCount}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 hidden lg:table-cell">
+                      {c.openRate !== undefined ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-muted rounded-full h-1.5 w-20">
+                            <div className="bg-primary h-1.5 rounded-full" style={{ width: `${c.openRate}%` }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground">{c.openRate}%</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-right text-xs text-muted-foreground">
+                      {new Date(c.sentAt || c.createdAt).toLocaleDateString()}
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 export default AdminNewsletter;
+

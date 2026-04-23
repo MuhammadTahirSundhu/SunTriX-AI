@@ -5,6 +5,8 @@ import { ArrowRight, Filter, Play } from "lucide-react";
 import Layout from "@/components/Layout";
 import PageTransition from "@/components/PageTransition";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
+import { PortfolioCardSkeleton } from "@/components/skeletons";
+import { useSEO } from "@/hooks/useSEO";
 
 
 interface PortfolioProject { _id: string; title: string; slug: string; category: string; shortDescription: string; metric: string; metricLabel: string; thumbnailImage: string; coverImage: string; videoUrl: string; tools: { name: string; icon: string }[]; }
@@ -12,12 +14,20 @@ interface PortfolioProject { _id: string; title: string; slug: string; category:
 const categories = ["All", "Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
 
 const Portfolio = () => {
+  useSEO({
+    title: "Our Work — SunTriX AI Solutions",
+    description: "Explore our portfolio of enterprise AI implementations, intelligent agents, and custom machine learning solutions.",
+    canonicalUrl: "https://www.suntrix.ai/work",
+  });
+
   const [projects, setProjects] = useState<PortfolioProject[]>([]);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO_LIST).then(({ data }) => {
       if (data) setProjects(data);
+      setLoading(false);
     });
   }, []);
 
@@ -59,6 +69,9 @@ const Portfolio = () => {
             </div>
 
             <motion.div layout className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {loading ? (
+                [...Array(6)].map((_, i) => <PortfolioCardSkeleton key={i} />)
+              ) : (
               <AnimatePresence mode="popLayout">
                 {filtered.map((project, i) => {
                   const cover = getCover(project);
@@ -122,9 +135,10 @@ const Portfolio = () => {
                   );
                 })}
               </AnimatePresence>
+              )}
             </motion.div>
 
-            {filtered.length === 0 && (
+            {!loading && filtered.length === 0 && (
               <div className="text-center py-16">
                 <Filter className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
                 <p className="text-muted-foreground">No projects in this category yet.</p>

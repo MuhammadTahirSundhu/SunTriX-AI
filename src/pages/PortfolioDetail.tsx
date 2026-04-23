@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, CheckCircle, ArrowRight, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import Layout from "@/components/Layout";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
+import { PortfolioDetailSkeleton } from "@/components/skeletons";
 
 const GallerySlider = ({ images }: { images: string[] }) => {
   const [current, setCurrent] = useState(0);
@@ -67,18 +68,22 @@ const PortfolioDetail = () => {
   const [project, setProject] = useState<PortfolioProject | null>(null);
   const [caseStudy, setCaseStudy] = useState<CaseStudy | null>(null);
   const [related, setRelated] = useState<PortfolioProject[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) return;
     apiRequest<PortfolioProject>(ENDPOINTS.PORTFOLIO_BY_SLUG(slug)).then(({ data: p }) => {
-      if (!p) return;
+      if (!p) { setLoading(false); return; }
       setProject(p);
+      setLoading(false);
       // Fetch related projects
       apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO_LIST).then(({ data: all }) => {
         if (all) setRelated(all.filter((r) => r.category === p.category && r._id !== p._id).slice(0, 3));
       });
     });
   }, [slug]);
+
+  if (loading) return <PortfolioDetailSkeleton />;
 
   if (!project) {
     return (

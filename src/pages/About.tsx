@@ -4,6 +4,7 @@ import { ArrowRight, Target, Lightbulb, Users, Globe, Award, Shield } from "luci
 import Layout from "@/components/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useMedia } from "@/hooks/use-media";
+import { useSEO } from "@/hooks/useSEO";
 
 const values = [
   { icon: Target, title: "Outcome-Driven", desc: "Every project is measured by business impact, not just technical delivery." },
@@ -24,6 +25,12 @@ const team = [
 ];
 
 const About = () => {
+  useSEO({
+    title: "About Us — SunTriX AI Solutions",
+    description: "SunTriX is an AI-first technology partner helping enterprises design, build, and scale intelligent systems.",
+    canonicalUrl: "https://www.suntrix.ai/about",
+  });
+
   const { t } = useI18n();
   const aboutHero = useMedia("about-hero");
   const ceoPortrait = useMedia("ceo-portrait");

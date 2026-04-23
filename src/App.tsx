@@ -23,6 +23,10 @@ import Technologies from "./pages/Technologies";
 import Partnership from "./pages/Partnership";
 import Testimonials from "./pages/Testimonials";
 import { PrivacyPolicy, TermsOfService, CookiePolicy } from "./pages/Legal";
+import TrackRequest from "./pages/TrackRequest";
+import Blog from "./pages/Blog";
+import BlogDetail from "./pages/BlogDetail";
+import Pricing from "./pages/Pricing";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -34,6 +38,11 @@ import AdminPortfolio from "./pages/admin/AdminPortfolio";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminDepartments from "./pages/admin/AdminDepartments";
 import AdminMedia from "./pages/admin/AdminMedia";
+import AdminAuditLog from "./pages/admin/AdminAuditLog";
+import AdminTeam from "./pages/admin/AdminTeam";
+import AdminClients from "./pages/admin/AdminClients";
+import AdminPricing from "./pages/admin/AdminPricing";
+import AdminBlog from "./pages/admin/AdminBlog";
 import { DynamicFavicon } from "@/components/DynamicFavicon";
 
 const queryClient = new QueryClient();
@@ -63,12 +72,17 @@ const AppRoutes = () => {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/request-task" element={<RequestTask />} />
+        <Route path="/track" element={<TrackRequest />} />
+        <Route path="/track/:token" element={<TrackRequest />} />
         <Route path="/technologies" element={<Technologies />} />
         <Route path="/partnership" element={<Partnership />} />
         <Route path="/testimonials" element={<Testimonials />} />
         <Route path="/legal/privacy" element={<PrivacyPolicy />} />
         <Route path="/legal/terms" element={<TermsOfService />} />
         <Route path="/legal/cookies" element={<CookiePolicy />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:slug" element={<BlogDetail />} />
+        <Route path="/pricing" element={<Pricing />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -77,10 +91,15 @@ const AppRoutes = () => {
           <Route path="tasks" element={<AdminTasks />} />
           <Route path="messages" element={<AdminMessages />} />
           <Route path="portfolio" element={<AdminPortfolio />} />
+          <Route path="blog" element={<AdminBlog />} />
+          <Route path="team" element={<AdminTeam />} />
+          <Route path="clients" element={<AdminClients />} />
+          <Route path="pricing" element={<AdminPricing />} />
           <Route path="departments" element={<AdminDepartments />} />
           <Route path="content" element={<AdminContent />} />
           <Route path="media" element={<AdminMedia />} />
           <Route path="newsletter" element={<AdminNewsletter />} />
+          <Route path="audit" element={<AdminAuditLog />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
 
@@ -98,7 +117,7 @@ const App = () => (
           <DynamicFavicon />
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AppRoutes />
           </BrowserRouter>
         </TooltipProvider>

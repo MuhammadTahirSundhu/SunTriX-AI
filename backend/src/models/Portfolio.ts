@@ -23,6 +23,7 @@ export interface IPortfolioProject extends Document {
   order: number;
   displayType: "video" | "images";
   liveUrl: string;
+  publishAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,6 +52,7 @@ const PortfolioSchema = new Schema<IPortfolioProject>(
     status: { type: String, enum: ["published", "draft"], default: "draft" },
     featured: { type: Boolean, default: false },
     order: { type: Number, default: 0 },
+    publishAt: { type: Date },
   },
   { timestamps: true }
 );

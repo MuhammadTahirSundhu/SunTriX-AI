@@ -2,24 +2,19 @@ import { useState } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Users, Settings,
-  LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone, Layers, Image
+  LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone, Layers, Image, Bell,
+  Shield, Building2, DollarSign, BookOpen, UserSquare2
 } from "lucide-react";
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
-  { icon: ClipboardList, label: "Task Requests", href: "/admin/tasks" },
-  { icon: MessageSquare, label: "Messages", href: "/admin/messages" },
-  { icon: Briefcase, label: "Portfolio", href: "/admin/portfolio" },
-  { icon: Layers, label: "Departments", href: "/admin/departments" },
-  { icon: FileText, label: "Content", href: "/admin/content" },
-  { icon: Image, label: "Media Library", href: "/admin/media" },
-  { icon: Users, label: "Newsletter", href: "/admin/newsletter" },
-  { icon: Settings, label: "Settings", href: "/admin/settings" },
-];
+import { useTokenRefresh } from "../../hooks/useTokenRefresh";
+import { useNotifications } from "../../hooks/useNotifications";
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
+
+  // Initialize token refresh cycle
+  useTokenRefresh();
+  const notifications = useNotifications();
 
   const token = localStorage.getItem("auth_token");
   const userRaw = localStorage.getItem("suntrix_admin_session");
@@ -35,6 +30,23 @@ const AdminLayout = () => {
     window.location.href = "/admin/login";
   };
 
+  const navItems = [
+    { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
+    { icon: ClipboardList, label: "Task Requests", href: "/admin/tasks", badge: notifications.newTasks },
+    { icon: MessageSquare, label: "Messages", href: "/admin/messages", badge: notifications.unreadMessages },
+    { icon: Briefcase, label: "Portfolio", href: "/admin/portfolio" },
+    { icon: BookOpen, label: "Blog", href: "/admin/blog" },
+    { icon: UserSquare2, label: "Team", href: "/admin/team" },
+    { icon: Building2, label: "Clients", href: "/admin/clients" },
+    { icon: DollarSign, label: "Pricing", href: "/admin/pricing" },
+    { icon: Layers, label: "Departments", href: "/admin/departments" },
+    { icon: FileText, label: "Content", href: "/admin/content" },
+    { icon: Image, label: "Media Library", href: "/admin/media" },
+    { icon: Users, label: "Newsletter", href: "/admin/newsletter", badge: notifications.newSubscribers },
+    { icon: Shield, label: "Audit Log", href: "/admin/audit" },
+    { icon: Settings, label: "Settings", href: "/admin/settings" },
+  ];
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
@@ -48,12 +60,29 @@ const AdminLayout = () => {
               <span className="text-sm font-bold text-foreground">SunTriX CMS</span>
             </Link>
           )}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-muted transition-colors relative">
             {sidebarOpen ? <X className="h-4 w-4 text-muted-foreground" /> : <Menu className="h-4 w-4 text-muted-foreground" />}
+            {!sidebarOpen && notifications.total > 0 && (
+              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-destructive border border-card" />
+            )}
           </button>
         </div>
 
-        <nav className="flex-1 p-2 space-y-1">
+        {sidebarOpen && (
+           <div className="p-4 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notifications</span>
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-muted-foreground" />
+                {notifications.total > 0 && (
+                  <span className="bg-destructive/10 text-destructive text-xs font-medium px-2 py-0.5 rounded-full">
+                    {notifications.total} New
+                  </span>
+                )}
+              </div>
+           </div>
+        )}
+
+        <nav className="flex-1 p-2 space-y-1 mt-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.href;
             return (
@@ -65,8 +94,13 @@ const AdminLayout = () => {
                 }`}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {sidebarOpen && <span>{item.label}</span>}
-                {sidebarOpen && isActive && <ChevronRight className="ml-auto h-3 w-3" />}
+                {sidebarOpen && <span className="flex-1">{item.label}</span>}
+                {sidebarOpen && item.badge > 0 && (
+                   <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                     {item.badge}
+                   </span>
+                )}
+                {sidebarOpen && isActive && !item.badge && <ChevronRight className="ml-auto h-3 w-3" />}
               </Link>
             );
           })}

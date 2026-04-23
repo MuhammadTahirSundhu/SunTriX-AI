@@ -52,6 +52,24 @@ router.get("/me", requireAuth, async (req: AuthRequest, res: Response, next: Nex
   }
 });
 
+// POST /auth/refresh — silently issue a new token (requires valid current token)
+router.post("/refresh", requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const admin = await Admin.findById(req.user!.id).select("-password");
+    if (!admin) return next(createError("User not found", 404));
+    const secret = process.env.JWT_SECRET!;
+    const expiresIn = (process.env.JWT_EXPIRES_IN || "7d") as `${number}${"s"|"m"|"h"|"d"|"w"}`;
+    const token = jwt.sign(
+      { id: admin._id, email: admin.email, role: admin.role, name: admin.name },
+      secret,
+      { expiresIn }
+    );
+    res.json({ token });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /auth/logout  (client-side token removal; server just acknowledges)
 router.post("/logout", requireAuth, (_req: Request, res: Response) => {
   res.json({ message: "Logged out successfully" });

@@ -10,8 +10,15 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import SocialBranding from "@/components/SocialBranding";
 import CTASection from "@/components/CTASection";
 import PageTransition from "@/components/PageTransition";
+import { useSEO } from "@/hooks/useSEO";
 
 const Index = () => {
+  useSEO({
+    title: "SunTriX AI Solutions — Enterprise AI Agency",
+    description: "SunTriX is an AI-first technology partner helping enterprises design, build, and scale intelligent systems.",
+    canonicalUrl: "https://www.suntrix.ai/",
+  });
+
   return (
     <Layout>
       <PageTransition>

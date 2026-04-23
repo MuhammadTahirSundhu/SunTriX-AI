@@ -4,8 +4,15 @@ import { useState } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
+import { useSEO } from "@/hooks/useSEO";
 
 const Contact = () => {
+  useSEO({
+    title: "Contact Us — SunTriX AI Solutions",
+    description: "Get in touch with SunTriX AI Solutions to discuss your next enterprise AI or machine learning project.",
+    canonicalUrl: "https://www.suntrix.ai/contact",
+  });
+
   const [form, setForm] = useState({ name: "", email: "", company: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
 

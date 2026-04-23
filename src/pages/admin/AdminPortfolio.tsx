@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import {
-  Plus, Pencil, Trash2, Eye, EyeOff, Star, StarOff, X, Save, Video, Image,
+  Plus, Pencil, Trash2, Eye, EyeOff, Star, StarOff, X, Save, Video, Image, Monitor,
 } from "lucide-react";
+import LivePreview from "@/components/admin/LivePreview";
+import type { PortfolioPreviewData } from "@/components/admin/LivePreview";
 
 const CATEGORIES = ["Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
 
@@ -50,6 +52,7 @@ const AdminPortfolio = () => {
   const [isNew, setIsNew] = useState(false);
   const [filter, setFilter] = useState("all");
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const reload = async () => {
     const { data } = await apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO_LIST + "?all=true");
@@ -271,9 +274,20 @@ const AdminPortfolio = () => {
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-foreground">{isNew ? "New Project" : "Edit Project"}</h2>
-                <button onClick={() => { setEditing(null); setIsNew(false); }} className="p-1 rounded-lg hover:bg-muted transition-colors">
-                  <X className="h-5 w-5 text-muted-foreground" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowPreview(!showPreview)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                      showPreview ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Monitor className="h-3.5 w-3.5" />
+                    {showPreview ? "Hide Preview" : "Live Preview"}
+                  </button>
+                  <button onClick={() => { setEditing(null); setIsNew(false); setShowPreview(false); }} className="p-1 rounded-lg hover:bg-muted transition-colors">
+                    <X className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
@@ -476,6 +490,30 @@ const AdminPortfolio = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Live Preview Panel */}
+      <LivePreview
+        data={editing && showPreview ? {
+          type: "portfolio",
+          title: editing.title,
+          category: editing.category,
+          shortDescription: editing.shortDescription,
+          metric: editing.metric,
+          metricLabel: editing.metricLabel,
+          coverImage: editing.coverImage,
+          thumbnailImage: editing.thumbnailImage,
+          videoUrl: editing.videoUrl,
+          liveUrl: editing.liveUrl,
+          tags: editing.tags,
+          tools: editing.tools,
+          highlights: editing.highlights,
+          status: editing.status || "draft",
+          featured: editing.featured,
+          displayType: editing.displayType,
+          images: editing.images || [],
+        } satisfies PortfolioPreviewData : null}
+        onClose={() => setShowPreview(false)}
+      />
     </div>
   );
 };

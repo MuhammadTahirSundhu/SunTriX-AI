@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, EyeOff, X, Save, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, X, Save, GripVertical, ArrowUp, ArrowDown, Monitor } from "lucide-react";
+import LivePreview from "@/components/admin/LivePreview";
+import type { DepartmentPreviewData } from "@/components/admin/LivePreview";
 
 interface Department {
   _id: string;
@@ -28,6 +30,7 @@ const AdminDepartments = () => {
   const [editing, setEditing] = useState<EditState | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const reload = async () => {
     const { data } = await apiRequest<Department[]>(ENDPOINTS.DEPARTMENTS_LIST + "?all=true");
@@ -143,7 +146,20 @@ const AdminDepartments = () => {
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-foreground">{isNew ? "New Department" : "Edit Department"}</h2>
-                <button onClick={() => { setEditing(null); setIsNew(false); }} className="p-1 rounded-lg hover:bg-muted"><X className="h-5 w-5 text-muted-foreground" /></button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowPreview(!showPreview)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                      showPreview ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Monitor className="h-3.5 w-3.5" />
+                    {showPreview ? "Hide Preview" : "Live Preview"}
+                  </button>
+                  <button onClick={() => { setEditing(null); setIsNew(false); setShowPreview(false); }} className="p-1 rounded-lg hover:bg-muted">
+                    <X className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                </div>
               </div>
               <div className="space-y-4">
                 <div>
@@ -193,6 +209,21 @@ const AdminDepartments = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Live Preview Panel */}
+      <LivePreview
+        data={editing && showPreview ? {
+          type: "department",
+          name: editing.name,
+          subtitle: editing.subtitle,
+          description: editing.description,
+          image: editing.image,
+          href: editing.href,
+          capabilities: editing.capabilities,
+          enabled: editing.enabled,
+        } satisfies DepartmentPreviewData : null}
+        onClose={() => setShowPreview(false)}
+      />
     </div>
   );
 };

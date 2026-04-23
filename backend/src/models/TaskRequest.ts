@@ -26,6 +26,8 @@ export interface ITaskRequest extends Document {
   integrations: string;
   notes: string;
   status: TaskStatus;
+  trackingToken: string;
+  statusHistory: { status: TaskStatus; note: string; updatedAt: Date }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +55,12 @@ const TaskRequestSchema = new Schema<ITaskRequest>(
       enum: ["new", "in_review", "proposal_sent", "in_progress", "completed", "cancelled"],
       default: "new",
     },
+    trackingToken: { type: String, unique: true, sparse: true },
+    statusHistory: [{
+      status: String,
+      note: String,
+      updatedAt: { type: Date, default: Date.now },
+    }],
   },
   { timestamps: true }
 );

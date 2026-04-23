@@ -3,15 +3,18 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
+import { DepartmentCardSkeleton } from "@/components/skeletons";
 
 interface Department { _id: string; name: string; subtitle: string; description: string; image: string; href: string; }
 
 const DepartmentsSection = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     apiRequest<Department[]>(ENDPOINTS.DEPARTMENTS_LIST).then(({ data }) => {
       if (data) setDepartments(data);
+      setLoading(false);
     });
   }, []);
 
@@ -22,12 +25,7 @@ const DepartmentsSection = () => {
     <section className="py-24 lg:py-32 relative">
       <div className="absolute inset-0 bg-neural-grid opacity-20" />
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
+        <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
           <span className="inline-block text-xs font-mono text-secondary uppercase tracking-widest mb-4">Departments</span>
           <h2 className="text-3xl lg:text-5xl font-display font-extrabold mb-4">
             What We <span className="gradient-text">Build</span>
@@ -37,6 +35,9 @@ const DepartmentsSection = () => {
           </p>
         </motion.div>
 
+        {loading ? (
+          <DepartmentCardSkeleton count={4} />
+        ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {departments.map((dept, i) => {
             const imgSrc = getImage(dept);
@@ -79,6 +80,7 @@ const DepartmentsSection = () => {
             );
           })}
         </div>
+        )}
 
         <motion.div
           className="mt-12 text-center"

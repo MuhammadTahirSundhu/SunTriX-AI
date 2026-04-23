@@ -2,20 +2,19 @@ import { Router, Request, Response, NextFunction } from "express";
 import Portfolio from "../models/Portfolio";
 import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
+import { logAudit } from "../lib/audit";
 import slugify from "slugify";
 
 const router = Router();
 
-// GET /portfolio  — public, lists published; admin sees all
+// GET /portfolio  — public lists published; admin sees all
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const isAdmin = req.headers.authorization?.startsWith("Bearer ");
     const filter = isAdmin ? {} : { status: "published" };
     const projects = await Portfolio.find(filter).sort({ order: 1, createdAt: -1 });
     res.json(projects);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 // GET /portfolio/slug/:slug  — public
@@ -24,9 +23,29 @@ router.get("/slug/:slug", async (req: Request, res: Response, next: NextFunction
     const project = await Portfolio.findOne({ slug: req.params.slug });
     if (!project) return next(createError("Project not found", 404));
     res.json(project);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
+});
+
+// DELETE /portfolio/bulk — admin bulk delete (must be before /:id)
+router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids }: { ids: string[] } = req.body;
+    if (!ids?.length) return next(createError("IDs required", 400));
+    await Portfolio.deleteMany({ _id: { $in: ids } });
+    await logAudit(req, "bulk_delete", "portfolio", "", `${ids.length} projects`);
+    res.json({ message: `Deleted ${ids.length} projects` });
+  } catch (err) { next(err); }
+});
+
+// PUT /portfolio/bulk — admin bulk update (must be before /:id)
+router.put("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids, update }: { ids: string[]; update: Record<string, unknown> } = req.body;
+    if (!ids?.length) return next(createError("IDs required", 400));
+    await Portfolio.updateMany({ _id: { $in: ids } }, update);
+    await logAudit(req, "bulk_update", "portfolio", "", `${ids.length} projects`);
+    res.json({ message: `Updated ${ids.length} projects` });
+  } catch (err) { next(err); }
 });
 
 // GET /portfolio/:id  — public
@@ -35,19 +54,16 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     const project = await Portfolio.findById(req.params.id);
     if (!project) return next(createError("Project not found", 404));
     res.json(project);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 // POST /portfolio  — admin only
 router.post("/", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const body = req.body;
-    if (!body.slug) {
-      body.slug = slugify(body.title || "untitled", { lower: true, strict: true });
-    }
+    const body = { ...req.body };
+    if (!body.slug) body.slug = slugify(body.title || "untitled", { lower: true, strict: true });
     const project = await Portfolio.create(body);
+    await logAudit(req, "create", "portfolio", project._id.toString(), project.title);
     res.status(201).json(project);
   } catch (err: unknown) {
     if ((err as { code?: number }).code === 11000) return next(createError("Slug must be unique", 409));
@@ -58,15 +74,11 @@ router.post("/", requireAuth, async (req: Request, res: Response, next: NextFunc
 // PUT /portfolio/:id  — admin only
 router.put("/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const project = await Portfolio.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const project = await Portfolio.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!project) return next(createError("Project not found", 404));
+    await logAudit(req, "update", "portfolio", project._id.toString(), project.title);
     res.json(project);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 // DELETE /portfolio/:id  — admin only
@@ -74,10 +86,9 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response, next: Nex
   try {
     const project = await Portfolio.findByIdAndDelete(req.params.id);
     if (!project) return next(createError("Project not found", 404));
+    await logAudit(req, "delete", "portfolio", req.params.id, project.title);
     res.json({ message: "Project deleted" });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 export default router;
