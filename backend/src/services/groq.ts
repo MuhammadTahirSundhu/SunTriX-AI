@@ -64,3 +64,80 @@ export async function generateEmailTemplate(prompt: string): Promise<string> {
   
   return html.trim();
 }
+
+// ─── Module schemas for AI field extraction ─────────────────────────────────
+const MODULE_SCHEMAS: Record<string, { schema: string; example: string }> = {
+  portfolio: {
+    schema: `title (string), slug (string, URL-safe), category (one of: "Agentic AI"|"AI & ML"|"Computer Vision"|"SaaS Platform"), description (string, detailed), shortDescription (string, 1-2 sentences), metric (string, e.g. "10x"), metricLabel (string, e.g. "Faster Processing"), clientName (string), industry (string), tags (string[], tech stack), highlights (string[], key achievements), liveUrl (string, optional)`,
+    example: `{"title":"Inventory Vision AI","slug":"inventory-vision-ai","category":"Computer Vision","description":"Full detailed description...","shortDescription":"AI-powered inventory system.","metric":"98%","metricLabel":"Detection Accuracy","clientName":"RetailCo","industry":"Retail","tags":["Python","AWS","OpenCV"],"highlights":["40% stockout reduction","Real-time alerts"],"liveUrl":""}`,
+  },
+  department: {
+    schema: `name (string), subtitle (string, short tagline), description (string, 2-3 sentences), href (string, URL slug starting with /services/), capabilities (string[], list of specific capabilities)`,
+    example: `{"name":"Agentic AI","subtitle":"Autonomous AI systems that act","description":"We build...","href":"/services/agentic-ai","capabilities":["Workflow Automation","Multi-agent orchestration"]}`,
+  },
+  blog: {
+    schema: `title (string), slug (string, URL-safe), excerpt (string, 1-2 sentences), content (string, full markdown article), category (string), tags (string[]), author (string), readTime (number, estimated minutes to read)`,
+    example: `{"title":"How AI is Transforming Retail","slug":"ai-transforming-retail","excerpt":"AI is...","content":"# How AI is Transforming Retail\\n\\n...","category":"AI","tags":["AI","Retail"],"author":"SunTriX Team","readTime":5}`,
+  },
+  team: {
+    schema: `name (string), role (string, job title), department (string), bio (string, 2-3 sentences professional bio), linkedin (string, URL or empty), twitter (string, URL or empty), github (string, URL or empty), website (string, URL or empty)`,
+    example: `{"name":"Jane Smith","role":"Lead ML Engineer","department":"Engineering","bio":"Jane has 8 years experience...","linkedin":"https://linkedin.com/in/jane","twitter":"","github":"https://github.com/jane","website":""}`,
+  },
+  pricing: {
+    schema: `name (string, plan name), price (number), currency (string, e.g. "USD"), billingPeriod (one of: "monthly"|"yearly"|"one-time"), description (string, 1-2 sentences), features (string[], list of included features), ctaLabel (string, button text), ctaLink (string, URL)`,
+    example: `{"name":"Starter","price":499,"currency":"USD","billingPeriod":"monthly","description":"Perfect for small teams.","features":["5 AI agents","Email support","10GB storage"],"ctaLabel":"Get Started","ctaLink":"/contact"}`,
+  },
+  client: {
+    schema: `name (string, company name), logoUrl (string, logo image URL if mentioned or empty string), websiteUrl (string, company website URL if mentioned or empty string)`,
+    example: `{"name":"Acme Corp","logoUrl":"","websiteUrl":"https://acme.com"}`,
+  },
+};
+
+export async function extractFields(
+  module: string,
+  text: string
+): Promise<Record<string, unknown>> {
+  const moduleSchema = MODULE_SCHEMAS[module];
+  if (!moduleSchema) {
+    throw new Error(`Unknown module: ${module}`);
+  }
+
+  const systemPrompt = `You are a data extraction AI for SunTriX admin panel.
+Your ONLY job is to extract structured data from unstructured text and return valid JSON.
+
+SCHEMA FOR MODULE "${module}":
+${moduleSchema.schema}
+
+RULES:
+1. Return ONLY a valid JSON object — no markdown, no code blocks, no explanation
+2. Map the user's text to the schema fields above as accurately as possible
+3. For array fields (tags, highlights, features, capabilities), return a JSON array of strings
+4. If a field cannot be determined from the text, use an empty string "" or empty array [] — never null
+5. Do NOT invent data that isn't mentioned or implied in the text
+6. Keep values concise and professional
+
+EXAMPLE OUTPUT:
+${moduleSchema.example}`;
+
+  const completion = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Extract fields from this text:\n\n${text}` },
+    ],
+    temperature: 0.1, // Low temp for deterministic structured output
+    max_tokens: 1024,
+  });
+
+  let raw = completion.choices[0]?.message?.content?.trim() || "{}";
+
+  // Strip markdown code fences if the model adds them
+  raw = raw.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim();
+
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    // If JSON parsing fails, return empty object so the UI stays functional
+    return {};
+  }
+}

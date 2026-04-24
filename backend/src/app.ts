@@ -26,6 +26,7 @@ import clientRoutes from "./routes/client.routes";
 import pricingRoutes from "./routes/pricing.routes";
 import postRoutes from "./routes/post.routes";
 import auditRoutes from "./routes/audit.routes";
+import aiExtractRoutes from "./routes/aiExtract.routes";
 import { startScheduler } from "./lib/scheduler";
 
 const app = express();
@@ -117,6 +118,7 @@ app.use(`${V1}/clients`, clientRoutes);
 app.use(`${V1}/pricing`, pricingRoutes);
 app.use(`${V1}/posts`, postRoutes);
 app.use(`${V1}/audit`, auditRoutes);
+app.use(`${V1}/ai`, aiExtractRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────
 app.use((_req, res) => {

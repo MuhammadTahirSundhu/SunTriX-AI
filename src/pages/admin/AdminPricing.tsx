@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { Plus, Trash2, Edit2, Check, X, Star, DollarSign } from "lucide-react";
+import AIAssistPanel from "@/components/admin/AIAssistPanel";
 
 interface PricingPlan {
   _id: string;
@@ -30,6 +31,7 @@ const AdminPricing = () => {
   const [editing, setEditing] = useState<PricingPlan | null>(null);
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+  const [aiMode, setAiMode] = useState(false);
 
   const fetch_ = async () => {
     setLoading(true);
@@ -40,7 +42,7 @@ const AdminPricing = () => {
 
   useEffect(() => { fetch_(); }, []);
 
-  const openCreate = () => { setEditing(null); setForm(empty); setShowForm(true); };
+  const openCreate = () => { setEditing(null); setForm(empty); setAiMode(false); setShowForm(true); };
   const openEdit = (p: PricingPlan) => {
     setEditing(p);
     setForm({ name: p.name, price: p.price, currency: p.currency, billingPeriod: p.billingPeriod, description: p.description, features: p.features.length ? p.features : [""], isPopular: p.isPopular, isVisible: p.isVisible, ctaLabel: p.ctaLabel, ctaLink: p.ctaLink });
@@ -84,9 +86,17 @@ const AdminPricing = () => {
           <h1 className="text-2xl font-display font-bold text-foreground">Pricing Plans</h1>
           <p className="text-sm text-muted-foreground">Manage service pricing</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus className="h-4 w-4" /> Add Plan
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { openCreate(); setAiMode(true); }}
+            className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 hover:bg-purple-500/20 transition-colors"
+          >
+            <span>✨</span> Add via AI
+          </button>
+          <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus className="h-4 w-4" /> Add Manually
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -151,6 +161,39 @@ const AdminPricing = () => {
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <h2 className="text-lg font-bold text-foreground">{editing ? "Edit Plan" : "New Plan"}</h2>
                 <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="px-6 pt-4">
+                <div className="flex rounded-lg border border-border bg-muted/30 p-0.5 mb-4">
+                  <button type="button" onClick={() => setAiMode(true)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all ${
+                      aiMode ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}>
+                    ✨ AI-Assisted
+                  </button>
+                  <button type="button" onClick={() => setAiMode(false)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all ${
+                      !aiMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}>
+                    📝 Manual
+                  </button>
+                </div>
+                {aiMode && (
+                  <div className="mb-4">
+                    <AIAssistPanel
+                      module="pricing"
+                      onExtracted={(fields) => {
+                        const f = fields as Partial<typeof form>;
+                        // features array needs to be non-empty strings
+                        if (Array.isArray(f.features) && f.features.length > 0) {
+                          setForm((prev) => ({ ...prev, ...f, features: f.features as string[] }));
+                        } else {
+                          setForm((prev) => ({ ...prev, ...f }));
+                        }
+                        setAiMode(false);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
                 <div>

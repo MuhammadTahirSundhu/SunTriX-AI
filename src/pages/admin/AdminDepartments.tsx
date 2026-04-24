@@ -5,6 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Eye, EyeOff, X, Save, GripVertical, ArrowUp, ArrowDown, Monitor } from "lucide-react";
 import LivePreview from "@/components/admin/LivePreview";
 import type { DepartmentPreviewData } from "@/components/admin/LivePreview";
+import AIAssistPanel from "@/components/admin/AIAssistPanel";
 
 interface Department {
   _id: string;
@@ -31,6 +32,7 @@ const AdminDepartments = () => {
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [aiMode, setAiMode] = useState(false);
 
   const reload = async () => {
     const { data } = await apiRequest<Department[]>(ENDPOINTS.DEPARTMENTS_LIST + "?all=true");
@@ -41,6 +43,7 @@ const AdminDepartments = () => {
 
   const handleNew = () => {
     setIsNew(true);
+    setAiMode(false);
     setEditing({ ...EMPTY_DEPT, order: departments.length + 1 });
   };
 
@@ -88,9 +91,20 @@ const AdminDepartments = () => {
           <h1 className="text-2xl font-display font-bold text-foreground">Departments</h1>
           <p className="text-sm text-muted-foreground">Manage website departments/services sections</p>
         </div>
-        <button onClick={handleNew} className="gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
-          <Plus className="h-4 w-4" /> Add Department
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { handleNew(); setAiMode(true); }}
+            className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 hover:bg-purple-500/20 transition-colors"
+          >
+            <span>✨</span> Add via AI
+          </button>
+          <button
+            onClick={() => { handleNew(); setAiMode(false); }}
+            className="gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+          >
+            <Plus className="h-4 w-4" /> Add Manually
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -161,6 +175,34 @@ const AdminDepartments = () => {
                   </button>
                 </div>
               </div>
+
+              {/* AI / Manual mode toggle */}
+              <div className="flex rounded-lg border border-border bg-muted/30 p-0.5 mb-5">
+                <button type="button" onClick={() => setAiMode(true)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all ${
+                    aiMode ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}>
+                  ✨ AI-Assisted
+                </button>
+                <button type="button" onClick={() => setAiMode(false)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all ${
+                    !aiMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}>
+                  📝 Manual
+                </button>
+              </div>
+
+              {aiMode && (
+                <div className="mb-5">
+                  <AIAssistPanel
+                    module="department"
+                    onExtracted={(fields) => {
+                      setEditing((prev) => prev ? { ...prev, ...fields } : prev);
+                      setAiMode(false);
+                    }}
+                  />
+                </div>
+              )}
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Name *</label>

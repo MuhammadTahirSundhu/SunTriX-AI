@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import LivePreview from "@/components/admin/LivePreview";
 import type { PortfolioPreviewData } from "@/components/admin/LivePreview";
+import AIAssistPanel from "@/components/admin/AIAssistPanel";
 
 const CATEGORIES = ["Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
 
@@ -53,6 +54,7 @@ const AdminPortfolio = () => {
   const [filter, setFilter] = useState("all");
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [aiMode, setAiMode] = useState(false);
 
   const reload = async () => {
     const { data } = await apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO_LIST + "?all=true");
@@ -69,6 +71,7 @@ const AdminPortfolio = () => {
 
   const handleNew = () => {
     setIsNew(true);
+    setAiMode(false);
     setEditing({ ...EMPTY_PROJECT, order: projects.length + 1 });
   };
 
@@ -176,9 +179,21 @@ const AdminPortfolio = () => {
           <h1 className="text-2xl font-display font-bold text-foreground">Portfolio</h1>
           <p className="text-sm text-muted-foreground">Manage projects and case studies</p>
         </div>
-        <button onClick={handleNew} className="gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">
-          <Plus className="h-4 w-4" /> Add Project
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { handleNew(); setAiMode(true); }}
+            className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 hover:bg-purple-500/20 transition-colors"
+          >
+            <span>✨</span> Add via AI
+          </button>
+          <button
+            onClick={() => { handleNew(); setAiMode(false); }}
+            className="gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+          >
+            <Plus className="h-4 w-4" /> Add Manually
+          </button>
+        </div>
+
       </div>
 
       {/* Filters */}
@@ -289,6 +304,41 @@ const AdminPortfolio = () => {
                   </button>
                 </div>
               </div>
+
+              {/* AI / Manual mode toggle */}
+              <div className="flex rounded-lg border border-border bg-muted/30 p-0.5 mb-5">
+                <button
+                  type="button"
+                  onClick={() => setAiMode(true)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all ${
+                    aiMode ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  ✨ AI-Assisted
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiMode(false)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all ${
+                    !aiMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  📝 Manual
+                </button>
+              </div>
+
+              {/* AI Panel */}
+              {aiMode && (
+                <div className="mb-5">
+                  <AIAssistPanel
+                    module="portfolio"
+                    onExtracted={(fields) => {
+                      setEditing((prev) => prev ? { ...prev, ...fields } : prev);
+                      setAiMode(false);
+                    }}
+                  />
+                </div>
+              )}
 
               <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div className="grid grid-cols-2 gap-4">

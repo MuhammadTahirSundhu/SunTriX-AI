@@ -174,6 +174,9 @@ export const ENDPOINTS = {
   // Audit Log
   AUDIT_LIST: `${BASE_URL}/audit`,
 
+  // AI-Assisted Field Extraction
+  AI_EXTRACT: `${BASE_URL}/ai/extract`,
+
   // Campaigns
   CAMPAIGN_LIST: `${BASE_URL}/newsletter/campaigns`,
   CAMPAIGN_CREATE: `${BASE_URL}/newsletter/campaigns`,

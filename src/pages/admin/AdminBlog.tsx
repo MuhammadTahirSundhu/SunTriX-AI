@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { Plus, Trash2, Edit2, X, Search, Filter, ChevronDown, Calendar, Eye, EyeOff, Clock } from "lucide-react";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import AIAssistPanel from "@/components/admin/AIAssistPanel";
 
 interface BlogPost {
   _id: string;
@@ -44,6 +45,7 @@ const AdminBlog = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [tagInput, setTagInput] = useState("");
+  const [aiMode, setAiMode] = useState(false);
 
   const fetch_ = async () => {
     setLoading(true);
@@ -60,6 +62,7 @@ const AdminBlog = () => {
     setEditing(null);
     setForm(empty);
     setTagInput("");
+    setAiMode(false);
     setShowForm(true);
   };
 
@@ -122,9 +125,17 @@ const AdminBlog = () => {
           <h1 className="text-2xl font-display font-bold text-foreground">Blog</h1>
           <p className="text-sm text-muted-foreground">Write and schedule blog posts</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus className="h-4 w-4" /> New Post
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { openCreate(); setAiMode(true); }}
+            className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 hover:bg-purple-500/20 transition-colors"
+          >
+            <span>✨</span> Add via AI
+          </button>
+          <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus className="h-4 w-4" /> Add Manually
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -229,6 +240,36 @@ const AdminBlog = () => {
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <h2 className="text-lg font-bold text-foreground">{editing ? "Edit Post" : "New Blog Post"}</h2>
                 <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="px-6 pt-4">
+                <div className="flex rounded-lg border border-border bg-muted/30 p-0.5 mb-4">
+                  <button type="button" onClick={() => setAiMode(true)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all ${
+                      aiMode ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}>
+                    ✨ AI-Assisted
+                  </button>
+                  <button type="button" onClick={() => setAiMode(false)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all ${
+                      !aiMode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}>
+                    📝 Manual
+                  </button>
+                </div>
+                {aiMode && (
+                  <div className="mb-4">
+                    <AIAssistPanel
+                      module="blog"
+                      onExtracted={(fields) => {
+                        const f = fields as Partial<typeof form>;
+                        setForm((prev) => ({ ...prev, ...f }));
+                        if (typeof fields.tags === "string") setTagInput(fields.tags as string);
+                        else if (Array.isArray(fields.tags)) setTagInput((fields.tags as string[]).join(", "));
+                        setAiMode(false);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
                 <div>

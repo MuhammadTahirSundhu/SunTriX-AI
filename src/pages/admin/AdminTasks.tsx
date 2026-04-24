@@ -17,6 +17,7 @@ interface TaskRequest {
   name: string;
   email: string;
   company: string;
+  projectTitle: string;
   service: string;
   budget: string;
   timeline: string;
