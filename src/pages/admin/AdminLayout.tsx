@@ -5,15 +5,12 @@ import {
   LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone, Layers, Image, Bell,
   Shield, Building2, DollarSign, BookOpen, UserSquare2
 } from "lucide-react";
-import { useTokenRefresh } from "../../hooks/useTokenRefresh";
 import { useNotifications } from "../../hooks/useNotifications";
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
 
-  // Initialize token refresh cycle
-  useTokenRefresh();
   const notifications = useNotifications();
 
   const token = localStorage.getItem("auth_token");

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
-import { Search, Filter, Trash2, Eye, ChevronDown, LayoutGrid, List as ListIcon, CheckSquare, Square, Copy, Check } from "lucide-react";
+import { Search, Filter, Trash2, Eye, ChevronDown, LayoutGrid, List as ListIcon, CheckSquare, Square, Copy, Check, X } from "lucide-react";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 
 type TaskStatus = "new" | "in_review" | "proposal_sent" | "in_progress" | "completed" | "cancelled";

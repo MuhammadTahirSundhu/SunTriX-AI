@@ -79,6 +79,7 @@ export const ENDPOINTS = {
   AUTH_REGISTER: `${BASE_URL}/auth/register`,
   AUTH_LOGOUT: `${BASE_URL}/auth/logout`,
   AUTH_ME: `${BASE_URL}/auth/me`,
+  AUTH_REFRESH: `${BASE_URL}/auth/refresh`,
 
   // Contact & Requests
   CONTACT_SUBMIT: `${BASE_URL}/contact`,
@@ -174,11 +175,11 @@ export const ENDPOINTS = {
   AUDIT_LIST: `${BASE_URL}/audit`,
 
   // Campaigns
-  CAMPAIGN_LIST: `${BASE_URL}/campaigns`,
-  CAMPAIGN_CREATE: `${BASE_URL}/campaigns`,
-  CAMPAIGN_UPDATE: (id: string) => `${BASE_URL}/campaigns/${id}`,
-  CAMPAIGN_DELETE: (id: string) => `${BASE_URL}/campaigns/${id}`,
-  CAMPAIGN_SEND: (id: string) => `${BASE_URL}/campaigns/${id}/send`,
+  CAMPAIGN_LIST: `${BASE_URL}/newsletter/campaigns`,
+  CAMPAIGN_CREATE: `${BASE_URL}/newsletter/campaigns`,
+  CAMPAIGN_UPDATE: (id: string) => `${BASE_URL}/newsletter/campaigns/${id}`,
+  CAMPAIGN_DELETE: (id: string) => `${BASE_URL}/newsletter/campaigns/${id}`,
+  CAMPAIGN_SEND: (id: string) => `${BASE_URL}/newsletter/campaigns/${id}/send`,
 
   // Assets (Cloudinary via backend)
   UPLOAD_IMAGE: `${BASE_URL}/upload/image`,
@@ -223,7 +224,7 @@ export async function apiRequest<T = unknown>(
 
   try {
     const token = localStorage.getItem("auth_token");
-    const res = await fetch(endpoint, {
+    let res = await fetch(endpoint, {
       method,
       headers: {
         "Content-Type": "application/json",
@@ -232,6 +233,57 @@ export async function apiRequest<T = unknown>(
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
+
+    if (res.status === 401 && endpoint !== ENDPOINTS.AUTH_REFRESH && endpoint !== ENDPOINTS.AUTH_LOGIN) {
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (refreshToken) {
+        // Try to refresh
+        const refreshRes = await fetch(ENDPOINTS.AUTH_REFRESH, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          if (refreshData.token && refreshData.refreshToken) {
+            localStorage.setItem("auth_token", refreshData.token);
+            localStorage.setItem("refresh_token", refreshData.refreshToken);
+            
+            // Retry the original request with the new token
+            res = await fetch(endpoint, {
+              method,
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${refreshData.token}`,
+                ...headers,
+              },
+              ...(body ? { body: JSON.stringify(body) } : {}),
+            });
+          } else {
+            // Refresh failed, clear tokens and redirect to login
+            localStorage.removeItem("auth_token");
+            localStorage.removeItem("refresh_token");
+            localStorage.removeItem("suntrix_admin_session");
+            window.location.href = "/admin/login";
+            return { data: null, error: "Session expired. Please log in again." };
+          }
+        } else {
+          // Refresh failed, clear tokens and redirect to login
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("suntrix_admin_session");
+          window.location.href = "/admin/login";
+          return { data: null, error: "Session expired. Please log in again." };
+        }
+      } else {
+        // No refresh token available, force logout
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("suntrix_admin_session");
+        window.location.href = "/admin/login";
+        return { data: null, error: "Session expired. Please log in again." };
+      }
+    }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: "Request failed" }));

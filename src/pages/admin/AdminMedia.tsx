@@ -104,7 +104,8 @@ const AdminMedia = () => {
   };
 
   const filtered = assets.filter(a => {
-    const matchSearch = a.name.toLowerCase().includes(search.toLowerCase()) || (a.folder || "").toLowerCase().includes(search.toLowerCase());
+    const assetName = a.name || a.publicId || "Unknown";
+    const matchSearch = assetName.toLowerCase().includes(search.toLowerCase()) || (a.folder || "").toLowerCase().includes(search.toLowerCase());
     const matchType = filterType === "all" || a.type === filterType;
     return matchSearch && matchType;
   });

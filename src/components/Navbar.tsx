@@ -62,6 +62,8 @@ const Navbar = () => {
           </div>
 
           <Link to="/work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.portfolio")}</Link>
+          <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
+          <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Blog</Link>
           <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.about")}</Link>
           <Link to="/how-we-work" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.howWeWork")}</Link>
           <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{t("nav.contact")}</Link>
@@ -93,6 +95,8 @@ const Navbar = () => {
                 { to: "/", label: t("nav.home") },
                 { to: "/services", label: t("nav.services") },
                 { to: "/work", label: t("nav.portfolio") },
+                { to: "/pricing", label: "Pricing" },
+                { to: "/blog", label: "Blog" },
                 { to: "/about", label: t("nav.about") },
                 { to: "/how-we-work", label: t("nav.howWeWork") },
                 { to: "/contact", label: t("nav.contact") },

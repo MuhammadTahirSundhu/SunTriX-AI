@@ -19,13 +19,14 @@ const AdminLogin = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { data, error: apiErr } = await apiRequest<{ token: string; user: { id: string; email: string; name: string; role: string } }>(
+    const { data, error: apiErr } = await apiRequest<{ token: string; refreshToken: string; user: { id: string; email: string; name: string; role: string } }>(
       ENDPOINTS.AUTH_LOGIN,
       { method: "POST", body: { email, password } }
     );
     setLoading(false);
-    if (data?.token) {
+    if (data?.token && data?.refreshToken) {
       localStorage.setItem("auth_token", data.token);
+      localStorage.setItem("refresh_token", data.refreshToken);
       localStorage.setItem("suntrix_admin_session", JSON.stringify(data.user));
       window.location.href = "/admin";
     } else {
