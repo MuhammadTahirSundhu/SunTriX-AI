@@ -10,9 +10,9 @@ const router = Router();
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const all = req.query.all === "true";
-    const filter = all ? {} : { enabled: true };
+    const filter = all ? {} : { isVisible: true };
     const plans = await Pricing.find(filter).sort({ order: 1 });
-    res.json(plans);
+    res.json({ plans });
   } catch (err) { next(err); }
 });
 
@@ -58,7 +58,7 @@ router.post("/bulk/import", requireAuth, async (req: Request, res: Response, nex
 router.post("/", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const plan = await Pricing.create(req.body);
-    await logAudit(req, "create", "pricing", plan._id.toString(), plan.planName);
+    await logAudit(req, "create", "pricing", plan._id.toString(), plan.name);
     res.status(201).json(plan);
   } catch (err) { next(err); }
 });
@@ -68,7 +68,7 @@ router.put("/:id", requireAuth, async (req: Request, res: Response, next: NextFu
   try {
     const plan = await Pricing.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!plan) return next(createError("Pricing plan not found", 404));
-    await logAudit(req, "update", "pricing", plan._id.toString(), plan.planName);
+    await logAudit(req, "update", "pricing", plan._id.toString(), plan.name);
     res.json(plan);
   } catch (err) { next(err); }
 });
@@ -78,7 +78,7 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response, next: Nex
   try {
     const plan = await Pricing.findByIdAndDelete(req.params.id);
     if (!plan) return next(createError("Pricing plan not found", 404));
-    await logAudit(req, "delete", "pricing", req.params.id, plan.planName);
+    await logAudit(req, "delete", "pricing", req.params.id, plan.name);
     res.json({ message: "Pricing plan deleted" });
   } catch (err) { next(err); }
 });

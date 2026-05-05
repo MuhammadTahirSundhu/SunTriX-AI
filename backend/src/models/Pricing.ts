@@ -1,30 +1,32 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IPricing extends Document {
-  planName: string;
-  price: string;
-  billingCycle: string;
+  name: string;
+  price: number;
+  currency: string;
+  billingPeriod: string;
   description: string;
   features: string[];
-  highlighted: boolean;
-  ctaText: string;
+  isPopular: boolean;
+  isVisible: boolean;
+  ctaLabel: string;
   ctaLink: string;
   order: number;
-  enabled: boolean;
 }
 
 const PricingSchema = new Schema<IPricing>(
   {
-    planName: { type: String, required: true, trim: true },
-    price: { type: String, required: true },
-    billingCycle: { type: String, default: "per project" },
+    name: { type: String, required: true, trim: true },
+    price: { type: Number, required: true },
+    currency: { type: String, default: "USD" },
+    billingPeriod: { type: String, default: "monthly" },
     description: { type: String, default: "" },
     features: [{ type: String }],
-    highlighted: { type: Boolean, default: false },
-    ctaText: { type: String, default: "Get Started" },
-    ctaLink: { type: String, default: "/request-task" },
+    isPopular: { type: Boolean, default: false },
+    isVisible: { type: Boolean, default: true },
+    ctaLabel: { type: String, default: "Get Started" },
+    ctaLink: { type: String, default: "/contact" },
     order: { type: Number, default: 1 },
-    enabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

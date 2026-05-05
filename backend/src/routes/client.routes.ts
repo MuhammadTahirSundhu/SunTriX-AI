@@ -10,9 +10,9 @@ const router = Router();
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const all = req.query.all === "true";
-    const filter = all ? {} : { enabled: true };
+    const filter = all ? {} : { isVisible: true };
     const clients = await Client.find(filter).sort({ order: 1, createdAt: 1 });
-    res.json(clients);
+    res.json({ clients });
   } catch (err) { next(err); }
 });
 
@@ -50,16 +50,6 @@ router.put("/:id", requireAuth, async (req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 });
 
-// DELETE /clients/:id — admin
-router.delete("/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const client = await Client.findByIdAndDelete(req.params.id);
-    if (!client) return next(createError("Client not found", 404));
-    await logAudit(req, "delete", "client", req.params.id, client.name);
-    res.json({ message: "Client deleted" });
-  } catch (err) { next(err); }
-});
-
 // DELETE /clients/bulk — admin bulk delete
 router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -68,6 +58,16 @@ router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: Ne
     await Client.deleteMany({ _id: { $in: ids } });
     await logAudit(req, "bulk_delete", "client", "", `${ids.length} clients`);
     res.json({ message: `Deleted ${ids.length} clients` });
+  } catch (err) { next(err); }
+});
+
+// DELETE /clients/:id — admin
+router.delete("/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const client = await Client.findByIdAndDelete(req.params.id);
+    if (!client) return next(createError("Client not found", 404));
+    await logAudit(req, "delete", "client", req.params.id, client.name);
+    res.json({ message: "Client deleted" });
   } catch (err) { next(err); }
 });
 

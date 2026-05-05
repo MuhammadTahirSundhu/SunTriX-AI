@@ -2,19 +2,19 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IClient extends Document {
   name: string;
-  logo: string;
-  url: string;
+  logoUrl: string;
+  websiteUrl: string;
+  isVisible: boolean;
   order: number;
-  enabled: boolean;
 }
 
 const ClientSchema = new Schema<IClient>(
   {
     name: { type: String, required: true, trim: true },
-    logo: { type: String, default: "" },
-    url: { type: String, default: "" },
+    logoUrl: { type: String, default: "" },
+    websiteUrl: { type: String, default: "" },
+    isVisible: { type: Boolean, default: true },
     order: { type: Number, default: 1 },
-    enabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
