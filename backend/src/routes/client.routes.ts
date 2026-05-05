@@ -16,6 +16,21 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   } catch (err) { next(err); }
 });
 
+// PUT /clients/reorder — admin bulk reorder
+router.put("/reorder", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids }: { ids: string[] } = req.body;
+    if (!ids || !Array.isArray(ids)) return next(createError("Array of IDs required", 400));
+    
+    const updates = ids.map((id, index) => ({
+      updateOne: { filter: { _id: id }, update: { order: index } }
+    }));
+    await Client.bulkWrite(updates);
+    await logAudit(req, "reorder", "client", "", `Reordered ${ids.length} clients`);
+    res.json({ message: "Reordered successfully" });
+  } catch (err) { next(err); }
+});
+
 // POST /clients — admin
 router.post("/", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -45,12 +60,26 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response, next: Nex
   } catch (err) { next(err); }
 });
 
-// PUT /clients/reorder — bulk reorder
-router.put("/reorder", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+// DELETE /clients/bulk — admin bulk delete
+router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { order }: { order: { id: string; order: number }[] } = req.body;
-    await Promise.all(order.map(({ id, order: o }) => Client.findByIdAndUpdate(id, { order: o })));
-    res.json({ message: "Reordered" });
+    const { ids }: { ids: string[] } = req.body;
+    if (!ids?.length) return next(createError("IDs required", 400));
+    await Client.deleteMany({ _id: { $in: ids } });
+    await logAudit(req, "bulk_delete", "client", "", `${ids.length} clients`);
+    res.json({ message: `Deleted ${ids.length} clients` });
+  } catch (err) { next(err); }
+});
+
+// POST /clients/bulk/import — admin bulk import
+router.post("/bulk/import", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) return next(createError("Array of items required", 400));
+    
+    const result = await Client.insertMany(items);
+    await logAudit(req, "bulk_import", "client", "", `Imported ${result.length} clients`);
+    res.status(201).json({ message: `Imported ${result.length} clients`, count: result.length });
   } catch (err) { next(err); }
 });
 

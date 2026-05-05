@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
-import { Plus, Trash2, Edit2, X, Search, Filter, ChevronDown, Calendar, Eye, EyeOff, Clock } from "lucide-react";
+import { Plus, Trash2, Edit2, X, Search, Filter, ChevronDown, Calendar, Eye, EyeOff, Clock, Copy } from "lucide-react";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import AIAssistPanel from "@/components/admin/AIAssistPanel";
+import { SortControl, SortOption } from "@/components/admin/SortControl";
 
 interface BlogPost {
   _id: string;
@@ -46,6 +47,7 @@ const AdminBlog = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [tagInput, setTagInput] = useState("");
   const [aiMode, setAiMode] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("date-desc");
 
   const fetch_ = async () => {
     setLoading(true);
@@ -87,8 +89,33 @@ const AdminBlog = () => {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this post?")) return;
-    await apiRequest(ENDPOINTS.BLOG_DELETE(id), { method: "DELETE" });
-    fetch_();
+    try {
+      await apiRequest(ENDPOINTS.BLOG_DELETE(id), { method: "DELETE" });
+      fetch_();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleClone = async (post: BlogPost) => {
+    const slug = `${post.slug}-copy-${Math.random().toString(36).substring(2, 7)}`;
+    const copy = { 
+      ...post, 
+      title: `${post.title} (Copy)`,
+      slug,
+      status: "draft" as const,
+      publishedAt: "",
+      scheduledAt: ""
+    };
+    delete (copy as any)._id;
+    delete (copy as any).createdAt;
+    
+    try {
+      await apiRequest(ENDPOINTS.BLOG_CREATE, { method: "POST", body: copy });
+      fetch_();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -113,6 +140,12 @@ const AdminBlog = () => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "all" || p.status === filterStatus;
     return matchSearch && matchStatus;
+  }).sort((a, b) => {
+    if (sortOption === "date-desc") return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    if (sortOption === "date-asc") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    if (sortOption === "az") return a.title.localeCompare(b.title);
+    if (sortOption === "za") return b.title.localeCompare(a.title);
+    return 0;
   });
 
   const bulkActions = [{ label: "Delete Selected", icon: Trash2, variant: "danger" as const, onClick: handleBulkDelete }];
@@ -138,22 +171,25 @@ const AdminBlog = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search posts..." className="w-full rounded-lg border border-border bg-muted/50 pl-10 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+      {/* Filters & Sort */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap gap-3 flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search posts..." className="w-full rounded-lg border border-border bg-muted/50 pl-10 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="appearance-none rounded-lg border border-border bg-muted/50 pl-10 pr-8 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+              <option value="all">All Statuses</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+          </div>
         </div>
-        <div className="relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="appearance-none rounded-lg border border-border bg-muted/50 pl-10 pr-8 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-            <option value="all">All Statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-            <option value="scheduled">Scheduled</option>
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-        </div>
+        <SortControl value={sortOption} onChange={setSortOption} hideCustom />
       </div>
 
       {loading ? (
@@ -220,6 +256,7 @@ const AdminBlog = () => {
                   <td className="px-4 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => openEdit(post)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><Edit2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleClone(post)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"><Copy className="h-4 w-4" /></button>
                       <button onClick={() => handleDelete(post._id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </td>

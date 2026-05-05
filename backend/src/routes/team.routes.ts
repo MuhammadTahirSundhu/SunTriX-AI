@@ -16,6 +16,44 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   } catch (err) { next(err); }
 });
 
+// PUT /team/reorder — admin bulk reorder
+router.put("/reorder", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids }: { ids: string[] } = req.body;
+    if (!ids || !Array.isArray(ids)) return next(createError("Array of IDs required", 400));
+    
+    const updates = ids.map((id, index) => ({
+      updateOne: { filter: { _id: id }, update: { order: index } }
+    }));
+    await Team.bulkWrite(updates);
+    await logAudit(req, "reorder", "team", "", `Reordered ${ids.length} members`);
+    res.json({ message: "Reordered successfully" });
+  } catch (err) { next(err); }
+});
+
+// DELETE /team/bulk — admin bulk delete
+router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids }: { ids: string[] } = req.body;
+    if (!ids?.length) return next(createError("IDs required", 400));
+    await Team.deleteMany({ _id: { $in: ids } });
+    await logAudit(req, "bulk_delete", "team", "", `${ids.length} members`);
+    res.json({ message: `Deleted ${ids.length} members` });
+  } catch (err) { next(err); }
+});
+
+// POST /team/bulk/import — admin bulk import
+router.post("/bulk/import", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) return next(createError("Array of items required", 400));
+    
+    const result = await Team.insertMany(items);
+    await logAudit(req, "bulk_import", "team", "", `Imported ${result.length} members`);
+    res.status(201).json({ message: `Imported ${result.length} members`, count: result.length });
+  } catch (err) { next(err); }
+});
+
 // GET /team/:id — admin
 router.get("/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {

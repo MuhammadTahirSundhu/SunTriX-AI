@@ -104,6 +104,7 @@ export const ENDPOINTS = {
   PORTFOLIO_CREATE: `${BASE_URL}/portfolio`,
   PORTFOLIO_UPDATE: (id: string) => `${BASE_URL}/portfolio/${id}`,
   PORTFOLIO_DELETE: (id: string) => `${BASE_URL}/portfolio/${id}`,
+  PORTFOLIO_REORDER: `${BASE_URL}/portfolio/reorder`,
 
   CASE_STUDY_LIST: `${BASE_URL}/case-studies`,
   CASE_STUDY_BY_SLUG: (slug: string) => `${BASE_URL}/case-studies/slug/${slug}`,
@@ -136,6 +137,7 @@ export const ENDPOINTS = {
   DEPARTMENTS_CREATE: `${BASE_URL}/departments`,
   DEPARTMENTS_UPDATE: (id: string) => `${BASE_URL}/departments/${id}`,
   DEPARTMENTS_DELETE: (id: string) => `${BASE_URL}/departments/${id}`,
+  DEPARTMENTS_REORDER: `${BASE_URL}/departments/reorder`,
 
   // Admin
   ADMIN_DASHBOARD_STATS: `${BASE_URL}/admin/stats`,
@@ -156,12 +158,14 @@ export const ENDPOINTS = {
   CLIENTS_CREATE: `${BASE_URL}/clients`,
   CLIENTS_UPDATE: (id: string) => `${BASE_URL}/clients/${id}`,
   CLIENTS_DELETE: (id: string) => `${BASE_URL}/clients/${id}`,
+  CLIENTS_REORDER: `${BASE_URL}/clients/reorder`,
 
   // Pricing
   PRICING_LIST: `${BASE_URL}/pricing`,
   PRICING_CREATE: `${BASE_URL}/pricing`,
   PRICING_UPDATE: (id: string) => `${BASE_URL}/pricing/${id}`,
   PRICING_DELETE: (id: string) => `${BASE_URL}/pricing/${id}`,
+  PRICING_REORDER: `${BASE_URL}/pricing/reorder`,
 
   // Blog / Posts
   BLOG_LIST: `${BASE_URL}/posts`,

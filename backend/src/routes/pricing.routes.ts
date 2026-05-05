@@ -16,6 +16,44 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   } catch (err) { next(err); }
 });
 
+// PUT /pricing/reorder — admin bulk reorder
+router.put("/reorder", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids }: { ids: string[] } = req.body;
+    if (!ids || !Array.isArray(ids)) return next(createError("Array of IDs required", 400));
+    
+    const updates = ids.map((id, index) => ({
+      updateOne: { filter: { _id: id }, update: { order: index } }
+    }));
+    await Pricing.bulkWrite(updates);
+    await logAudit(req, "reorder", "pricing", "", `Reordered ${ids.length} plans`);
+    res.json({ message: "Reordered successfully" });
+  } catch (err) { next(err); }
+});
+
+// DELETE /pricing/bulk — admin bulk delete
+router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids }: { ids: string[] } = req.body;
+    if (!ids?.length) return next(createError("IDs required", 400));
+    await Pricing.deleteMany({ _id: { $in: ids } });
+    await logAudit(req, "bulk_delete", "pricing", "", `${ids.length} plans`);
+    res.json({ message: `Deleted ${ids.length} plans` });
+  } catch (err) { next(err); }
+});
+
+// POST /pricing/bulk/import — admin bulk import
+router.post("/bulk/import", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) return next(createError("Array of items required", 400));
+    
+    const result = await Pricing.insertMany(items);
+    await logAudit(req, "bulk_import", "pricing", "", `Imported ${result.length} plans`);
+    res.status(201).json({ message: `Imported ${result.length} plans`, count: result.length });
+  } catch (err) { next(err); }
+});
+
 // POST /pricing — admin
 router.post("/", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {

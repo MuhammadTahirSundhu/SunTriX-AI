@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
-import { Plus, Trash2, Edit2, GripVertical, Linkedin, Twitter, Github, Globe, X, Check } from "lucide-react";
+import { Plus, Trash2, Edit2, GripVertical, Linkedin, Twitter, Github, Globe, X, Check, Copy } from "lucide-react";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import AIAssistPanel from "@/components/admin/AIAssistPanel";
+import { SortableList } from "@/components/admin/SortableList";
+import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
+import { SortControl, SortOption } from "@/components/admin/SortControl";
+import { toast } from "sonner";
 
 interface TeamMember {
   _id: string;
@@ -42,6 +46,7 @@ const AdminTeam = () => {
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [aiMode, setAiMode] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("custom");
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -91,8 +96,45 @@ const AdminTeam = () => {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this team member?")) return;
-    await apiRequest(ENDPOINTS.TEAM_DELETE(id), { method: "DELETE" });
-    fetchMembers();
+    try {
+      await apiRequest(ENDPOINTS.TEAM_DELETE(id), { method: "DELETE" });
+      fetchMembers();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete team member");
+    }
+  };
+
+  const handleClone = async (member: TeamMember) => {
+    const copy = { 
+      ...member, 
+      name: `${member.name} (Copy)`,
+      isVisible: false
+    };
+    delete (copy as any)._id;
+    
+    try {
+      await apiRequest(ENDPOINTS.TEAM_CREATE, { method: "POST", body: copy });
+      toast.success("Team member duplicated");
+      fetchMembers();
+    } catch (err) {
+      toast.error("Failed to duplicate");
+    }
+  };
+
+  const handleReorder = async (newMembers: TeamMember[]) => {
+    setMembers(newMembers);
+    try {
+      const ids = newMembers.map(m => m._id);
+      await apiRequest(ENDPOINTS.TEAM_REORDER, {
+        method: "PUT",
+        body: { ids }
+      });
+      toast.success("Team order saved");
+    } catch (err) {
+      toast.error("Failed to save order");
+      fetchMembers();
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -115,6 +157,13 @@ const AdminTeam = () => {
 
   const bulkActions = [{ label: "Delete Selected", icon: Trash2, variant: "danger" as const, onClick: handleBulkDelete }];
 
+  const sortedMembers = [...members].sort((a, b) => {
+    if (sortOption === "custom") return 0;
+    if (sortOption === "az") return a.name.localeCompare(b.name);
+    if (sortOption === "za") return b.name.localeCompare(a.name);
+    return 0; // fallback
+  });
+
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8 flex items-end justify-between">
@@ -135,71 +184,86 @@ const AdminTeam = () => {
         </div>
       </div>
 
+      <div className="flex justify-end mb-6">
+        <SortControl value={sortOption} onChange={setSortOption} />
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {members.map((member) => (
-            <motion.div
-              key={member._id}
-              layout
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className={`relative bg-card border rounded-xl p-5 transition-all group ${selectedIds.has(member._id) ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
-            >
-              {/* Select checkbox */}
-              <button
-                onClick={() => toggleSelect(member._id)}
-                className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        <>
+          <SortableList items={sortedMembers} onReorder={handleReorder} strategy="rect" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {sortedMembers.map((member) => (
+              <SortableItem key={member._id} id={member._id} disabled={sortOption !== "custom"}>
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`relative bg-card border rounded-xl p-5 transition-all group ${selectedIds.has(member._id) ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
               >
-                <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${selectedIds.has(member._id) ? "bg-primary border-primary" : "border-muted-foreground bg-card"}`}>
-                  {selectedIds.has(member._id) && <Check className="h-3 w-3 text-white" />}
+                {/* Drag Handle */}
+                <div className={`absolute top-4 right-4 z-10 transition-opacity bg-background/80 backdrop-blur-sm rounded ${sortOption === "custom" ? "opacity-0 group-hover:opacity-100" : "hidden"}`}>
+                  <DragHandle />
                 </div>
-              </button>
 
-              <div className="flex gap-4">
-                {member.imageUrl ? (
-                  <img src={member.imageUrl} alt={member.name} className="h-14 w-14 rounded-full object-cover shrink-0 border-2 border-border" />
-                ) : (
-                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
-                    {member.name.charAt(0)}
+                {/* Select checkbox */}
+                <button
+                  onClick={() => toggleSelect(member._id)}
+                  className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                >
+                  <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${selectedIds.has(member._id) ? "bg-primary border-primary" : "border-muted-foreground bg-card"}`}>
+                    {selectedIds.has(member._id) && <Check className="h-3 w-3 text-white" />}
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">{member.name}</h3>
-                  <p className="text-sm text-primary">{member.role}</p>
-                  <p className="text-xs text-muted-foreground">{member.department}</p>
+                </button>
+
+                <div className="flex gap-4">
+                  {member.imageUrl ? (
+                    <img src={member.imageUrl} alt={member.name} className="h-14 w-14 rounded-full object-cover shrink-0 border-2 border-border" />
+                  ) : (
+                    <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
+                      {member.name.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{member.name}</h3>
+                    <p className="text-sm text-primary">{member.role}</p>
+                    <p className="text-xs text-muted-foreground">{member.department}</p>
+                  </div>
                 </div>
-              </div>
 
-              <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{member.bio}</p>
+                <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{member.bio}</p>
 
-              {/* Social Links */}
-              <div className="flex gap-2 mt-4 pt-4 border-t border-border/50">
-                {member.linkedin && <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Linkedin className="h-4 w-4" /></a>}
-                {member.twitter && <a href={member.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Twitter className="h-4 w-4" /></a>}
-                {member.github && <a href={member.github} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Github className="h-4 w-4" /></a>}
-                {member.website && <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Globe className="h-4 w-4" /></a>}
+                {/* Social Links */}
+                <div className="flex gap-2 mt-4 pt-4 border-t border-border/50">
+                  {member.linkedin && <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Linkedin className="h-4 w-4" /></a>}
+                  {member.twitter && <a href={member.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Twitter className="h-4 w-4" /></a>}
+                  {member.github && <a href={member.github} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Github className="h-4 w-4" /></a>}
+                  {member.website && <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Globe className="h-4 w-4" /></a>}
 
-                <div className="ml-auto flex items-center gap-2">
-                  <button
-                    onClick={() => toggleVisibility(member)}
-                    className={`text-xs px-2 py-0.5 rounded-full border font-medium transition-colors ${member.isVisible ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-muted text-muted-foreground border-border"}`}
-                  >
-                    {member.isVisible ? "Visible" : "Hidden"}
-                  </button>
-                  <button onClick={() => openEdit(member)} className="text-muted-foreground hover:text-primary transition-colors p-1">
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleDelete(member._id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={() => toggleVisibility(member)}
+                      className={`text-xs px-2 py-0.5 rounded-full border font-medium transition-colors ${member.isVisible ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-muted text-muted-foreground border-border"}`}
+                    >
+                      {member.isVisible ? "Visible" : "Hidden"}
+                    </button>
+                    <button onClick={() => openEdit(member)} className="text-muted-foreground hover:text-primary transition-colors p-1">
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleClone(member)} className="text-muted-foreground hover:text-primary transition-colors p-1">
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleDelete(member._id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+              </SortableItem>
+            ))}
+          </SortableList>
 
           {members.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
@@ -213,7 +277,7 @@ const AdminTeam = () => {
               </button>
             </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Slide-in Form */}

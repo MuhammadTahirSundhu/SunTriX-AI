@@ -26,6 +26,21 @@ router.get("/slug/:slug", async (req: Request, res: Response, next: NextFunction
   } catch (err) { next(err); }
 });
 
+// PUT /portfolio/reorder — admin bulk reorder
+router.put("/reorder", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids }: { ids: string[] } = req.body;
+    if (!ids || !Array.isArray(ids)) return next(createError("Array of IDs required", 400));
+    
+    const updates = ids.map((id, index) => ({
+      updateOne: { filter: { _id: id }, update: { order: index } }
+    }));
+    await Portfolio.bulkWrite(updates);
+    await logAudit(req, "reorder", "portfolio", "", `Reordered ${ids.length} projects`);
+    res.json({ message: "Reordered successfully" });
+  } catch (err) { next(err); }
+});
+
 // DELETE /portfolio/bulk — admin bulk delete (must be before /:id)
 router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -45,6 +60,24 @@ router.put("/bulk", requireAuth, async (req: Request, res: Response, next: NextF
     await Portfolio.updateMany({ _id: { $in: ids } }, update);
     await logAudit(req, "bulk_update", "portfolio", "", `${ids.length} projects`);
     res.json({ message: `Updated ${ids.length} projects` });
+  } catch (err) { next(err); }
+});
+
+// POST /portfolio/bulk/import — admin bulk import
+router.post("/bulk/import", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) return next(createError("Array of items required", 400));
+    
+    // Add default slugs
+    const preparedItems = items.map((item: any) => ({
+      ...item,
+      slug: item.slug || slugify(item.title || "untitled", { lower: true, strict: true }) + "-" + Math.random().toString(36).slice(-4)
+    }));
+
+    const result = await Portfolio.insertMany(preparedItems);
+    await logAudit(req, "bulk_import", "portfolio", "", `Imported ${result.length} projects`);
+    res.status(201).json({ message: `Imported ${result.length} projects`, count: result.length });
   } catch (err) { next(err); }
 });
 

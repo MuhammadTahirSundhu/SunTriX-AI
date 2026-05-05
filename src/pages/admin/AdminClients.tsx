@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
-import { Plus, Trash2, Edit2, Globe, X, Check, Building2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Globe, X, Check, Building2, Copy } from "lucide-react";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import AIAssistPanel from "@/components/admin/AIAssistPanel";
+import { SortableList } from "@/components/admin/SortableList";
+import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
+import { SortControl, SortOption } from "@/components/admin/SortControl";
+import { toast } from "sonner";
 
 interface Client {
   _id: string;
@@ -25,6 +29,7 @@ const AdminClients = () => {
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [aiMode, setAiMode] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("custom");
 
   const fetch_ = async () => {
     setLoading(true);
@@ -53,8 +58,45 @@ const AdminClients = () => {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this client?")) return;
-    await apiRequest(ENDPOINTS.CLIENTS_DELETE(id), { method: "DELETE" });
-    fetch_();
+    try {
+      await apiRequest(ENDPOINTS.CLIENTS_DELETE(id), { method: "DELETE" });
+      fetch_();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete client");
+    }
+  };
+
+  const handleClone = async (client: Client) => {
+    const copy = { 
+      ...client, 
+      name: `${client.name} (Copy)`,
+      isVisible: false
+    };
+    delete (copy as any)._id;
+    
+    try {
+      await apiRequest(ENDPOINTS.CLIENTS_CREATE, { method: "POST", body: copy });
+      toast.success("Client duplicated");
+      fetch_();
+    } catch (err) {
+      toast.error("Failed to duplicate");
+    }
+  };
+
+  const handleReorder = async (newClients: Client[]) => {
+    setClients(newClients);
+    try {
+      const ids = newClients.map(c => c._id);
+      await apiRequest(ENDPOINTS.CLIENTS_REORDER, {
+        method: "PUT",
+        body: { ids }
+      });
+      toast.success("Clients order saved");
+    } catch (err) {
+      toast.error("Failed to save order");
+      fetch_();
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -71,6 +113,13 @@ const AdminClients = () => {
   };
 
   const bulkActions = [{ label: "Delete Selected", icon: Trash2, variant: "danger" as const, onClick: handleBulkDelete }];
+
+  const sortedClients = [...clients].sort((a, b) => {
+    if (sortOption === "custom") return 0;
+    if (sortOption === "az") return a.name.localeCompare(b.name);
+    if (sortOption === "za") return b.name.localeCompare(a.name);
+    return 0; // fallback
+  });
 
   return (
     <div className="p-6 lg:p-8">
@@ -98,6 +147,10 @@ const AdminClients = () => {
         </div>
       ) : (
         <>
+          <div className="flex justify-end mb-6">
+            <SortControl value={sortOption} onChange={setSortOption} />
+          </div>
+
           {/* Live Preview Strip */}
           {clients.filter((c) => c.isVisible).length > 0 && (
             <div className="mb-8 p-6 rounded-xl bg-card border border-border">
@@ -116,15 +169,16 @@ const AdminClients = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {clients.map((client) => (
-              <motion.div
-                key={client._id}
-                layout
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={`relative bg-card border rounded-xl p-4 group transition-all ${selectedIds.has(client._id) ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+          <SortableList items={sortedClients} onReorder={handleReorder} strategy="rect" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {sortedClients.map((client) => (
+              <SortableItem key={client._id} id={client._id} disabled={sortOption !== "custom"}>
+              <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className={`relative bg-card rounded-xl border p-4 flex flex-col group transition-all ${selectedIds.has(client._id) ? "border-primary ring-1 ring-primary" : "border-border"}`}
               >
+                <div className={`absolute top-2 right-2 z-20 transition-opacity bg-background/80 backdrop-blur-sm rounded ${sortOption === "custom" ? "opacity-0 group-hover:opacity-100" : "hidden"}`}>
+                  <DragHandle />
+                </div>
+                
                 <button
                   onClick={() => toggleSelect(client._id)}
                   className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -160,12 +214,16 @@ const AdminClients = () => {
                     <button onClick={() => openEdit(client)} className="p-1 text-muted-foreground hover:text-primary transition-colors">
                       <Edit2 className="h-3.5 w-3.5" />
                     </button>
+                    <button onClick={() => handleClone(client)} className="p-1 text-muted-foreground hover:text-primary transition-colors">
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
                     <button onClick={() => handleDelete(client._id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
               </motion.div>
+              </SortableItem>
             ))}
 
             {clients.length === 0 && (
@@ -176,7 +234,7 @@ const AdminClients = () => {
                 <button onClick={openCreate} className="bg-primary text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">Add Client</button>
               </div>
             )}
-          </div>
+          </SortableList>
         </>
       )}
 

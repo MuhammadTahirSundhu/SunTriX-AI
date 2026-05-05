@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
-import { Plus, Trash2, Edit2, Check, X, Star, DollarSign } from "lucide-react";
+import { Plus, Trash2, Edit2, Check, X, Star, DollarSign, Copy } from "lucide-react";
 import AIAssistPanel from "@/components/admin/AIAssistPanel";
+import { SortableList } from "@/components/admin/SortableList";
+import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
+import { SortControl, SortOption } from "@/components/admin/SortControl";
+import { toast } from "sonner";
 
 interface PricingPlan {
   _id: string;
@@ -32,6 +36,7 @@ const AdminPricing = () => {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
   const [aiMode, setAiMode] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("custom");
 
   const fetch_ = async () => {
     setLoading(true);
@@ -62,8 +67,45 @@ const AdminPricing = () => {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this plan?")) return;
-    await apiRequest(ENDPOINTS.PRICING_DELETE(id), { method: "DELETE" });
-    fetch_();
+    try {
+      await apiRequest(ENDPOINTS.PRICING_DELETE(id), { method: "DELETE" });
+      fetch_();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete plan");
+    }
+  };
+
+  const handleClone = async (plan: PricingPlan) => {
+    const copy = { 
+      ...plan, 
+      name: `${plan.name} (Copy)`,
+      isVisible: false
+    };
+    delete (copy as any)._id;
+    
+    try {
+      await apiRequest(ENDPOINTS.PRICING_CREATE, { method: "POST", body: copy });
+      toast.success("Plan duplicated");
+      fetch_();
+    } catch (err) {
+      toast.error("Failed to duplicate");
+    }
+  };
+
+  const handleReorder = async (newPlans: PricingPlan[]) => {
+    setPlans(newPlans);
+    try {
+      const ids = newPlans.map(p => p._id);
+      await apiRequest(ENDPOINTS.PRICING_REORDER, {
+        method: "PUT",
+        body: { ids }
+      });
+      toast.success("Pricing order saved");
+    } catch (err) {
+      toast.error("Failed to save order");
+      fetch_();
+    }
   };
 
   const addFeature = () => setForm({ ...form, features: [...form.features, ""] });
@@ -78,6 +120,13 @@ const AdminPricing = () => {
       <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${val ? "left-6" : "left-1"}`} />
     </button>
   );
+
+  const sortedPlans = [...plans].sort((a, b) => {
+    if (sortOption === "custom") return 0;
+    if (sortOption === "az") return a.name.localeCompare(b.name);
+    if (sortOption === "za") return b.name.localeCompare(a.name);
+    return 0; // fallback
+  });
 
   return (
     <div className="p-6 lg:p-8">
@@ -99,6 +148,10 @@ const AdminPricing = () => {
         </div>
       </div>
 
+      <div className="flex justify-end mb-6">
+        <SortControl value={sortOption} onChange={setSortOption} />
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -110,10 +163,14 @@ const AdminPricing = () => {
           <button onClick={openCreate} className="bg-primary text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:opacity-90">Add Plan</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {plans.map((plan) => (
-            <motion.div key={plan._id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className={`relative bg-card rounded-2xl border p-6 flex flex-col ${plan.isPopular ? "border-primary shadow-lg shadow-primary/10" : "border-border"}`}>
+        <SortableList items={sortedPlans} onReorder={handleReorder} strategy="rect" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {sortedPlans.map((plan) => (
+            <SortableItem key={plan._id} id={plan._id} disabled={sortOption !== "custom"}>
+            <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className={`relative bg-card rounded-2xl border p-6 flex flex-col group ${plan.isPopular ? "border-primary shadow-lg shadow-primary/10" : "border-border"}`}>
+              <div className={`absolute top-4 right-4 z-20 transition-opacity bg-background/80 backdrop-blur-sm rounded ${sortOption === "custom" ? "opacity-0 group-hover:opacity-100" : "hidden"}`}>
+                <DragHandle />
+              </div>
               {plan.isPopular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
@@ -143,13 +200,17 @@ const AdminPricing = () => {
                 <button onClick={() => openEdit(plan)} className="flex-1 text-sm border border-border rounded-lg py-2 hover:bg-muted transition-colors text-foreground flex items-center justify-center gap-2">
                   <Edit2 className="h-3.5 w-3.5" /> Edit
                 </button>
+                <button onClick={() => handleClone(plan)} className="p-2 rounded-lg border border-border hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-muted-foreground transition-colors">
+                  <Copy className="h-4 w-4" />
+                </button>
                 <button onClick={() => handleDelete(plan._id)} className="p-2 rounded-lg border border-border hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive text-muted-foreground transition-colors">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </motion.div>
+            </SortableItem>
           ))}
-        </div>
+        </SortableList>
       )}
 
       <AnimatePresence>

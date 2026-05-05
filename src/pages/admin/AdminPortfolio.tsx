@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import {
-  Plus, Pencil, Trash2, Eye, EyeOff, Star, StarOff, X, Save, Video, Image, Monitor,
-} from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, StarOff, X, Save, Video, Image, Monitor, Copy } from "lucide-react";
 import LivePreview from "@/components/admin/LivePreview";
 import type { PortfolioPreviewData } from "@/components/admin/LivePreview";
 import AIAssistPanel from "@/components/admin/AIAssistPanel";
+import { SortableList } from "@/components/admin/SortableList";
+import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
+import { SortControl, SortOption } from "@/components/admin/SortControl";
+import { CSVImporter, ExpectedField } from "@/components/admin/CSVImporter";
+import { UploadCloud } from "lucide-react";
 
 const CATEGORIES = ["Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
 
@@ -55,7 +58,30 @@ const AdminPortfolio = () => {
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [aiMode, setAiMode] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("custom");
+  const [showImport, setShowImport] = useState(false);
 
+  const portfolioFields: ExpectedField[] = [
+    { key: "title", label: "Title", required: true },
+    { key: "category", label: "Category", required: true },
+    { key: "clientName", label: "Client Name" },
+    { key: "industry", label: "Industry" },
+    { key: "shortDescription", label: "Short Description" },
+    { key: "status", label: "Status (published/draft)" }
+  ];
+
+  const handleImport = async (items: any[]) => {
+    try {
+      await apiRequest(ENDPOINTS.PORTFOLIO_LIST + "/bulk/import", {
+        method: "POST",
+        body: { items }
+      });
+      reload();
+    } catch (err) {
+      toast({ title: "Import failed", variant: "destructive" });
+      throw err;
+    }
+  };
   const reload = async () => {
     const { data } = await apiRequest<PortfolioProject[]>(ENDPOINTS.PORTFOLIO_LIST + "?all=true");
     if (data) setProjects(data);
@@ -63,11 +89,18 @@ const AdminPortfolio = () => {
 
   useEffect(() => { reload(); }, []);
 
-  const filtered = filter === "all" ? projects : projects.filter((p) =>
+  const filtered = (filter === "all" ? projects : projects.filter((p) =>
     filter === "published" ? p.status === "published" :
     filter === "draft" ? p.status === "draft" :
     filter === "featured" ? p.featured : true
-  );
+  )).sort((a, b) => {
+    if (sortOption === "custom") return 0;
+    if (sortOption === "date-desc") return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    if (sortOption === "date-asc") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    if (sortOption === "az") return a.title.localeCompare(b.title);
+    if (sortOption === "za") return b.title.localeCompare(a.title);
+    return 0;
+  });
 
   const handleNew = () => {
     setIsNew(true);
@@ -97,9 +130,31 @@ const AdminPortfolio = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await apiRequest(ENDPOINTS.PORTFOLIO_DELETE(id), { method: "DELETE" });
-    toast({ title: "Project deleted" });
-    reload();
+    if (!window.confirm("Delete this project?")) return;
+    try {
+      await apiRequest(ENDPOINTS.PORTFOLIO_DELETE(id), { method: "DELETE" });
+      toast({ title: "Project deleted" });
+      reload();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Failed to delete project", variant: "destructive" });
+    }
+  };
+
+  const handleReorder = async (newFiltered: PortfolioProject[]) => {
+    if (filter !== "all") {
+      toast({ title: "Please switch to 'All' filter to reorder", variant: "destructive" });
+      return;
+    }
+    setProjects(newFiltered);
+    try {
+      const ids = newFiltered.map(p => p._id);
+      await apiRequest(ENDPOINTS.PORTFOLIO_REORDER, { method: "PUT", body: { ids } });
+      toast({ title: "Order saved" });
+    } catch (err) {
+      toast({ title: "Failed to save order", variant: "destructive" });
+      reload();
+    }
   };
 
   const toggleStatus = async (p: PortfolioProject) => {
@@ -108,6 +163,27 @@ const AdminPortfolio = () => {
       body: { status: p.status === "published" ? "draft" : "published" },
     });
     reload();
+  };
+
+  const handleClone = async (p: PortfolioProject) => {
+    const slug = `${p.slug}-copy-${Math.random().toString(36).substring(2, 7)}`;
+    const copy = { 
+      ...p, 
+      title: `${p.title} (Copy)`,
+      slug,
+      status: "draft" as const
+    };
+    delete (copy as any)._id;
+    delete (copy as any).createdAt;
+    delete (copy as any).updatedAt;
+    
+    try {
+      await apiRequest(ENDPOINTS.PORTFOLIO_CREATE, { method: "POST", body: copy });
+      toast({ title: "Project duplicated" });
+      reload();
+    } catch (err) {
+      toast({ title: "Failed to duplicate", variant: "destructive" });
+    }
   };
 
   const toggleFeatured = async (p: PortfolioProject) => {
@@ -187,6 +263,12 @@ const AdminPortfolio = () => {
             <span>✨</span> Add via AI
           </button>
           <button
+            onClick={() => setShowImport(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+          >
+            <UploadCloud className="h-4 w-4" /> Import CSV
+          </button>
+          <button
             onClick={() => { handleNew(); setAiMode(false); }}
             className="gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
           >
@@ -196,34 +278,40 @@ const AdminPortfolio = () => {
 
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 mb-6">
-        {["all", "published", "draft", "featured"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-              filter === f ? "gradient-bg text-primary-foreground" : "border border-border text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}{f !== "all" && ` (${projects.filter((p) =>
-              f === "published" ? p.status === "published" :
-              f === "draft" ? p.status === "draft" : p.featured
-            ).length})`}
-          </button>
-        ))}
+      {/* Filters & Sort */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex gap-2">
+          {["all", "published", "draft", "featured"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                filter === f ? "gradient-bg text-primary-foreground" : "border border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}{f !== "all" && ` (${projects.filter((p) =>
+                f === "published" ? p.status === "published" :
+                f === "draft" ? p.status === "draft" : p.featured
+              ).length})`}
+            </button>
+          ))}
+        </div>
+        <SortControl value={sortOption} onChange={setSortOption} />
       </div>
 
       {/* Project Grid */}
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <SortableList items={filtered} onReorder={handleReorder} strategy="rect" className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map((project) => (
+          <SortableItem key={project._id} id={project._id} disabled={sortOption !== "custom" || filter !== "all"}>
           <motion.div
-            key={project._id}
             layout
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="rounded-xl border border-border bg-card overflow-hidden group"
+            className="rounded-xl border border-border bg-card overflow-hidden group relative"
           >
+            <div className={`absolute top-2 left-2 z-20 transition-opacity bg-black/40 backdrop-blur-sm rounded ${sortOption === "custom" && filter === "all" ? "opacity-0 group-hover:opacity-100" : "hidden"}`}>
+              <DragHandle className="text-white hover:text-white" />
+            </div>
             <div className="h-36 bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent flex items-center justify-center relative">
               {project.coverImage ? (
                 <img src={project.coverImage} alt={project.title} className="w-full h-full object-cover" />
@@ -256,12 +344,16 @@ const AdminPortfolio = () => {
                 <button onClick={() => toggleFeatured(project)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
                   {project.featured ? <Star className="h-3.5 w-3.5 fill-gold text-gold" /> : <StarOff className="h-3.5 w-3.5" />}
                 </button>
+                <button onClick={() => handleClone(project)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
                 <button onClick={() => handleDelete(project._id)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
           </motion.div>
+          </SortableItem>
         ))}
 
         {filtered.length === 0 && (
@@ -269,7 +361,7 @@ const AdminPortfolio = () => {
             No projects found. <button onClick={handleNew} className="text-primary underline ml-1">Add one</button>
           </div>
         )}
-      </div>
+      </SortableList>
 
       {/* Edit Modal */}
       <AnimatePresence>
@@ -563,6 +655,14 @@ const AdminPortfolio = () => {
           images: editing.images || [],
         } satisfies PortfolioPreviewData : null}
         onClose={() => setShowPreview(false)}
+      />
+      
+      <CSVImporter 
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        onImport={handleImport}
+        expectedFields={portfolioFields}
+        moduleName="Portfolio"
       />
     </div>
   );

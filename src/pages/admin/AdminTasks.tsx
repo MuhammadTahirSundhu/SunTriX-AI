@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { Search, Filter, Trash2, Eye, ChevronDown, LayoutGrid, List as ListIcon, CheckSquare, Square, Copy, Check, X } from "lucide-react";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { SortControl, SortOption } from "@/components/admin/SortControl";
 
 type TaskStatus = "new" | "in_review" | "proposal_sent" | "in_progress" | "completed" | "cancelled";
 
@@ -44,6 +45,7 @@ const AdminTasks = () => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedTask, setSelectedTask] = useState<TaskRequest | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "board">("board");
+  const [sortOption, setSortOption] = useState<SortOption>("date-desc");
   
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -73,6 +75,12 @@ const AdminTasks = () => {
                           (t.company || "").toLowerCase().includes(search.toLowerCase());
     const matchesStatus = filterStatus === "all" || t.status === filterStatus;
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    if (sortOption === "date-desc") return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    if (sortOption === "date-asc") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    if (sortOption === "az") return a.name.localeCompare(b.name);
+    if (sortOption === "za") return b.name.localeCompare(a.name);
+    return 0;
   });
 
   const toggleSelection = (id: string) => {
@@ -151,28 +159,31 @@ const AdminTasks = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-6 shrink-0">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, or company..."
-            className="w-full rounded-lg border border-border bg-muted/50 pl-10 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 shrink-0">
+        <div className="flex flex-wrap gap-3 flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, email, or company..."
+              className="w-full rounded-lg border border-border bg-muted/50 pl-10 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="appearance-none rounded-lg border border-border bg-muted/50 pl-10 pr-8 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="all">All Statuses</option>
+              {statusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+          </div>
         </div>
-        <div className="relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="appearance-none rounded-lg border border-border bg-muted/50 pl-10 pr-8 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="all">All Statuses</option>
-            {statusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-        </div>
+        <SortControl value={sortOption} onChange={setSortOption} hideCustom />
       </div>
 
       <div className="flex gap-6 flex-1 min-h-0">

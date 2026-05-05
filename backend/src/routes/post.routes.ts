@@ -112,4 +112,27 @@ router.put("/bulk", requireAuth, async (req: Request, res: Response, next: NextF
   } catch (err) { next(err); }
 });
 
+// POST /posts/bulk/import — bulk import
+router.post("/bulk/import", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) return next(createError("Array of items required", 400));
+    
+    const preparedItems = items.map((item: any) => {
+      const data = { ...item };
+      if (!data.slug && data.title) {
+        data.slug = slugify(data.title, { lower: true, strict: true }) + "-" + Math.random().toString(36).slice(-4);
+      }
+      if (data.status === "published" && !data.publishedAt) {
+        data.publishedAt = new Date();
+      }
+      return data;
+    });
+
+    const result = await Post.insertMany(preparedItems);
+    await logAudit(req, "bulk_import", "post", "", `Imported ${result.length} posts`);
+    res.status(201).json({ message: `Imported ${result.length} posts`, count: result.length });
+  } catch (err) { next(err); }
+});
+
 export default router;

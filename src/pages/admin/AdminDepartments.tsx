@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, EyeOff, X, Save, GripVertical, ArrowUp, ArrowDown, Monitor } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, X, Save, GripVertical, ArrowUp, ArrowDown, Monitor, Copy } from "lucide-react";
 import LivePreview from "@/components/admin/LivePreview";
 import type { DepartmentPreviewData } from "@/components/admin/LivePreview";
 import AIAssistPanel from "@/components/admin/AIAssistPanel";
+import { SortableList } from "@/components/admin/SortableList";
+import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
+import { SortControl, SortOption } from "@/components/admin/SortControl";
 
 interface Department {
   _id: string;
@@ -33,6 +36,7 @@ const AdminDepartments = () => {
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [aiMode, setAiMode] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("custom");
 
   const reload = async () => {
     const { data } = await apiRequest<Department[]>(ENDPOINTS.DEPARTMENTS_LIST + "?all=true");
@@ -67,9 +71,32 @@ const AdminDepartments = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await apiRequest(ENDPOINTS.DEPARTMENTS_DELETE(id), { method: "DELETE" });
-    toast({ title: "Department deleted" });
-    reload();
+    if (!window.confirm("Delete this department?")) return;
+    try {
+      await apiRequest(ENDPOINTS.DEPARTMENTS_DELETE(id), { method: "DELETE" });
+      toast({ title: "Department deleted" });
+      reload();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Failed to delete", variant: "destructive" });
+    }
+  };
+
+  const handleClone = async (dept: Department) => {
+    const copy = { 
+      ...dept, 
+      name: `${dept.name} (Copy)`,
+      enabled: false
+    };
+    delete (copy as any)._id;
+    
+    try {
+      await apiRequest(ENDPOINTS.DEPARTMENTS_CREATE, { method: "POST", body: copy });
+      toast({ title: "Department duplicated" });
+      reload();
+    } catch (err) {
+      toast({ title: "Failed to duplicate", variant: "destructive" });
+    }
   };
 
   const toggleEnabled = async (dept: Department) => {
@@ -77,10 +104,27 @@ const AdminDepartments = () => {
     reload();
   };
 
-  const moveOrder = async (dept: Department, dir: -1 | 1) => {
-    await apiRequest(ENDPOINTS.DEPARTMENTS_UPDATE(dept._id), { method: "PUT", body: { order: dept.order + dir } });
-    reload();
+  const handleReorder = async (newDepts: Department[]) => {
+    setDepartments(newDepts);
+    try {
+      const ids = newDepts.map(d => d._id);
+      await apiRequest(ENDPOINTS.DEPARTMENTS_REORDER, {
+        method: "PUT",
+        body: { ids }
+      });
+      toast({ title: "Order saved" });
+    } catch (err) {
+      toast({ title: "Failed to save order", variant: "destructive" });
+      reload();
+    }
   };
+
+  const sortedDepartments = [...departments].sort((a, b) => {
+    if (sortOption === "custom") return 0;
+    if (sortOption === "az") return a.name.localeCompare(b.name);
+    if (sortOption === "za") return b.name.localeCompare(a.name);
+    return 0; // fallback if dates requested but not available
+  });
 
   const inp = "w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
 
@@ -106,17 +150,21 @@ const AdminDepartments = () => {
           </button>
         </div>
       </div>
+      
+      <div className="flex justify-end mb-6">
+        <SortControl value={sortOption} onChange={setSortOption} />
+      </div>
 
-      <div className="space-y-3">
-        {[...departments].sort((a, b) => a.order - b.order).map((dept) => (
+      <SortableList items={sortedDepartments} onReorder={handleReorder} strategy="vertical" className="space-y-3">
+        {sortedDepartments.map((dept) => (
+          <SortableItem key={dept._id} id={dept._id} disabled={sortOption !== "custom"}>
           <motion.div
-            key={dept._id}
             layout
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-4 rounded-xl border border-border bg-card p-4"
+            className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 group"
           >
-            <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+            {sortOption === "custom" && <DragHandle />}
 
             <div className="h-12 w-16 rounded-lg bg-muted overflow-hidden shrink-0">
               {dept.image && <img src={dept.image} alt={dept.name} className="w-full h-full object-cover" />}
@@ -134,17 +182,17 @@ const AdminDepartments = () => {
             </span>
 
             <div className="flex items-center gap-1">
-              <button onClick={() => moveOrder(dept, -1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"><ArrowUp className="h-3.5 w-3.5" /></button>
-              <button onClick={() => moveOrder(dept, 1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"><ArrowDown className="h-3.5 w-3.5" /></button>
               <button onClick={() => toggleEnabled(dept)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors">
                 {dept.enabled ? <Eye className="h-3.5 w-3.5 text-success" /> : <EyeOff className="h-3.5 w-3.5" />}
               </button>
               <button onClick={() => { setEditing(dept); setIsNew(false); }} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+              <button onClick={() => handleClone(dept)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"><Copy className="h-3.5 w-3.5" /></button>
               <button onClick={() => handleDelete(dept._id)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           </motion.div>
+          </SortableItem>
         ))}
-      </div>
+      </SortableList>
 
       {/* Edit Modal */}
       <AnimatePresence>
