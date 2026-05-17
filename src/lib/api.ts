@@ -192,6 +192,7 @@ export const ENDPOINTS = {
   // Assets (Cloudinary via backend)
   UPLOAD_IMAGE: `${BASE_URL}/upload/image`,
   UPLOAD_VIDEO: `${BASE_URL}/upload/video`,
+  UPLOAD_DOCUMENT: `${BASE_URL}/upload/document`,
   UPLOAD_LIST: `${BASE_URL}/upload`,
   UPLOAD_DELETE: (publicId: string) => `${BASE_URL}/upload/${btoa(publicId)}`,
   UPLOAD_BULK_DELETE: `${BASE_URL}/upload/bulk`,

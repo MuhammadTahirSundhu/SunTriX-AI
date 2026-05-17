@@ -7,7 +7,7 @@ const techCategories = [
     category: "Agentic AI & Automation",
     items: [
       { name: "LangChain", logo: "https://cdn.simpleicons.org/langchain/1C3C3C", url: "https://www.langchain.com" },
-      { name: "OpenAI", logo: "https://cdn.simpleicons.org/openai/000000", url: "https://openai.com" },
+      { name: "OpenAI", logo: "https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/openai.svg", url: "https://openai.com" },
       { name: "Anthropic", logo: "https://cdn.simpleicons.org/anthropic/191919", url: "https://www.anthropic.com" },
       { name: "n8n", logo: "https://cdn.simpleicons.org/n8n/EA4B71", url: "https://n8n.io" },
       { name: "Zapier", logo: "https://cdn.simpleicons.org/zapier/FF4A00", url: "https://zapier.com" },
@@ -53,7 +53,7 @@ const techCategories = [
       { name: "MongoDB", logo: "https://cdn.simpleicons.org/mongodb/47A248", url: "https://www.mongodb.com" },
       { name: "PostgreSQL", logo: "https://cdn.simpleicons.org/postgresql/4169E1", url: "https://www.postgresql.org" },
       { name: "Redis", logo: "https://cdn.simpleicons.org/redis/FF4438", url: "https://redis.io" },
-      { name: "AWS", logo: "https://cdn.simpleicons.org/amazonaws/FF9900", url: "https://aws.amazon.com" },
+      { name: "AWS", logo: "https://cdn.simpleicons.org/amazonwebservices/FF9900", url: "https://aws.amazon.com" },
       { name: "Docker", logo: "https://cdn.simpleicons.org/docker/2496ED", url: "https://www.docker.com" },
       { name: "Kubernetes", logo: "https://cdn.simpleicons.org/kubernetes/326CE5", url: "https://kubernetes.io" },
       { name: "Cloudinary", logo: "https://cdn.simpleicons.org/cloudinary/3448C5", url: "https://cloudinary.com" },

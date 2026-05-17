@@ -202,63 +202,73 @@ const AdminTeam = () => {
                 layout
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`relative bg-card border rounded-xl p-5 transition-all group ${selectedIds.has(member._id) ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                className={`relative bg-card/40 hover:bg-card p-6 flex flex-col items-center text-center rounded-[2rem] border transition-all duration-300 group ${selectedIds.has(member._id) ? "border-primary ring-1 ring-primary shadow-xl" : "border-border/50 hover:border-primary/40 hover:shadow-2xl hover:-translate-y-1"}`}
               >
                 {/* Drag Handle */}
-                <div className={`absolute top-4 right-4 z-10 transition-opacity bg-background/80 backdrop-blur-sm rounded ${sortOption === "custom" ? "opacity-0 group-hover:opacity-100" : "hidden"}`}>
+                <div className={`absolute top-4 right-4 z-20 transition-opacity bg-background/80 backdrop-blur-sm rounded ${sortOption === "custom" ? "opacity-0 group-hover:opacity-100" : "hidden"}`}>
                   <DragHandle />
                 </div>
 
                 {/* Select checkbox */}
                 <button
                   onClick={() => toggleSelect(member._id)}
-                  className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  className="absolute top-5 left-5 opacity-0 group-hover:opacity-100 transition-opacity z-20"
                 >
-                  <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${selectedIds.has(member._id) ? "bg-primary border-primary" : "border-muted-foreground bg-card"}`}>
-                    {selectedIds.has(member._id) && <Check className="h-3 w-3 text-white" />}
+                  <div className={`h-6 w-6 rounded border-2 flex items-center justify-center transition-colors ${selectedIds.has(member._id) ? "bg-primary border-primary" : "border-muted-foreground bg-background hover:border-primary"}`}>
+                    {selectedIds.has(member._id) && <Check className="h-4 w-4 text-white" />}
                   </div>
                 </button>
+                
+                {/* Visibility Toggle Floating */}
+                <button
+                  onClick={() => toggleVisibility(member)}
+                  className={`absolute top-4 right-4 z-20 text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full border font-bold transition-colors ${sortOption === "custom" ? "mt-10" : ""} ${member.isVisible ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-muted text-muted-foreground border-border"}`}
+                >
+                  {member.isVisible ? "Visible" : "Hidden"}
+                </button>
 
-                <div className="flex gap-4">
-                  {member.imageUrl ? (
-                    <img src={member.imageUrl} alt={member.name} className="h-14 w-14 rounded-full object-cover shrink-0 border-2 border-border" />
-                  ) : (
-                    <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
-                      {member.name.charAt(0)}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">{member.name}</h3>
-                    <p className="text-sm text-primary">{member.role}</p>
-                    <p className="text-xs text-muted-foreground">{member.department}</p>
+                {/* Circular Image Container */}
+                <div className="relative w-40 h-40 mb-5 mt-4 mx-auto">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500" />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-100 scale-105 transition-all duration-500 -z-10" />
+                  <div className="relative w-full h-full rounded-full border-[5px] border-background overflow-hidden bg-muted shadow-xl transition-transform duration-500 z-10 group-hover:scale-95">
+                    {member.imageUrl ? (
+                      <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                        <span className="text-5xl font-bold text-primary opacity-70">{member.name.charAt(0)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{member.bio}</p>
+                <div className="relative z-20 w-full flex-1 flex flex-col">
+                  <h3 className="text-xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{member.name}</h3>
+                  <p className="text-sm font-semibold text-primary mb-0.5">{member.role}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-4 font-medium">{member.department}</p>
 
-                {/* Social Links */}
-                <div className="flex gap-2 mt-4 pt-4 border-t border-border/50">
-                  {member.linkedin && <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Linkedin className="h-4 w-4" /></a>}
-                  {member.twitter && <a href={member.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Twitter className="h-4 w-4" /></a>}
-                  {member.github && <a href={member.github} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Github className="h-4 w-4" /></a>}
-                  {member.website && <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Globe className="h-4 w-4" /></a>}
+                  <p className="text-sm text-muted-foreground mb-6 line-clamp-3 bg-background/50 p-3 rounded-xl border border-border/50 text-left w-full mx-auto flex-1">{member.bio || "No bio provided."}</p>
 
-                  <div className="ml-auto flex items-center gap-2">
-                    <button
-                      onClick={() => toggleVisibility(member)}
-                      className={`text-xs px-2 py-0.5 rounded-full border font-medium transition-colors ${member.isVisible ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-muted text-muted-foreground border-border"}`}
-                    >
-                      {member.isVisible ? "Visible" : "Hidden"}
-                    </button>
-                    <button onClick={() => openEdit(member)} className="text-muted-foreground hover:text-primary transition-colors p-1">
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => handleClone(member)} className="text-muted-foreground hover:text-primary transition-colors p-1">
-                      <Copy className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => handleDelete(member._id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  {/* Social Links & Actions */}
+                  <div className="flex items-center justify-between w-full mt-auto pt-4 border-t border-border/50">
+                    <div className="flex gap-1.5">
+                      {member.linkedin && <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"><Linkedin className="h-4 w-4" /></a>}
+                      {member.twitter && <a href={member.twitter} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"><Twitter className="h-4 w-4" /></a>}
+                      {member.github && <a href={member.github} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"><Github className="h-4 w-4" /></a>}
+                      {member.website && <a href={member.website} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"><Globe className="h-4 w-4" /></a>}
+                    </div>
+
+                    <div className="flex items-center gap-1 bg-background rounded-full border border-border/50 p-1">
+                      <button onClick={() => openEdit(member)} className="p-1.5 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Edit">
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => handleClone(member)} className="p-1.5 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Duplicate">
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => handleDelete(member._id)} className="p-1.5 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-colors" title="Delete">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>

@@ -9,10 +9,8 @@ import { I18nProvider } from "@/lib/i18n";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ServicesOverview from "./pages/ServicesOverview";
-import AgenticAI from "./pages/services/AgenticAI";
-import AIML from "./pages/services/AIML";
-import ComputerVision from "./pages/services/ComputerVision";
-import SaaSPlatform from "./pages/services/SaaSPlatform";
+
+import DynamicService from "./pages/services/DynamicService";
 import HowWeWork from "./pages/HowWeWork";
 import Portfolio from "./pages/Portfolio";
 import PortfolioDetail from "./pages/PortfolioDetail";
@@ -66,10 +64,8 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/services" element={<ServicesOverview />} />
-        <Route path="/services/agentic-ai" element={<AgenticAI />} />
-        <Route path="/services/ai-ml" element={<AIML />} />
-        <Route path="/services/computer-vision" element={<ComputerVision />} />
-        <Route path="/services/saas-platform" element={<SaaSPlatform />} />
+
+        <Route path="/services/:slug" element={<DynamicService />} />
         <Route path="/how-we-work" element={<HowWeWork />} />
         <Route path="/work" element={<Portfolio />} />
         <Route path="/work/:slug" element={<PortfolioDetail />} />

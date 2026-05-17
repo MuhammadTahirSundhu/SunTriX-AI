@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Target, Lightbulb, Users, Globe, Award, Shield } from "lucide-react";
+import { ArrowRight, Target, Lightbulb, Users, Globe, Award, Shield, Linkedin, Twitter, Github } from "lucide-react";
 import Layout from "@/components/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useMedia } from "@/hooks/use-media";
@@ -38,7 +38,12 @@ const About = () => {
 
   const { t } = useI18n();
   const aboutHero = useMedia("about-hero");
-  const ceoPortrait = useMedia("ceo-portrait");
+  const ceoPortraitFallback = useMedia("ceo-portrait");
+
+  const ceoMember = team.find(member => member.role?.toLowerCase().includes("ceo") || member.role?.toLowerCase().includes("founder"));
+  const displayCeoImage = ceoMember?.imageUrl || ceoPortraitFallback;
+  const displayCeoName = ceoMember?.name || "Alex Chen";
+  const displayCeoRole = ceoMember?.role || "CEO & Co-Founder";
 
   return (
     <Layout>
@@ -69,16 +74,22 @@ const About = () => {
               <div className="relative">
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 via-secondary/10 to-gold/10 blur-2xl scale-110" />
                 <div className="relative h-72 w-72 lg:h-96 lg:w-96 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl">
-                  <img src={ceoPortrait} alt="CEO - Alex Chen" className="w-full h-full object-cover object-top" />
+                  {displayCeoImage ? (
+                    <img src={displayCeoImage} alt={displayCeoName} className="w-full h-full object-cover object-top" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                      <span className="text-6xl font-bold text-primary">{displayCeoName.charAt(0)}</span>
+                    </div>
+                  )}
                 </div>
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.8 }}
-                  className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-card/90 backdrop-blur-sm border border-border rounded-xl px-5 py-2.5 text-center shadow-lg"
+                  className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-card/90 backdrop-blur-sm border border-border rounded-xl px-5 py-2.5 text-center shadow-lg whitespace-nowrap"
                 >
-                  <p className="text-sm font-bold text-foreground">Alex Chen</p>
-                  <p className="text-xs text-primary">CEO & Co-Founder</p>
+                  <p className="text-sm font-bold text-foreground">{displayCeoName}</p>
+                  <p className="text-xs text-primary">{displayCeoRole}</p>
                 </motion.div>
               </div>
             </motion.div>
@@ -136,20 +147,42 @@ const About = () => {
           {loadingTeam ? (
             <div className="flex justify-center"><div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div></div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
               {team.map((member, i) => (
                 <motion.div key={member._id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                  className="rounded-xl border border-border bg-card p-6 text-center">
-                  {member.imageUrl ? (
-                    <img src={member.imageUrl} alt={member.name} className="h-16 w-16 rounded-full object-cover mx-auto mb-4 border-2 border-primary/20" />
-                  ) : (
-                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 mx-auto mb-4 flex items-center justify-center">
-                      <span className="text-lg font-bold text-primary">{member.name.split(" ").map((n: string) => n[0]).join("")}</span>
+                  className="group relative rounded-[2rem] bg-card/30 hover:bg-card p-8 flex flex-col items-center text-center border border-border/50 hover:border-primary/30 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
+                  
+                  {/* Circular Image Container */}
+                  <div className="relative w-48 h-48 mb-6">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500" />
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-100 scale-105 transition-all duration-500 -z-10" />
+                    <div className="relative w-full h-full rounded-full border-[6px] border-background overflow-hidden bg-muted shadow-xl transition-transform duration-500 z-10 group-hover:scale-95">
+                      {member.imageUrl ? (
+                        <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                          <span className="text-6xl font-bold text-primary opacity-70">{member.name.charAt(0)}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <h3 className="text-base font-bold text-foreground">{member.name}</h3>
-                  <p className="text-sm text-primary">{member.role}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{member.department}</p>
+                  </div>
+
+                  <div className="relative z-20 w-full flex-1 flex flex-col">
+                    <h3 className="text-2xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{member.name}</h3>
+                    <p className="text-sm font-semibold text-primary mb-1">{member.role}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest mb-4 font-medium">{member.department}</p>
+                    
+                    {member.bio && <p className="text-sm text-muted-foreground line-clamp-3 mb-6 flex-1 px-2">{member.bio}</p>}
+                    
+                    {(member.linkedin || member.twitter || member.github || member.website) && (
+                      <div className="flex items-center justify-center gap-3 pt-5 border-t border-border/50 w-full mt-auto">
+                        {member.linkedin && <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-background border border-border text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 hover:scale-110 shadow-sm"><Linkedin className="h-4 w-4" /></a>}
+                        {member.twitter && <a href={member.twitter} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-background border border-border text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 hover:scale-110 shadow-sm"><Twitter className="h-4 w-4" /></a>}
+                        {member.github && <a href={member.github} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-background border border-border text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 hover:scale-110 shadow-sm"><Github className="h-4 w-4" /></a>}
+                        {member.website && <a href={member.website} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-background border border-border text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 hover:scale-110 shadow-sm"><Globe className="h-4 w-4" /></a>}
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               ))}
             </div>

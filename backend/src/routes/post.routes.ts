@@ -4,6 +4,20 @@ import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
 import { logAudit } from "../lib/audit";
 import slugify from "slugify";
+import sanitizeHtml from "sanitize-html";
+
+const sanitizeOptions = {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+    "img", "h1", "h2", "h3", "h4", "h5", "h6", "span", "u", "s"
+  ]),
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    "a": ["href", "name", "target", "rel"],
+    "img": ["src", "alt", "title", "width", "height"],
+    "span": ["style", "class"],
+    "p": ["style", "class"]
+  }
+};
 
 const router = Router();
 
@@ -59,6 +73,9 @@ router.post("/", requireAuth, async (req: Request, res: Response, next: NextFunc
     if (data.status === "published" && !data.publishedAt) {
       data.publishedAt = new Date();
     }
+    if (data.content) {
+      data.content = sanitizeHtml(data.content, sanitizeOptions);
+    }
     const post = await Post.create(data);
     await logAudit(req, "create", "post", post._id.toString(), post.title);
     res.status(201).json(post);
@@ -71,6 +88,9 @@ router.put("/:id", requireAuth, async (req: Request, res: Response, next: NextFu
     const data = { ...req.body };
     if (data.status === "published" && !data.publishedAt) {
       data.publishedAt = new Date();
+    }
+    if (data.content) {
+      data.content = sanitizeHtml(data.content, sanitizeOptions);
     }
     const post = await Post.findByIdAndUpdate(req.params.id, data, { new: true });
     if (!post) return next(createError("Post not found", 404));
@@ -125,6 +145,9 @@ router.post("/bulk/import", requireAuth, async (req: Request, res: Response, nex
       }
       if (data.status === "published" && !data.publishedAt) {
         data.publishedAt = new Date();
+      }
+      if (data.content) {
+        data.content = sanitizeHtml(data.content, sanitizeOptions);
       }
       return data;
     });

@@ -14,15 +14,16 @@ interface ServicePageProps {
   subtitle: string;
   description: string;
   category: string;
-  useCases: { title: string; desc: string }[];
-  process: { step: string; title: string; desc: string }[];
-  techStack: string[];
-  caseStudy: { title: string; metric: string; desc: string };
+  image?: string;
+  useCases?: { title: string; desc: string }[];
+  process?: { step: string; title: string; desc: string }[];
+  techStack?: string[];
+  caseStudy?: { title: string; metric: string; desc: string };
 }
 
 interface Department { _id: string; name: string; image: string; enabled: boolean; }
 
-const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, category, useCases, process, techStack, caseStudy }: ServicePageProps) => {
+const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, category, image, useCases, process, techStack, caseStudy }: ServicePageProps) => {
   const [relatedProjects, setRelatedProjects] = useState<PortfolioProject[]>([]);
   const [deptInfo, setDeptInfo] = useState<Department | null>(null);
 
@@ -63,7 +64,7 @@ const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, categor
               </Link>
             </motion.div>
 
-            {deptInfo?.image && (
+            {(image || deptInfo?.image) && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9, x: 30 }} 
                 animate={{ opacity: 1, scale: 1, x: 0 }} 
@@ -73,7 +74,7 @@ const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, categor
                 <div className="absolute -inset-4 bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-[2.5rem] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700" />
                 <div className="relative rounded-3xl border border-white/10 overflow-hidden bg-card/50 backdrop-blur-sm shadow-[0_20px_50px_rgba(0,0,0,0.5)] rotate-2 group-hover:rotate-0 transition-all duration-700">
                   <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent z-10" />
-                  <img src={deptInfo.image} alt={title} className="w-full h-auto object-cover aspect-[4/3]" />
+                  <img src={image || deptInfo?.image} alt={title} className="w-full h-auto object-cover aspect-[4/3]" />
                 </div>
                 {/* Micro-interaction element */}
                 <div className="absolute -bottom-6 -left-6 bg-card border border-border p-4 rounded-xl shadow-2xl z-20 animate-bounce-subtle">
@@ -94,49 +95,55 @@ const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, categor
       </section>
 
       {/* Use Cases */}
-      <section className="py-24 border-t border-border">
-        <div className="container mx-auto px-4 lg:px-8">
-          <h2 className="text-3xl font-extrabold mb-12">Use <span className="gradient-text">Cases</span></h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {useCases.map((uc, i) => (
-              <motion.div key={uc.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
-                className="rounded-xl border border-border bg-card p-6 hover:border-primary/30 glow-hover transition-all">
-                <h3 className="text-lg font-bold mb-2 text-foreground">{uc.title}</h3>
-                <p className="text-sm text-muted-foreground">{uc.desc}</p>
-              </motion.div>
-            ))}
+      {useCases && useCases.length > 0 && (
+        <section className="py-24 border-t border-border">
+          <div className="container mx-auto px-4 lg:px-8">
+            <h2 className="text-3xl font-extrabold mb-12">Use <span className="gradient-text">Cases</span></h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {useCases.map((uc, i) => (
+                <motion.div key={uc.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
+                  className="rounded-xl border border-border bg-card p-6 hover:border-primary/30 glow-hover transition-all">
+                  <h3 className="text-lg font-bold mb-2 text-foreground">{uc.title}</h3>
+                  <p className="text-sm text-muted-foreground">{uc.desc}</p>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Process */}
-      <section className="py-24 bg-card/30 border-t border-border">
-        <div className="container mx-auto px-4 lg:px-8">
-          <h2 className="text-3xl font-extrabold mb-12">How We <span className="gradient-text">Build It</span></h2>
-          <div className="grid md:grid-cols-4 gap-6">
-            {process.map((p, i) => (
-              <motion.div key={p.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="text-center">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-mono font-bold text-primary mb-4">{p.step}</span>
-                <h3 className="text-lg font-bold mb-2 text-foreground">{p.title}</h3>
-                <p className="text-sm text-muted-foreground">{p.desc}</p>
-              </motion.div>
-            ))}
+      {process && process.length > 0 && (
+        <section className="py-24 bg-card/30 border-t border-border">
+          <div className="container mx-auto px-4 lg:px-8">
+            <h2 className="text-3xl font-extrabold mb-12">How We <span className="gradient-text">Build It</span></h2>
+            <div className="grid md:grid-cols-4 gap-6">
+              {process.map((p, i) => (
+                <motion.div key={p.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                  className="text-center">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-mono font-bold text-primary mb-4">{p.step}</span>
+                  <h3 className="text-lg font-bold mb-2 text-foreground">{p.title}</h3>
+                  <p className="text-sm text-muted-foreground">{p.desc}</p>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Tech Stack */}
-      <section className="py-24 border-t border-border">
-        <div className="container mx-auto px-4 lg:px-8">
-          <h2 className="text-3xl font-extrabold mb-12">Tech <span className="gradient-text">Stack</span></h2>
-          <div className="flex flex-wrap gap-3">
-            {techStack.map((tech) => (
-              <span key={tech} className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-mono text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors">{tech}</span>
-            ))}
+      {techStack && techStack.length > 0 && (
+        <section className="py-24 border-t border-border">
+          <div className="container mx-auto px-4 lg:px-8">
+            <h2 className="text-3xl font-extrabold mb-12">Tech <span className="gradient-text">Stack</span></h2>
+            <div className="flex flex-wrap gap-3">
+              {techStack.map((tech) => (
+                <span key={tech} className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-mono text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors">{tech}</span>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Related Portfolio */}
       {relatedProjects.length > 0 && (
@@ -190,23 +197,25 @@ const ServicePageTemplate = ({ icon: Icon, title, subtitle, description, categor
       )}
 
       {/* Case Study Teaser */}
-      <section className="py-24 border-t border-border">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="rounded-xl border border-border bg-card p-8 lg:p-12 max-w-3xl">
-            <span className="text-xs font-mono text-primary uppercase tracking-widest mb-2 block">Case Study</span>
-            <h3 className="text-2xl font-bold mb-2 text-foreground">{caseStudy.title}</h3>
-            <div className="inline-flex items-center gap-2 rounded-full bg-success/10 px-4 py-1.5 mb-4">
-              <CheckCircle className="h-4 w-4 text-success" />
-              <span className="text-sm font-semibold text-success">{caseStudy.metric}</span>
-            </div>
-            <p className="text-muted-foreground mb-6">{caseStudy.desc}</p>
-            <Link to="/work" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-              View Full Case Study <ArrowRight className="h-3 w-3" />
-            </Link>
-          </motion.div>
-        </div>
-      </section>
+      {caseStudy && caseStudy.title && (
+        <section className="py-24 border-t border-border">
+          <div className="container mx-auto px-4 lg:px-8">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              className="rounded-xl border border-border bg-card p-8 lg:p-12 max-w-3xl">
+              <span className="text-xs font-mono text-primary uppercase tracking-widest mb-2 block">Case Study</span>
+              <h3 className="text-2xl font-bold mb-2 text-foreground">{caseStudy.title}</h3>
+              <div className="inline-flex items-center gap-2 rounded-full bg-success/10 px-4 py-1.5 mb-4">
+                <CheckCircle className="h-4 w-4 text-success" />
+                <span className="text-sm font-semibold text-success">{caseStudy.metric}</span>
+              </div>
+              <p className="text-muted-foreground mb-6">{caseStudy.desc}</p>
+              <Link to="/work" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                View Full Case Study <ArrowRight className="h-3 w-3" />
+              </Link>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="py-24 border-t border-border">

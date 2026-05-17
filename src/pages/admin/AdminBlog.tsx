@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
-import { Plus, Trash2, Edit2, X, Search, Filter, ChevronDown, Calendar, Eye, EyeOff, Clock, Copy } from "lucide-react";
+import { Plus, Trash2, Edit2, X, Search, Filter, ChevronDown, Calendar, Eye, EyeOff, Clock, Copy, Paperclip } from "lucide-react";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import AIAssistPanel from "@/components/admin/AIAssistPanel";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import MediaUploader, { MediaAttachment } from "@/components/admin/MediaUploader";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import { useRef, useMemo, useCallback } from "react";
 
 interface BlogPost {
   _id: string;
@@ -22,12 +26,13 @@ interface BlogPost {
   author?: string;
   readTime?: number;
   createdAt: string;
+  mediaAttachments?: MediaAttachment[];
 }
 
 const empty: Omit<BlogPost, "_id" | "createdAt"> = {
   title: "", slug: "", excerpt: "", content: "", coverImage: "",
   tags: [], category: "", status: "draft", scheduledAt: "", publishedAt: "",
-  author: "", readTime: 5,
+  author: "", readTime: 5, mediaAttachments: [],
 };
 
 const statusColors: Record<string, string> = {
@@ -49,6 +54,7 @@ const AdminBlog = () => {
   const [tagInput, setTagInput] = useState("");
   const [aiMode, setAiMode] = useState(false);
   const [sortOption, setSortOption] = useState<SortOption>("date-desc");
+  const quillRef = useRef<ReactQuill>(null);
 
   const fetch_ = async () => {
     setLoading(true);
@@ -58,6 +64,59 @@ const AdminBlog = () => {
   };
 
   useEffect(() => { fetch_(); }, []);
+
+  const imageHandler = useCallback(() => {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "image/*");
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", "suntrix");
+
+        try {
+          const token = localStorage.getItem("auth_token");
+          const res = await fetch(ENDPOINTS.UPLOAD_IMAGE, {
+            method: "POST",
+            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: formData,
+          });
+          if (!res.ok) throw new Error("Upload failed");
+          const data = await res.json();
+          const url = data.url || data.secureUrl;
+
+          const quill = quillRef.current?.getEditor();
+          if (quill && url) {
+            const range = quill.getSelection() || { index: quill.getLength() };
+            quill.insertEmbed(range.index, "image", url);
+            quill.setSelection({ index: range.index + 1, length: 0 });
+          }
+        } catch (err) {
+          console.error("Image upload failed", err);
+          alert("Failed to upload image. Please try again.");
+        }
+      }
+    };
+  }, []);
+
+  const quillModules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ["bold", "italic", "underline", "strike", "blockquote"],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["link", "image"],
+        ["clean"],
+      ],
+      handlers: {
+        image: imageHandler,
+      },
+    },
+  }), [imageHandler]);
 
   const slugify = (str: string) => str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
@@ -71,7 +130,7 @@ const AdminBlog = () => {
 
   const openEdit = (p: BlogPost) => {
     setEditing(p);
-    setForm({ title: p.title, slug: p.slug, excerpt: p.excerpt, content: p.content, coverImage: p.coverImage || "", tags: p.tags, category: p.category, status: p.status, scheduledAt: p.scheduledAt || "", publishedAt: p.publishedAt || "", author: p.author || "", readTime: p.readTime || 5 });
+    setForm({ title: p.title, slug: p.slug, excerpt: p.excerpt, content: p.content, coverImage: p.coverImage || "", tags: p.tags, category: p.category, status: p.status, scheduledAt: p.scheduledAt || "", publishedAt: p.publishedAt || "", author: p.author || "", readTime: p.readTime || 5, mediaAttachments: p.mediaAttachments || [] });
     setTagInput(p.tags.join(", "));
     setShowForm(true);
   };
@@ -232,6 +291,12 @@ const AdminBlog = () => {
                       <div>
                         <p className="font-medium text-foreground line-clamp-1">{post.title}</p>
                         <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{post.excerpt}</p>
+                        {(post.mediaAttachments?.length ?? 0) > 0 && (
+                          <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                            <Paperclip className="h-2.5 w-2.5" />
+                            {post.mediaAttachments!.length} attachment{post.mediaAttachments!.length !== 1 ? "s" : ""}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -324,13 +389,47 @@ const AdminBlog = () => {
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Excerpt</label>
                   <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} rows={2} className={`${inputCls} resize-none`} placeholder="Short summary shown in post lists..." />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Content (Markdown)</label>
-                  <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} className={`${inputCls} resize-none font-mono text-xs`} placeholder="Write in Markdown..." />
+                <div className="quill-dark">
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Content</label>
+                  <ReactQuill
+                    ref={quillRef}
+                    theme="snow"
+                    value={form.content}
+                    onChange={(val) => setForm({ ...form, content: val })}
+                    className="bg-background text-foreground"
+                    modules={quillModules}
+                  />
+                  <style>{`
+                    .quill-dark .ql-toolbar { border-color: hsl(var(--border)); border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; background: hsl(var(--muted)/0.5); }
+                    .quill-dark .ql-container { border-color: hsl(var(--border)); border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; min-height: 200px; }
+                    .quill-dark .ql-stroke { stroke: hsl(var(--foreground)); }
+                    .quill-dark .ql-fill { fill: hsl(var(--foreground)); }
+                    .quill-dark .ql-picker { color: hsl(var(--foreground)); }
+                    .quill-dark .ql-picker-options { background: hsl(var(--background)); border-color: hsl(var(--border)); }
+                    .quill-dark .ql-editor { font-family: inherit; }
+                  `}</style>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Cover Image</label>
                   <ImageUpload value={form.coverImage || ""} onChange={(url) => setForm({ ...form, coverImage: url })} placeholder="https://..." />
+                </div>
+                {/* ── Media & Attachments ── */}
+                <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+                    <Paperclip className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-foreground">Media &amp; Attachments</span>
+                    {(form.mediaAttachments?.length ?? 0) > 0 && (
+                      <span className="ml-auto text-xs bg-primary/20 text-primary font-bold px-2 py-0.5 rounded-full">
+                        {form.mediaAttachments!.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <MediaUploader
+                      value={form.mediaAttachments || []}
+                      onChange={(attachments) => setForm({ ...form, mediaAttachments: attachments })}
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

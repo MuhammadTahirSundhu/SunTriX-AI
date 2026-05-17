@@ -4,7 +4,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { apiRequest, ENDPOINTS } from "../lib/api";
 import { useSEO } from "../hooks/useSEO";
 import Layout from "../components/Layout";
-import { Clock, Tag, ArrowLeft, Calendar, User, ChevronRight, Share2, Copy, Check } from "lucide-react";
+import { Clock, Tag, ArrowLeft, Calendar, User, ChevronRight, Share2, Copy, Check, FileText, Download, Eye } from "lucide-react";
 
 interface BlogPost {
   _id: string;
@@ -20,11 +20,31 @@ interface BlogPost {
   readTime?: number;
   author?: string;
   createdAt: string;
+  mediaAttachments?: {
+    url: string;
+    type: string;
+    name: string;
+    size: number;
+    publicId: string;
+  }[];
 }
+
+const formatBytes = (bytes: number, decimals = 2) => {
+  if (!+bytes) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+};
 
 // Minimal markdown → HTML renderer (no external deps)
 const renderMarkdown = (md: string): string => {
   if (!md) return "";
+  // If the content is already HTML (from Quill), return it directly
+  if (/<[a-z][\s\S]*>/i.test(md)) {
+    return md;
+  }
   return md
     .replace(/^### (.+)$/gm, "<h3>$1</h3>")
     .replace(/^## (.+)$/gm, "<h2>$1</h2>")
@@ -97,6 +117,9 @@ const BlogDetail = () => {
 
   if (!post) return null;
 
+  const visualMedia = post.mediaAttachments?.filter(m => m.type.startsWith("image") || m.type.startsWith("video")) || [];
+  const documentMedia = post.mediaAttachments?.filter(m => !m.type.startsWith("image") && !m.type.startsWith("video")) || [];
+
   return (
     <Layout>
       <div className="min-h-screen bg-background pt-28 pb-24">
@@ -150,6 +173,34 @@ const BlogDetail = () => {
               </p>
             )}
 
+            {/* Visual Media Showcase (Cover Presentation) */}
+            {visualMedia.length > 0 && (
+              <div className="mb-10 mt-6">
+                <div className={`grid gap-3 ${visualMedia.length >= 3 ? 'grid-cols-1 md:grid-cols-3 md:grid-rows-2 h-[400px] md:h-[500px]' : visualMedia.length === 2 ? 'grid-cols-1 md:grid-cols-2 h-[300px] md:h-[400px]' : 'grid-cols-1 h-[300px] md:h-[450px]'}`}>
+                  {visualMedia.slice(0, 3).map((media, i) => {
+                    const isMain = visualMedia.length >= 3 && i === 0;
+                    const classes = `relative rounded-2xl overflow-hidden bg-black group shadow-xl border border-border/50 w-full h-full ${isMain ? 'md:col-span-2 md:row-span-2' : ''}`;
+                    
+                    return (
+                      <div key={i} className={classes}>
+                        {media.type.startsWith("video") ? (
+                          <video src={media.url} controls={isMain || visualMedia.length < 3} autoPlay={!isMain && visualMedia.length >= 3} muted loop className="w-full h-full object-cover" />
+                        ) : (
+                          <img src={media.url} alt={media.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 cursor-pointer" onClick={() => window.open(media.url, "_blank")} />
+                        )}
+                        {visualMedia.length > 3 && i === 2 && (
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center cursor-pointer hover:bg-black/40 transition-colors" onClick={() => window.open(visualMedia[3].url, "_blank")}>
+                            <span className="text-white text-3xl font-display font-bold">+{visualMedia.length - 2}</span>
+                            <span className="text-white/80 font-medium">More Media</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Share */}
             <div className="flex items-center gap-3 pb-8 border-b border-border">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
@@ -181,6 +232,30 @@ const BlogDetail = () => {
               prose-li:text-muted-foreground"
             dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
           />
+
+          {/* Document Assets (Downloads) */}
+          {documentMedia.length > 0 && (
+            <div className="mb-16 mt-12 pt-10 border-t border-border">
+              <h3 className="text-2xl font-display font-bold text-foreground mb-6 flex items-center gap-3">
+                <FileText className="w-6 h-6 text-primary" />
+                Attached Assets
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {documentMedia.map((media, i) => (
+                  <a key={i} href={media.url} target="_blank" rel="noopener noreferrer" 
+                     className="flex items-center gap-4 p-5 rounded-2xl border border-border bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
+                    <div className="p-3.5 bg-primary/10 text-primary rounded-xl group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+                      <Download className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{media.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{formatBytes(media.size)} • {media.type.split('/')[1]?.toUpperCase() || "FILE"}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Tags */}
           {post.tags?.length > 0 && (

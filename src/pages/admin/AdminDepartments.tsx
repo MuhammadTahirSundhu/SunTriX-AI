@@ -19,6 +19,11 @@ interface Department {
   image: string;
   href: string;
   capabilities: string[];
+  icon: string;
+  useCases: { title: string; desc: string }[];
+  process: { step: string; title: string; desc: string }[];
+  techStack: string[];
+  caseStudy: { title: string; metric: string; desc: string };
   order: number;
   enabled: boolean;
 }
@@ -27,7 +32,9 @@ type EditState = Omit<Department, "_id"> & { _id?: string };
 
 const EMPTY_DEPT: EditState = {
   name: "", subtitle: "", description: "", image: "",
-  href: "/services/agentic-ai", capabilities: [], order: 1, enabled: true,
+  href: "/services/", capabilities: [], icon: "Layers",
+  useCases: [], process: [], techStack: [], caseStudy: { title: "", metric: "", desc: "" },
+  order: 1, enabled: true,
 };
 
 const AdminDepartments = () => {
@@ -205,7 +212,7 @@ const AdminDepartments = () => {
           >
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl"
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-foreground">{isNew ? "New Department" : "Edit Department"}</h2>
@@ -275,22 +282,113 @@ const AdminDepartments = () => {
                     <input type="number" value={editing.order} onChange={(e) => setEditing({ ...editing, order: Number(e.target.value) })} className={inp} />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">Image URL</label>
-                  <ImageUpload 
-                    value={editing.image} 
-                    onChange={(url) => setEditing({ ...editing, image: url })} 
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Image URL</label>
+                    <ImageUpload 
+                      value={editing.image} 
+                      onChange={(url) => setEditing({ ...editing, image: url })} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Lucide Icon Name</label>
+                    <input value={editing.icon || ""} onChange={(e) => setEditing({ ...editing, icon: e.target.value })} className={inp} placeholder="e.g. Bot, Brain" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">Capabilities (one per line)</label>
-                  <textarea 
-                    value={editing.capabilities?.join("\n")} 
-                    onChange={(e) => setEditing({ ...editing, capabilities: e.target.value.split("\n").filter(v => v.trim()) })} 
-                    rows={4} 
-                    className={inp + " resize-none"}
-                    placeholder="e.g. Workflow Automation&#10;Agentic AI"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Capabilities (one per line)</label>
+                    <textarea 
+                      value={editing.capabilities?.join("\n")} 
+                      onChange={(e) => setEditing({ ...editing, capabilities: e.target.value.split("\n").filter(v => v.trim()) })} 
+                      rows={4} 
+                      className={inp + " resize-none"}
+                      placeholder="e.g. Workflow Automation"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Tech Stack (one per line)</label>
+                    <textarea 
+                      value={editing.techStack?.join("\n") || ""} 
+                      onChange={(e) => setEditing({ ...editing, techStack: e.target.value.split("\n").filter(v => v.trim()) })} 
+                      rows={4} 
+                      className={inp + " resize-none"}
+                      placeholder="e.g. React&#10;Node.js"
+                    />
+                  </div>
+                </div>
+                
+                {/* Advanced Fields: Use Cases */}
+                <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-bold text-foreground">Use Cases</label>
+                    <button type="button" onClick={() => setEditing({...editing, useCases: [...(editing.useCases || []), {title: "", desc: ""}]})} className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded">Add Use Case</button>
+                  </div>
+                  {editing.useCases?.map((uc, i) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <div className="flex-1 space-y-2">
+                        <input className={inp} placeholder="Title" value={uc.title} onChange={e => {
+                          const newUc = [...(editing.useCases || [])];
+                          newUc[i].title = e.target.value;
+                          setEditing({...editing, useCases: newUc});
+                        }} />
+                        <textarea className={inp + " resize-none text-xs"} placeholder="Description" rows={2} value={uc.desc} onChange={e => {
+                          const newUc = [...(editing.useCases || [])];
+                          newUc[i].desc = e.target.value;
+                          setEditing({...editing, useCases: newUc});
+                        }} />
+                      </div>
+                      <button type="button" onClick={() => {
+                        const newUc = [...(editing.useCases || [])];
+                        newUc.splice(i, 1);
+                        setEditing({...editing, useCases: newUc});
+                      }} className="p-2 mt-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4"/></button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Advanced Fields: Process */}
+                <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-bold text-foreground">Process Steps</label>
+                    <button type="button" onClick={() => setEditing({...editing, process: [...(editing.process || []), {step: "0" + ((editing.process?.length || 0) + 1), title: "", desc: ""}]})} className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded">Add Step</button>
+                  </div>
+                  {editing.process?.map((p, i) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <input className={inp + " w-16"} placeholder="Step" value={p.step} onChange={e => {
+                        const newP = [...(editing.process || [])];
+                        newP[i].step = e.target.value;
+                        setEditing({...editing, process: newP});
+                      }} />
+                      <div className="flex-1 space-y-2">
+                        <input className={inp} placeholder="Title" value={p.title} onChange={e => {
+                          const newP = [...(editing.process || [])];
+                          newP[i].title = e.target.value;
+                          setEditing({...editing, process: newP});
+                        }} />
+                        <textarea className={inp + " resize-none text-xs"} placeholder="Description" rows={2} value={p.desc} onChange={e => {
+                          const newP = [...(editing.process || [])];
+                          newP[i].desc = e.target.value;
+                          setEditing({...editing, process: newP});
+                        }} />
+                      </div>
+                      <button type="button" onClick={() => {
+                        const newP = [...(editing.process || [])];
+                        newP.splice(i, 1);
+                        setEditing({...editing, process: newP});
+                      }} className="p-2 mt-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4"/></button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Advanced Fields: Case Study */}
+                <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+                  <label className="block text-xs font-bold text-foreground mb-2">Case Study Highlight</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input className={inp} placeholder="Title (e.g. Enterprise Pipeline)" value={editing.caseStudy?.title || ""} onChange={e => setEditing({...editing, caseStudy: { ...(editing.caseStudy || {metric:"", desc:""}), title: e.target.value }})} />
+                    <input className={inp} placeholder="Metric (e.g. 10x Faster)" value={editing.caseStudy?.metric || ""} onChange={e => setEditing({...editing, caseStudy: { ...(editing.caseStudy || {title:"", desc:""}), metric: e.target.value }})} />
+                  </div>
+                  <textarea className={inp + " resize-none text-xs"} placeholder="Description of the achievement..." rows={2} value={editing.caseStudy?.desc || ""} onChange={e => setEditing({...editing, caseStudy: { ...(editing.caseStudy || {title:"", metric:""}), desc: e.target.value }})} />
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">

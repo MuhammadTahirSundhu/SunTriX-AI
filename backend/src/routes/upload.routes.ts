@@ -1,7 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { upload, uploadImage, uploadVideo, cloudinary } from "../services/cloudinary";
+import { upload, uploadImage, uploadVideo, uploadDocument, cloudinary } from "../services/cloudinary";
 import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
+import path from "path";
 
 const router = Router();
 
@@ -72,7 +73,7 @@ router.post(
         url: result.url,
         secureUrl: result.url,
         resourceType: "image",
-        format: result.publicId.split(".").pop() || "jpg",
+        format: path.extname(req.file.originalname).replace(".", "") || "jpg",
         bytes: req.file.size,
         folder,
         createdAt: new Date().toISOString(),
@@ -99,7 +100,36 @@ router.post(
         url: result.url,
         secureUrl: result.url,
         resourceType: "video",
-        format: result.publicId.split(".").pop() || "mp4",
+        format: path.extname(req.file.originalname).replace(".", "") || "mp4",
+        bytes: req.file.size,
+        folder,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /upload/document — admin only (PDFs, DOCs, XLS, PPT, etc.)
+router.post(
+  "/document",
+  requireAuth,
+  upload.single("file"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) return next(createError("No file uploaded", 400));
+      const folder = (req.body.folder as string) || "suntrix/docs";
+      const result = await uploadDocument(req.file.buffer, req.file.originalname, folder);
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      res.json({
+        _id: result.publicId,
+        publicId: result.publicId,
+        url: result.url,
+        secureUrl: result.url,
+        resourceType: "raw",
+        format: ext.replace(".", ""),
+        name: req.file.originalname,
         bytes: req.file.size,
         folder,
         createdAt: new Date().toISOString(),

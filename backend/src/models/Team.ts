@@ -3,26 +3,30 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface ITeamMember extends Document {
   name: string;
   role: string;
+  department: string;
   bio: string;
-  photo: string;
-  linkedIn: string;
+  imageUrl: string;
+  linkedin: string;
   twitter: string;
   github: string;
+  website: string;
   order: number;
-  visible: boolean;
+  isVisible: boolean;
 }
 
 const TeamSchema = new Schema<ITeamMember>(
   {
     name: { type: String, required: true, trim: true },
     role: { type: String, required: true, trim: true },
+    department: { type: String, default: "" },
     bio: { type: String, default: "" },
-    photo: { type: String, default: "" },
-    linkedIn: { type: String, default: "" },
+    imageUrl: { type: String, default: "" },
+    linkedin: { type: String, default: "" },
     twitter: { type: String, default: "" },
     github: { type: String, default: "" },
+    website: { type: String, default: "" },
     order: { type: Number, default: 1 },
-    visible: { type: Boolean, default: true },
+    isVisible: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

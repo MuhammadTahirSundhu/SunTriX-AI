@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -7,18 +8,25 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
 import { useMedia } from "@/hooks/use-media";
 
-const services = [
-  { name: "Agentic AI & Automation", desc: "Autonomous agents & workflow automation", href: "/services/agentic-ai" },
-  { name: "AI & Machine Learning", desc: "Predictive analytics & custom models", href: "/services/ai-ml" },
-  { name: "Computer Vision", desc: "Object detection & image analysis", href: "/services/computer-vision" },
-  { name: "AI Product / SaaS", desc: "End-to-end platform development", href: "/services/saas-platform" },
-];
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
+  const [services, setServices] = useState<{name: string, desc: string, href: string}[]>([]);
   const { t } = useI18n();
   const suntrixLogo = useMedia("suntrix-logo");
+
+  useEffect(() => {
+    apiRequest<any[]>(ENDPOINTS.DEPARTMENTS_LIST).then(({ data }) => {
+      if (data) {
+        setServices(data.map(d => ({
+          name: d.name,
+          desc: d.subtitle,
+          href: d.href
+        })));
+      }
+    });
+  }, []);
 
   return (
     <nav className="sticky top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/70 backdrop-blur-xl">

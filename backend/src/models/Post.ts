@@ -2,6 +2,14 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export type PostStatus = "draft" | "published" | "scheduled";
 
+export interface IMediaAttachment {
+  url: string;
+  type: "image" | "video" | "document";
+  name: string;
+  publicId: string;
+  size?: number;
+}
+
 export interface IPost extends Document {
   title: string;
   slug: string;
@@ -17,7 +25,19 @@ export interface IPost extends Document {
   views: number;
   publishAt?: Date;
   publishedAt?: Date;
+  mediaAttachments: IMediaAttachment[];
 }
+
+const MediaAttachmentSchema = new Schema<IMediaAttachment>(
+  {
+    url: { type: String, required: true },
+    type: { type: String, enum: ["image", "video", "document"], required: true },
+    name: { type: String, default: "" },
+    publicId: { type: String, default: "" },
+    size: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
 
 const PostSchema = new Schema<IPost>(
   {
@@ -39,6 +59,7 @@ const PostSchema = new Schema<IPost>(
     views: { type: Number, default: 0 },
     publishAt: { type: Date },
     publishedAt: { type: Date },
+    mediaAttachments: { type: [MediaAttachmentSchema], default: [] },
   },
   { timestamps: true }
 );

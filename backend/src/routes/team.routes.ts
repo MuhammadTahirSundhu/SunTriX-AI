@@ -10,7 +10,7 @@ const router = Router();
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const all = req.query.all === "true";
-    const filter = all ? {} : { visible: true };
+    const filter = all ? {} : { isVisible: true };
     const members = await Team.find(filter).sort({ order: 1, createdAt: 1 });
     res.json(members);
   } catch (err) { next(err); }
