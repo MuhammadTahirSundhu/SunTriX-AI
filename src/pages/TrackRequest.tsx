@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "../lib/api";
-import { ArrowLeft, CheckCircle2, Clock, Mail, Search } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Mail, Search, CheckCircle } from "lucide-react";
 import Layout from "../components/Layout";
 
 type TaskStatus = "new" | "in_review" | "proposal_sent" | "in_progress" | "completed" | "cancelled";
@@ -26,13 +26,15 @@ interface TrackedTask {
 const statusSteps = [
   { value: "new", label: "Request Received", desc: "We've received your project brief." },
   { value: "in_review", label: "In Review", desc: "Our team is reviewing your requirements." },
-  { value: "proposal_sent", label: "Proposal Sent", desc: "We've sent a proposal to your email." },
+  { value: "proposal_sent", label: "Proposal Sent", desc: "We've sent a proposal & invoice to your email." },
   { value: "in_progress", label: "In Progress", desc: "We are actively working on your project." },
   { value: "completed", label: "Completed", desc: "Project delivered successfully." },
 ];
 
 const TrackRequest = () => {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const justPaid = searchParams.get("paid") === "1";
   const [task, setTask] = useState<TrackedTask | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +145,26 @@ const TrackRequest = () => {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-8"
             >
+              {/* Payment Confirmed Banner */}
+              {justPaid && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 flex items-start gap-4"
+                >
+                  <div className="h-10 w-10 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
+                    <CheckCircle className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-emerald-500 mb-1">Payment Confirmed — Project is Now Active!</h3>
+                    <p className="text-sm text-emerald-500/80">
+                      Thank you for your payment. Your project manager will contact you within 2 business hours to schedule a kickoff call.
+                      Check your inbox for a receipt and next-steps email.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Header */}
               <div className="bg-card border border-border rounded-2xl p-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

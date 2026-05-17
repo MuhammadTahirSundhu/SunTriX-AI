@@ -195,6 +195,16 @@ export const ENDPOINTS = {
   UPLOAD_LIST: `${BASE_URL}/upload`,
   UPLOAD_DELETE: (publicId: string) => `${BASE_URL}/upload/${btoa(publicId)}`,
   UPLOAD_BULK_DELETE: `${BASE_URL}/upload/bulk`,
+
+  // Payments (Stripe)
+  PAYMENT_CREATE_CHECKOUT: `${BASE_URL}/payments/create-checkout`,
+  PAYMENT_VERIFY: (sessionId: string) => `${BASE_URL}/payments/verify/${sessionId}`,
+  PAYMENT_INVOICE: (token: string) => `${BASE_URL}/payments/invoice/${token}`,
+  PAYMENT_ADMIN_LIST: `${BASE_URL}/payments/admin/list`,
+  PAYMENT_ADMIN_STATS: `${BASE_URL}/payments/admin/stats`,
+  PAYMENT_ADMIN_CREATE_INVOICE: `${BASE_URL}/payments/admin/create-invoice`,
+  PAYMENT_ADMIN_CREATE_LINK: `${BASE_URL}/payments/admin/create-payment-link`,
+  PAYMENT_ADMIN_REFUND: (id: string) => `${BASE_URL}/payments/admin/refund/${id}`,
 } as const;
 
 // ─── Grok Chat Helper Types ──────────────────────────────────────

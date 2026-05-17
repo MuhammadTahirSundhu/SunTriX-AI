@@ -3,7 +3,7 @@ import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Users, Settings,
   LogOut, Menu, X, ChevronRight, Briefcase, FileText, Megaphone, Layers, Image, Bell,
-  Shield, Building2, DollarSign, BookOpen, UserSquare2
+  Shield, Building2, DollarSign, BookOpen, UserSquare2, CreditCard
 } from "lucide-react";
 import { useNotifications } from "../../hooks/useNotifications";
 
@@ -36,6 +36,7 @@ const AdminLayout = () => {
     { icon: UserSquare2, label: "Team", href: "/admin/team" },
     { icon: Building2, label: "Clients", href: "/admin/clients" },
     { icon: DollarSign, label: "Pricing", href: "/admin/pricing" },
+    { icon: CreditCard, label: "Payments", href: "/admin/payments" },
     { icon: Layers, label: "Departments", href: "/admin/departments" },
     { icon: FileText, label: "Content", href: "/admin/content" },
     { icon: Image, label: "Media Library", href: "/admin/media" },

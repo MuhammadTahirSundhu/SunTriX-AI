@@ -27,6 +27,7 @@ import pricingRoutes from "./routes/pricing.routes";
 import postRoutes from "./routes/post.routes";
 import auditRoutes from "./routes/audit.routes";
 import aiExtractRoutes from "./routes/aiExtract.routes";
+import paymentRoutes from "./routes/payment.routes";
 import { startScheduler } from "./lib/scheduler";
 
 const app = express();
@@ -80,6 +81,16 @@ const chatLimiter = rateLimit({
 
 app.use(globalLimiter);
 
+// ─── Stripe Webhook Raw Body (MUST be before express.json) ──────
+// Only the webhook path gets raw Buffer — everything else gets JSON
+app.use((req, res, next) => {
+  if (req.originalUrl === "/v1/payments/webhook") {
+    express.raw({ type: "application/json" })(req, res, next);
+  } else {
+    next();
+  }
+});
+
 // ─── Body Parsing ────────────────────────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -101,6 +112,8 @@ app.get("/health", (_req, res) => {
 // ─── API Routes ──────────────────────────────────────────────────
 const V1 = "/v1";
 
+// (webhook raw body is handled above before express.json)
+
 app.use(`${V1}/auth`, authRoutes);
 app.use(`${V1}/portfolio`, portfolioRoutes);
 app.use(`${V1}/case-studies`, caseStudyRoutes);
@@ -119,6 +132,7 @@ app.use(`${V1}/pricing`, pricingRoutes);
 app.use(`${V1}/posts`, postRoutes);
 app.use(`${V1}/audit`, auditRoutes);
 app.use(`${V1}/ai`, aiExtractRoutes);
+app.use(`${V1}/payments`, paymentRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────
 app.use((_req, res) => {

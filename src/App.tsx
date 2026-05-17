@@ -43,6 +43,10 @@ import AdminTeam from "./pages/admin/AdminTeam";
 import AdminClients from "./pages/admin/AdminClients";
 import AdminPricing from "./pages/admin/AdminPricing";
 import AdminBlog from "./pages/admin/AdminBlog";
+import AdminPayments from "./pages/admin/AdminPayments";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
+import ClientInvoice from "./pages/ClientInvoice";
 import { DynamicFavicon } from "@/components/DynamicFavicon";
 
 const queryClient = new QueryClient();
@@ -83,6 +87,9 @@ const AppRoutes = () => {
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogDetail />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/invoice/:token" element={<ClientInvoice />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -99,6 +106,7 @@ const AppRoutes = () => {
           <Route path="content" element={<AdminContent />} />
           <Route path="media" element={<AdminMedia />} />
           <Route path="newsletter" element={<AdminNewsletter />} />
+          <Route path="payments" element={<AdminPayments />} />
           <Route path="audit" element={<AdminAuditLog />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
