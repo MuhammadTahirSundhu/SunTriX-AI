@@ -9,6 +9,7 @@ import AIAssistPanel from "@/components/admin/AIAssistPanel";
 import { SortableList } from "@/components/admin/SortableList";
 import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 interface Department {
   _id: string;
@@ -276,7 +277,10 @@ const AdminDepartments = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Image URL</label>
-                  <input value={editing.image} onChange={(e) => setEditing({ ...editing, image: e.target.value })} placeholder="Cloudinary URL" className={inp} />
+                  <ImageUpload 
+                    value={editing.image} 
+                    onChange={(url) => setEditing({ ...editing, image: url })} 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Capabilities (one per line)</label>

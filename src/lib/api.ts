@@ -141,6 +141,7 @@ export const ENDPOINTS = {
 
   // Admin
   ADMIN_DASHBOARD_STATS: `${BASE_URL}/admin/stats`,
+  ADMIN_ACTIVITY: (days = 30) => `${BASE_URL}/admin/activity?days=${days}`,
   ADMIN_NOTIFICATIONS: `${BASE_URL}/admin/notifications`,
   ADMIN_TASKS: `${BASE_URL}/task-requests`,
   ADMIN_CONTACTS: `${BASE_URL}/contact`,
@@ -192,7 +193,7 @@ export const ENDPOINTS = {
   UPLOAD_IMAGE: `${BASE_URL}/upload/image`,
   UPLOAD_VIDEO: `${BASE_URL}/upload/video`,
   UPLOAD_LIST: `${BASE_URL}/upload`,
-  UPLOAD_DELETE: (publicId: string) => `${BASE_URL}/upload/${publicId}`,
+  UPLOAD_DELETE: (publicId: string) => `${BASE_URL}/upload/${btoa(publicId)}`,
   UPLOAD_BULK_DELETE: `${BASE_URL}/upload/bulk`,
 } as const;
 

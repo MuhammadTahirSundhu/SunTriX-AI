@@ -110,7 +110,24 @@ router.post(
   }
 );
 
-// DELETE /upload/:publicId — delete from Cloudinary (admin only)
+// DELETE /upload/bulk — bulk delete from Cloudinary (admin only)
+router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { publicIds } = req.body;
+    if (!Array.isArray(publicIds)) return next(createError("publicIds array required", 400));
+    
+    // Cloudinary supports bulk deletion
+    if (publicIds.length > 0) {
+      await cloudinary.api.delete_resources(publicIds);
+    }
+    
+    res.json({ success: true, count: publicIds.length });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /upload/:encodedId — delete from Cloudinary (admin only)
 // publicId is base64-encoded to avoid slash issues in URLs
 router.delete("/:encodedId", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {

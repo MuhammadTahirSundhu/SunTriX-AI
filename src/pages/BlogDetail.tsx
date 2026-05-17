@@ -60,14 +60,14 @@ const BlogDetail = () => {
   useEffect(() => {
     const fetch_ = async () => {
       setLoading(true);
-      const { data } = await apiRequest<{ post: BlogPost }>(ENDPOINTS.BLOG_BY_SLUG(slug!));
-      if (data?.post) {
-        setPost(data.post);
+      const { data } = await apiRequest<BlogPost>(ENDPOINTS.BLOG_BY_SLUG(slug!));
+      if (data && data._id) {
+        setPost(data);
         // Fetch related posts
         const { data: allData } = await apiRequest<{ posts: BlogPost[] }>(ENDPOINTS.BLOG_LIST);
         if (allData?.posts) {
           const others = allData.posts.filter(
-            (p) => p.slug !== slug && p.status === "published" && p.category === data.post.category
+            (p) => p.slug !== slug && p.status === "published" && p.category === data.category
           ).slice(0, 3);
           setRelated(others);
         }

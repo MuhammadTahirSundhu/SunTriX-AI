@@ -8,6 +8,7 @@ import { SortableList } from "@/components/admin/SortableList";
 import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 interface TeamMember {
   _id: string;
@@ -355,7 +356,7 @@ const AdminTeam = () => {
 
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Profile Image URL</label>
-                  <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="https://..." />
+                  <ImageUpload value={form.imageUrl || ""} onChange={(url) => setForm({ ...form, imageUrl: url })} placeholder="https://..." />
                 </div>
 
                 <div className="space-y-3">

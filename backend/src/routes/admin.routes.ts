@@ -4,11 +4,12 @@ import ContactMessage from "../models/ContactMessage";
 import Portfolio from "../models/Portfolio";
 import Testimonial from "../models/Testimonial";
 import Newsletter from "../models/Newsletter";
+import Post from "../models/Post";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
 
-// GET /admin/stats — dashboard overview
+// GET /admin/stats — basic KPI counts
 router.get("/stats", requireAuth, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [
@@ -45,6 +46,135 @@ router.get("/notifications", requireAuth, async (_req: Request, res: Response, n
       Newsletter.countDocuments({ subscribed: true, createdAt: { $gte: sevenDaysAgo } }),
     ]);
     res.json({ newTasks, unreadMessages, newSubscribers, total: newTasks + unreadMessages });
+  } catch (err) { next(err); }
+});
+
+// GET /admin/activity — comprehensive activity overview data
+router.get("/activity", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const prevSince = new Date(Date.now() - days * 2 * 24 * 60 * 60 * 1000);
+
+    // ── 1. Trend chart: daily counts over last N days ─────────────
+    const buildDailyBuckets = (numDays: number) => {
+      const buckets: Record<string, { tasks: number; messages: number; subscribers: number }> = {};
+      for (let i = numDays - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        buckets[key] = { tasks: 0, messages: 0, subscribers: 0 };
+      }
+      return buckets;
+    };
+
+    const buckets = buildDailyBuckets(days);
+
+    const [taskDocs, msgDocs, subDocs] = await Promise.all([
+      TaskRequest.find({ createdAt: { $gte: since } }).select("createdAt"),
+      ContactMessage.find({ createdAt: { $gte: since } }).select("createdAt"),
+      Newsletter.find({ createdAt: { $gte: since }, subscribed: true }).select("createdAt"),
+    ]);
+
+    for (const doc of taskDocs) {
+      const key = (doc as any).createdAt.toISOString().slice(0, 10);
+      if (buckets[key]) buckets[key].tasks++;
+    }
+    for (const doc of msgDocs) {
+      const key = (doc as any).createdAt.toISOString().slice(0, 10);
+      if (buckets[key]) buckets[key].messages++;
+    }
+    for (const doc of subDocs) {
+      const key = (doc as any).createdAt.toISOString().slice(0, 10);
+      if (buckets[key]) buckets[key].subscribers++;
+    }
+
+    const trendChart = Object.entries(buckets).map(([date, vals]) => ({ date, ...vals }));
+
+    // ── 2. Task pipeline breakdown ────────────────────────────────
+    const pipeline = await TaskRequest.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+    const taskPipeline = pipeline.map((p: any) => ({ status: p._id, count: p.count }));
+
+    // ── 3. Top requested services ─────────────────────────────────
+    const serviceAgg = await TaskRequest.aggregate([
+      { $group: { _id: "$service", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 6 },
+    ]);
+    const topServices = serviceAgg.map((s: any) => ({ service: s._id, count: s.count }));
+
+    // ── 4. Period-over-period growth ──────────────────────────────
+    const [
+      tasksNow, tasksPrev,
+      msgsNow, msgsPrev,
+      subsNow, subsPrev,
+    ] = await Promise.all([
+      TaskRequest.countDocuments({ createdAt: { $gte: since } }),
+      TaskRequest.countDocuments({ createdAt: { $gte: prevSince, $lt: since } }),
+      ContactMessage.countDocuments({ createdAt: { $gte: since } }),
+      ContactMessage.countDocuments({ createdAt: { $gte: prevSince, $lt: since } }),
+      Newsletter.countDocuments({ createdAt: { $gte: since }, subscribed: true }),
+      Newsletter.countDocuments({ createdAt: { $gte: prevSince, $lt: since }, subscribed: true }),
+    ]);
+    const pct = (now: number, prev: number) =>
+      prev === 0 ? (now > 0 ? 100 : 0) : Math.round(((now - prev) / prev) * 100);
+
+    const growth = {
+      tasks: { current: tasksNow, previous: tasksPrev, pct: pct(tasksNow, tasksPrev) },
+      messages: { current: msgsNow, previous: msgsPrev, pct: pct(msgsNow, msgsPrev) },
+      subscribers: { current: subsNow, previous: subsPrev, pct: pct(subsNow, subsPrev) },
+    };
+
+    // ── 5. Content health ─────────────────────────────────────────
+    const [
+      publishedPosts, draftPosts, publishedPortfolio, totalPortfolio,
+      totalTestimonials, totalSubscribers, unreadMessages,
+    ] = await Promise.all([
+      Post.countDocuments({ status: "published" }),
+      Post.countDocuments({ status: "draft" }),
+      Portfolio.countDocuments({ status: "published" }),
+      Portfolio.countDocuments(),
+      Testimonial.countDocuments(),
+      Newsletter.countDocuments({ subscribed: true }),
+      ContactMessage.countDocuments({ read: false }),
+    ]);
+    const contentHealth = {
+      publishedPosts, draftPosts, publishedPortfolio, totalPortfolio,
+      totalTestimonials, totalSubscribers, unreadMessages,
+    };
+
+    // ── 6. Recent activity feed ───────────────────────────────────
+    const [recentTasks, recentMsgs, recentSubs] = await Promise.all([
+      TaskRequest.find().select("name service status createdAt").sort({ createdAt: -1 }).limit(5),
+      ContactMessage.find().select("name subject read createdAt").sort({ createdAt: -1 }).limit(5),
+      Newsletter.find({ subscribed: true }).select("name email createdAt").sort({ createdAt: -1 }).limit(4),
+    ]);
+
+    const feed = [
+      ...recentTasks.map((t: any) => ({ type: "task", title: `New task from ${t.name}`, subtitle: t.service, status: t.status, at: t.createdAt })),
+      ...recentMsgs.map((m: any) => ({ type: "message", title: `Message: ${m.subject}`, subtitle: m.name, status: m.read ? "read" : "unread", at: m.createdAt })),
+      ...recentSubs.map((s: any) => ({ type: "subscriber", title: `New subscriber`, subtitle: s.name || s.email, status: "new", at: s.createdAt })),
+    ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 12);
+
+    // ── 7. Conversion funnel ──────────────────────────────────────
+    const [totalTasks, inReview, proposalSent, inProgress, completed] = await Promise.all([
+      TaskRequest.countDocuments(),
+      TaskRequest.countDocuments({ status: { $in: ["in_review", "proposal_sent", "in_progress", "completed"] } }),
+      TaskRequest.countDocuments({ status: { $in: ["proposal_sent", "in_progress", "completed"] } }),
+      TaskRequest.countDocuments({ status: { $in: ["in_progress", "completed"] } }),
+      TaskRequest.countDocuments({ status: "completed" }),
+    ]);
+    const funnel = [
+      { stage: "Inquiries", count: totalTasks },
+      { stage: "Reviewed", count: inReview },
+      { stage: "Proposal Sent", count: proposalSent },
+      { stage: "In Progress", count: inProgress },
+      { stage: "Completed", count: completed },
+    ];
+
+    res.json({ trendChart, taskPipeline, topServices, growth, contentHealth, feed, funnel });
   } catch (err) { next(err); }
 });
 

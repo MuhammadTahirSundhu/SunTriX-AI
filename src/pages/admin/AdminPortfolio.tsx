@@ -11,6 +11,7 @@ import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
 import { CSVImporter, ExpectedField } from "@/components/admin/CSVImporter";
 import { UploadCloud } from "lucide-react";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 const CATEGORIES = ["Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
 
@@ -504,28 +505,19 @@ const AdminPortfolio = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-1">
-                        Cover Image URL
-                        <UploadButton onUpload={(url) => setEditing({ ...editing, coverImage: url })} />
-                      </label>
-                      <input value={editing.coverImage} onChange={(e) => setEditing({ ...editing, coverImage: e.target.value })} placeholder="Cloudinary or external URL" className={inp} />
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">Cover Image URL</label>
+                      <ImageUpload value={editing.coverImage} onChange={(url) => setEditing({ ...editing, coverImage: url })} placeholder="Cloudinary or external URL" />
                     </div>
                     <div>
-                      <label className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-1">
-                        Thumbnail URL
-                        <UploadButton onUpload={(url) => setEditing({ ...editing, thumbnailImage: url })} />
-                      </label>
-                      <input value={editing.thumbnailImage} onChange={(e) => setEditing({ ...editing, thumbnailImage: e.target.value })} placeholder="Card thumbnail" className={inp} />
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">Thumbnail URL</label>
+                      <ImageUpload value={editing.thumbnailImage} onChange={(url) => setEditing({ ...editing, thumbnailImage: url })} placeholder="Card thumbnail" />
                     </div>
                   </div>
 
                   {editing.displayType === "video" ? (
                     <div>
-                      <label className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-1">
-                        Demo Video URL
-                        <UploadButton type="video" onUpload={(url) => setEditing({ ...editing, videoUrl: url })} />
-                      </label>
-                      <input value={editing.videoUrl} onChange={(e) => setEditing({ ...editing, videoUrl: e.target.value })} placeholder="YouTube or local video URL" className={inp} />
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">Demo Video URL</label>
+                      <ImageUpload value={editing.videoUrl} onChange={(url) => setEditing({ ...editing, videoUrl: url })} placeholder="YouTube or local video URL" />
                     </div>
                   ) : (
                     <div className="space-y-4">

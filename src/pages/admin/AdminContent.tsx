@@ -6,6 +6,7 @@ import {
   Save, Globe, Megaphone, Building2, MessageSquareQuote,
   Plus, Trash2, Eye, EyeOff, ToggleLeft, ToggleRight, Video, Share2
 } from "lucide-react";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 type Tab = "hero" | "announcement" | "company" | "social" | "intro-video" | "testimonials";
 
@@ -278,14 +279,21 @@ const AdminContent = () => {
             </button>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Video Embed URL</label>
-            <input value={company.introVideoUrl} onChange={(e) => setCompany({ ...company, introVideoUrl: e.target.value })} placeholder="https://www.youtube.com/embed/..." className={inp} />
-            <p className="text-xs text-muted-foreground mt-1">Use the embed URL format. For YouTube: youtube.com/embed/VIDEO_ID</p>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Video Embed URL / Upload</label>
+            <ImageUpload 
+              value={company.introVideoUrl} 
+              onChange={(url) => setCompany({ ...company, introVideoUrl: url })} 
+            />
+            <p className="text-xs text-muted-foreground mt-1">Upload a video file or use an embed URL format (e.g. YouTube: youtube.com/embed/VIDEO_ID)</p>
           </div>
           {company.introVideoUrl && (
             <div className="rounded-lg border border-border overflow-hidden">
               <div className="aspect-video">
-                <iframe src={company.introVideoUrl} className="w-full h-full" allow="autoplay; fullscreen" title="Preview" />
+                {company.introVideoUrl.includes(".mp4") || company.introVideoUrl.includes("cloudinary.com/video") ? (
+                  <video src={company.introVideoUrl} controls className="w-full h-full object-cover" />
+                ) : (
+                  <iframe src={company.introVideoUrl} className="w-full h-full" allow="autoplay; fullscreen" title="Preview" />
+                )}
               </div>
             </div>
           )}

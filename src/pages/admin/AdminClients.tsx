@@ -8,6 +8,7 @@ import { SortableList } from "@/components/admin/SortableList";
 import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 interface Client {
   _id: string;
@@ -288,12 +289,7 @@ const AdminClients = () => {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Logo Image URL *</label>
-                  <input required value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="https://..." />
-                  {form.logoUrl && (
-                    <div className="mt-2 h-12 bg-muted/30 rounded-lg flex items-center justify-center p-2">
-                      <img src={form.logoUrl} alt="preview" className="max-h-full max-w-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                    </div>
-                  )}
+                  <ImageUpload value={form.logoUrl} onChange={(url) => setForm({ ...form, logoUrl: url })} placeholder="https://..." />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Website URL</label>

@@ -5,6 +5,7 @@ import { Plus, Trash2, Edit2, X, Search, Filter, ChevronDown, Calendar, Eye, Eye
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import AIAssistPanel from "@/components/admin/AIAssistPanel";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 interface BlogPost {
   _id: string;
@@ -328,8 +329,8 @@ const AdminBlog = () => {
                   <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} className={`${inputCls} resize-none font-mono text-xs`} placeholder="Write in Markdown..." />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Cover Image URL</label>
-                  <input value={form.coverImage} onChange={(e) => setForm({ ...form, coverImage: e.target.value })} className={inputCls} placeholder="https://..." />
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Cover Image</label>
+                  <ImageUpload value={form.coverImage || ""} onChange={(url) => setForm({ ...form, coverImage: url })} placeholder="https://..." />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
