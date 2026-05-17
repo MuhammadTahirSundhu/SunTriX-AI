@@ -1,16 +1,12 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ArrowRight, ExternalLink, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { newsletterStore } from "@/lib/store";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useMedia } from "@/hooks/use-media";
-
-const PLATFORM_ICONS: Record<string, string> = {
-  LinkedIn: "💼", Twitter: "𝕏", GitHub: "🐙", YouTube: "▶️",
-  Instagram: "📸", Upwork: "🟢", Fiverr: "🟩",
-};
+import { SocialIconSVG, PLATFORM_BRAND } from "@/components/SocialIcons";
 
 const Footer = () => {
   const [name, setName] = useState("");
@@ -71,12 +67,19 @@ const Footer = () => {
               {t("footer.tagline") || "Engineering Intelligence That Perceives, Reasons, and Acts. Your AI-first technology partner delivering end-to-end AI engineering."}
             </p>
             <div className="flex items-center gap-3 pt-2">
-              {socialLinks.slice(0, 4).map((link) => (
-                <a key={link.platform} href={link.url} target="_blank" rel="noopener noreferrer" 
-                  className="h-9 w-9 rounded-lg border border-border bg-muted/30 flex items-center justify-center hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all">
-                  <span className="text-lg">{PLATFORM_ICONS[link.platform] || "🔗"}</span>
-                </a>
-              ))}
+              {activeLinks.slice(0, 5).map((link) => {
+                const brand = PLATFORM_BRAND[link.platform];
+                const icon = SocialIconSVG[link.platform];
+                return (
+                  <a key={link.platform} href={link.url} target="_blank" rel="noopener noreferrer"
+                    title={link.platform}
+                    className={`h-9 w-9 rounded-lg border border-border bg-muted/30 flex items-center justify-center transition-all ${brand?.bg || "hover:bg-primary/10"} ${brand?.border || "hover:border-primary/30"}`}
+                    style={{ color: brand?.color }}
+                  >
+                    {icon ?? <span className="text-lg">🔗</span>}
+                  </a>
+                );
+              })}
             </div>
           </div>
 

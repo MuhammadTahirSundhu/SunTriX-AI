@@ -1,63 +1,62 @@
 import { motion } from "framer-motion";
 import deptPlatform from "@/assets/dept-platform.png";
 
+/** Each tech item: name shown, SVG logo URL (Simple Icons CDN = https://cdn.simpleicons.org/<slug>/<hex>), official link */
 const techCategories = [
   {
     category: "Agentic AI & Automation",
     items: [
-      { name: "LangChain", icon: "🔗" },
-      { name: "CrewAI", icon: "🤖" },
-      { name: "AutoGen", icon: "⚡" },
-      { name: "OpenAI GPT-4o", icon: "🧠" },
-      { name: "Claude 3.5", icon: "🟣" },
-      { name: "n8n", icon: "🔄" },
-      { name: "Zapier AI", icon: "⚙️" },
+      { name: "LangChain", logo: "https://cdn.simpleicons.org/langchain/1C3C3C", url: "https://www.langchain.com" },
+      { name: "OpenAI", logo: "https://cdn.simpleicons.org/openai/000000", url: "https://openai.com" },
+      { name: "Anthropic", logo: "https://cdn.simpleicons.org/anthropic/191919", url: "https://www.anthropic.com" },
+      { name: "n8n", logo: "https://cdn.simpleicons.org/n8n/EA4B71", url: "https://n8n.io" },
+      { name: "Zapier", logo: "https://cdn.simpleicons.org/zapier/FF4A00", url: "https://zapier.com" },
+      { name: "Make", logo: "https://cdn.simpleicons.org/make/6D00CC", url: "https://www.make.com" },
     ],
   },
   {
     category: "AI & Machine Learning",
     items: [
-      { name: "PyTorch", icon: "🔥" },
-      { name: "TensorFlow", icon: "📐" },
-      { name: "Hugging Face", icon: "🤗" },
-      { name: "MLflow", icon: "📊" },
-      { name: "Vertex AI", icon: "☁️" },
-      { name: "scikit-learn", icon: "📈" },
-      { name: "ONNX", icon: "🔷" },
+      { name: "PyTorch", logo: "https://cdn.simpleicons.org/pytorch/EE4C2C", url: "https://pytorch.org" },
+      { name: "TensorFlow", logo: "https://cdn.simpleicons.org/tensorflow/FF6F00", url: "https://www.tensorflow.org" },
+      { name: "Hugging Face", logo: "https://cdn.simpleicons.org/huggingface/FFD21E", url: "https://huggingface.co" },
+      { name: "scikit-learn", logo: "https://cdn.simpleicons.org/scikitlearn/F7931E", url: "https://scikit-learn.org" },
+      { name: "Vertex AI", logo: "https://cdn.simpleicons.org/googlecloud/4285F4", url: "https://cloud.google.com/vertex-ai" },
+      { name: "MLflow", logo: "https://cdn.simpleicons.org/mlflow/0194E2", url: "https://mlflow.org" },
     ],
   },
   {
     category: "Computer Vision",
     items: [
-      { name: "YOLOv8", icon: "👁️" },
-      { name: "OpenCV", icon: "📷" },
-      { name: "NVIDIA Triton", icon: "💚" },
-      { name: "TensorRT", icon: "🚀" },
-      { name: "MediaPipe", icon: "🎯" },
-      { name: "Roboflow", icon: "🏷️" },
+      { name: "OpenCV", logo: "https://cdn.simpleicons.org/opencv/5C3EE8", url: "https://opencv.org" },
+      { name: "Roboflow", logo: "https://cdn.simpleicons.org/roboflow/6706CE", url: "https://roboflow.com" },
+      { name: "NVIDIA", logo: "https://cdn.simpleicons.org/nvidia/76B900", url: "https://developer.nvidia.com" },
+      { name: "MediaPipe", logo: "https://cdn.simpleicons.org/google/4285F4", url: "https://mediapipe.dev" },
+      { name: "TensorRT", logo: "https://cdn.simpleicons.org/nvidia/76B900", url: "https://developer.nvidia.com/tensorrt" },
+      { name: "ONNX", logo: "https://cdn.simpleicons.org/onnx/005CED", url: "https://onnx.ai" },
     ],
   },
   {
     category: "SaaS & Platform",
     items: [
-      { name: "Next.js 14", icon: "▲" },
-      { name: "React", icon: "⚛️" },
-      { name: "Node.js", icon: "💚" },
-      { name: "TypeScript", icon: "📘" },
-      { name: "Stripe", icon: "💳" },
-      { name: "Vercel", icon: "▼" },
+      { name: "Next.js", logo: "https://cdn.simpleicons.org/nextdotjs/000000", url: "https://nextjs.org" },
+      { name: "React", logo: "https://cdn.simpleicons.org/react/61DAFB", url: "https://react.dev" },
+      { name: "Node.js", logo: "https://cdn.simpleicons.org/nodedotjs/339933", url: "https://nodejs.org" },
+      { name: "TypeScript", logo: "https://cdn.simpleicons.org/typescript/3178C6", url: "https://www.typescriptlang.org" },
+      { name: "Stripe", logo: "https://cdn.simpleicons.org/stripe/635BFF", url: "https://stripe.com" },
+      { name: "Vercel", logo: "https://cdn.simpleicons.org/vercel/000000", url: "https://vercel.com" },
     ],
   },
   {
     category: "Data & Infrastructure",
     items: [
-      { name: "MongoDB Atlas", icon: "🍃" },
-      { name: "PostgreSQL", icon: "🐘" },
-      { name: "Redis", icon: "🔴" },
-      { name: "AWS", icon: "☁️" },
-      { name: "Docker", icon: "🐳" },
-      { name: "Kubernetes", icon: "☸️" },
-      { name: "Cloudinary", icon: "🌤️" },
+      { name: "MongoDB", logo: "https://cdn.simpleicons.org/mongodb/47A248", url: "https://www.mongodb.com" },
+      { name: "PostgreSQL", logo: "https://cdn.simpleicons.org/postgresql/4169E1", url: "https://www.postgresql.org" },
+      { name: "Redis", logo: "https://cdn.simpleicons.org/redis/FF4438", url: "https://redis.io" },
+      { name: "AWS", logo: "https://cdn.simpleicons.org/amazonaws/FF9900", url: "https://aws.amazon.com" },
+      { name: "Docker", logo: "https://cdn.simpleicons.org/docker/2496ED", url: "https://www.docker.com" },
+      { name: "Kubernetes", logo: "https://cdn.simpleicons.org/kubernetes/326CE5", url: "https://kubernetes.io" },
+      { name: "Cloudinary", logo: "https://cdn.simpleicons.org/cloudinary/3448C5", url: "https://cloudinary.com" },
     ],
   },
 ];
@@ -90,13 +89,23 @@ const TechStackSection = () => {
                   <p className="text-xs font-mono text-primary mb-2 uppercase tracking-wider">{cat.category}</p>
                   <div className="flex flex-wrap gap-2">
                     {cat.items.map((tech) => (
-                      <motion.span
+                      <motion.a
                         key={tech.name}
+                        href={tech.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         whileHover={{ scale: 1.05, y: -2 }}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-mono text-muted-foreground hover:text-primary hover:border-primary/30 glow-hover transition-all cursor-default"
+                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-mono text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/5 glow-hover transition-all cursor-pointer group"
                       >
-                        <span>{tech.icon}</span> {tech.name}
-                      </motion.span>
+                        <img
+                          src={tech.logo}
+                          alt={tech.name}
+                          className="h-4 w-4 object-contain"
+                          loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                        {tech.name}
+                      </motion.a>
                     ))}
                   </div>
                 </motion.div>

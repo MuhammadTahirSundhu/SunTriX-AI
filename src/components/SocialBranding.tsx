@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
+import { SocialIconSVG, PLATFORM_BRAND } from "@/components/SocialIcons";
 
 interface SocialLink {
   platform: string;
@@ -12,26 +13,6 @@ interface SocialLink {
 interface SocialLinksResponse {
   links: SocialLink[];
 }
-
-const PLATFORM_ICONS: Record<string, string> = {
-  LinkedIn: "💼",
-  Twitter: "𝕏",
-  GitHub: "🐙",
-  YouTube: "▶️",
-  Instagram: "📸",
-  Upwork: "🟢",
-  Fiverr: "🟩",
-};
-
-const PLATFORM_COLORS: Record<string, string> = {
-  LinkedIn: "hover:border-[#0A66C2]/50 hover:bg-[#0A66C2]/5",
-  Twitter: "hover:border-foreground/30 hover:bg-foreground/5",
-  GitHub: "hover:border-foreground/30 hover:bg-foreground/5",
-  YouTube: "hover:border-[#FF0000]/50 hover:bg-[#FF0000]/5",
-  Instagram: "hover:border-[#E1306C]/50 hover:bg-[#E1306C]/5",
-  Upwork: "hover:border-[#14A800]/50 hover:bg-[#14A800]/5",
-  Fiverr: "hover:border-[#1DBF73]/50 hover:bg-[#1DBF73]/5",
-};
 
 const SocialBranding = () => {
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
@@ -58,23 +39,34 @@ const SocialBranding = () => {
           <span className="text-xs font-mono text-primary uppercase tracking-widest">Find Us On</span>
         </motion.div>
         <div className="flex flex-wrap justify-center gap-4">
-          {activeLinks.map((link, i) => (
-            <motion.a
-              key={link.platform}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              className={`inline-flex items-center gap-3 rounded-xl border border-border bg-card px-6 py-4 text-sm font-medium text-foreground transition-all duration-300 ${PLATFORM_COLORS[link.platform] || "hover:border-primary/30"}`}
-            >
-              <span className="text-lg">{PLATFORM_ICONS[link.platform] || "🔗"}</span>
-              {link.platform}
-              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-            </motion.a>
-          ))}
+          {activeLinks.map((link, i) => {
+            const brand = PLATFORM_BRAND[link.platform];
+            const icon = SocialIconSVG[link.platform];
+            return (
+              <motion.a
+                key={link.platform}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05 }}
+                whileHover={{ scale: 1.04, y: -2 }}
+                className={`inline-flex items-center gap-3 rounded-xl border border-border bg-card px-6 py-4 text-sm font-medium text-foreground transition-all duration-300 ${brand?.bg || "hover:bg-primary/5"} ${brand?.border || "hover:border-primary/30"}`}
+              >
+                {icon ? (
+                  <span style={{ color: brand?.color }} className="transition-colors">
+                    {icon}
+                  </span>
+                ) : (
+                  <span className="text-lg">🔗</span>
+                )}
+                {link.platform}
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+              </motion.a>
+            );
+          })}
         </div>
       </div>
     </section>
