@@ -104,7 +104,7 @@ app.use((req, res, next) => {
 // ─── Stripe Webhook Raw Body (MUST be before express.json) ──────
 // Only the webhook path gets raw Buffer — everything else gets JSON
 app.use((req, res, next) => {
-  if (req.originalUrl === "/v1/payments/webhook") {
+  if (req.originalUrl === "/v1/payments/webhook" || req.originalUrl === "/v1/tracker/webhook/stripe") {
     express.raw({ type: "application/json" })(req, res, next);
   } else {
     next();
@@ -134,6 +134,8 @@ const V1 = "/v1";
 
 // (webhook raw body is handled above before express.json)
 
+import trackerRoutes from "./routes/tracker.routes";
+
 app.use(`${V1}/auth`, authRoutes);
 app.use(`${V1}/portfolio`, portfolioRoutes);
 app.use(`${V1}/case-studies`, caseStudyRoutes);
@@ -156,6 +158,7 @@ app.use(`${V1}/payments`, paymentRoutes);
 app.use(`${V1}/settings`, settingsRoutes);
 app.use(`${V1}/proposals`, proposalRoutes);
 app.use(`${V1}/contracts`, contractRoutes);
+app.use(`${V1}/tracker`, trackerRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────
 app.use((_req, res) => {

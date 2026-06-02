@@ -225,6 +225,25 @@ export const ENDPOINTS = {
   SETTINGS_BULK:  `${BASE_URL}/settings/bulk`,
   SETTINGS_UPDATE: (key: string) => `${BASE_URL}/settings/${key}`,
   SETTINGS_PUBLIC: `${BASE_URL}/settings/public`,
+
+  // Project Tracker
+  TRACKER_ADMIN_LIST:  `${BASE_URL}/tracker/admin/list`,
+  TRACKER_ADMIN_BY_ID: (id: string) => `${BASE_URL}/tracker/admin/${id}`,
+  TRACKER_ADMIN_AUDIT: (id: string) => `${BASE_URL}/tracker/admin/${id}/audit`,
+  TRACKER_ADMIN_PHASE_ADVANCE:      (id: string) => `${BASE_URL}/tracker/admin/${id}/phase/advance`,
+  TRACKER_ADMIN_DELIVERABLE_DONE:   (id: string, dId: string) => `${BASE_URL}/tracker/admin/${id}/deliverable/${dId}/complete`,
+  TRACKER_ADMIN_UPDATE:             (id: string) => `${BASE_URL}/tracker/admin/${id}/update`,
+  TRACKER_ADMIN_CHAT:               (id: string) => `${BASE_URL}/tracker/admin/${id}/chat`,
+  TRACKER_ADMIN_FILE_UPLOAD:        (id: string) => `${BASE_URL}/tracker/admin/${id}/file/upload`,
+  TRACKER_ADMIN_MILESTONE_PAYABLE:  (id: string, mId: string) => `${BASE_URL}/tracker/admin/${id}/milestone/${mId}/mark-payable`,
+  TRACKER_CLIENT_BY_TOKEN:          (token: string) => `${BASE_URL}/tracker/client/${token}`,
+  TRACKER_CLIENT_DELIVERABLE_APPROVE: (token: string, dId: string) => `${BASE_URL}/tracker/client/${token}/deliverable/${dId}/approve`,
+  TRACKER_CLIENT_DELIVERABLE_REJECT:  (token: string, dId: string) => `${BASE_URL}/tracker/client/${token}/deliverable/${dId}/reject`,
+  TRACKER_CLIENT_FILE_APPROVE:        (token: string, fId: string) => `${BASE_URL}/tracker/client/${token}/file/${fId}/approve`,
+  TRACKER_CLIENT_FILE_REJECT:         (token: string, fId: string) => `${BASE_URL}/tracker/client/${token}/file/${fId}/reject`,
+  TRACKER_CLIENT_UPDATE_ACK:          (token: string, uId: string) => `${BASE_URL}/tracker/client/${token}/update/${uId}/acknowledge`,
+  TRACKER_CLIENT_CHAT:                (token: string) => `${BASE_URL}/tracker/client/${token}/chat`,
+  TRACKER_CLIENT_MILESTONE_CHECKOUT:  (token: string, mId: string) => `${BASE_URL}/tracker/client/${token}/milestone/${mId}/checkout`,
 } as const;
 
 // ─── Grok Chat Helper Types ──────────────────────────────────────

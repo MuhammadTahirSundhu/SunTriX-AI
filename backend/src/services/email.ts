@@ -106,7 +106,117 @@ export async function sendTaskNotification(data: {
   }
 }
 
+// ─── Project Tracker Notifications ──────────────────────────────────────────
 
+export async function sendTrackerPhaseAdvancedEmail(data: { clientEmail: string; projectTitle: string; newPhase: string; portalUrl: string; }): Promise<void> {
+  try {
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.clientEmail],
+      subject: `Project Update: Now in ${data.newPhase} — ${data.projectTitle}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px;">
+        <h2 style="color:#4f46e5;margin-top:0;">🚀 Phase Advanced</h2>
+        <p style="color:#374151;font-size:16px;">Great news! <strong>${data.projectTitle}</strong> has officially advanced to the <strong>${data.newPhase}</strong> phase.</p>
+        <p style="color:#6b7280;margin-bottom:24px;">You can view the updated timeline and current focus areas in your Project Hub.</p>
+        <a href="${data.portalUrl}" style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">View Project Hub</a>
+      </div>`,
+    });
+  } catch (err) { console.error("Email Error:", err); }
+}
+
+export async function sendTrackerDeliverableReviewEmail(data: { clientEmail: string; projectTitle: string; deliverableTitle: string; portalUrl: string; }): Promise<void> {
+  try {
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.clientEmail],
+      subject: `Action Required: Review Deliverable for ${data.projectTitle}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px;">
+        <h2 style="color:#f59e0b;margin-top:0;">👀 Deliverable Ready for Review</h2>
+        <p style="color:#374151;font-size:16px;">We have submitted a deliverable for your approval: <strong>${data.deliverableTitle}</strong>.</p>
+        <p style="color:#6b7280;margin-bottom:24px;">Please review the attached materials in your Project Hub and let us know if you approve or require changes.</p>
+        <a href="${data.portalUrl}" style="display:inline-block;background:#f59e0b;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Review Deliverable</a>
+      </div>`,
+    });
+  } catch (err) { console.error("Email Error:", err); }
+}
+
+export async function sendTrackerUpdateEmail(data: { clientEmail: string; projectTitle: string; updateType: string; portalUrl: string; isActionRequired: boolean; }): Promise<void> {
+  try {
+    const color = data.isActionRequired ? "#ef4444" : "#10b981";
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.clientEmail],
+      subject: `${data.isActionRequired ? 'Action Required: ' : ''}New Update on ${data.projectTitle}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px;">
+        <h2 style="color:${color};margin-top:0;">📝 Project Update Posted</h2>
+        <p style="color:#374151;font-size:16px;">We've posted a new <strong>${data.updateType}</strong> regarding your project.</p>
+        <a href="${data.portalUrl}" style="display:inline-block;background:${color};color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Read Update</a>
+      </div>`,
+    });
+  } catch (err) { console.error("Email Error:", err); }
+}
+
+export async function sendTrackerFileEmail(data: { clientEmail: string; projectTitle: string; filename: string; portalUrl: string; }): Promise<void> {
+  try {
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.clientEmail],
+      subject: `New File Shared: ${data.filename} — ${data.projectTitle}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px;">
+        <h2 style="color:#3b82f6;margin-top:0;">📁 File Ready for Review</h2>
+        <p style="color:#374151;font-size:16px;">A new file has been shared with you: <strong>${data.filename}</strong>.</p>
+        <a href="${data.portalUrl}" style="display:inline-block;background:#3b82f6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">View File</a>
+      </div>`,
+    });
+  } catch (err) { console.error("Email Error:", err); }
+}
+
+export async function sendTrackerPaymentDueEmail(data: { clientEmail: string; projectTitle: string; milestoneTitle: string; amountFormatted: string; portalUrl: string; }): Promise<void> {
+  try {
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.clientEmail],
+      subject: `Invoice Ready: ${data.milestoneTitle} — ${data.projectTitle}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px;">
+        <h2 style="color:#ef4444;margin-top:0;">💳 Payment Due</h2>
+        <p style="color:#374151;font-size:16px;">An invoice of <strong>${data.amountFormatted}</strong> is now due for the milestone: <strong>${data.milestoneTitle}</strong>.</p>
+        <p style="color:#6b7280;margin-bottom:24px;">You can pay this securely via your Project Hub.</p>
+        <a href="${data.portalUrl}" style="display:inline-block;background:#ef4444;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Pay Invoice Now</a>
+      </div>`,
+    });
+  } catch (err) { console.error("Email Error:", err); }
+}
+
+export async function sendTrackerPaymentConfirmedEmail(data: { clientEmail: string; projectTitle: string; milestoneTitle: string; amountFormatted: string; portalUrl: string; }): Promise<void> {
+  try {
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.clientEmail],
+      subject: `Payment Received: ${data.milestoneTitle} — ${data.projectTitle}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px;">
+        <h2 style="color:#10b981;margin-top:0;">✅ Payment Confirmed</h2>
+        <p style="color:#374151;font-size:16px;">We have successfully received your payment of <strong>${data.amountFormatted}</strong> for <strong>${data.milestoneTitle}</strong>.</p>
+        <p style="color:#6b7280;margin-bottom:24px;">Thank you for your prompt payment!</p>
+        <a href="${data.portalUrl}" style="display:inline-block;background:#10b981;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Go to Project Hub</a>
+      </div>`,
+    });
+  } catch (err) { console.error("Email Error:", err); }
+}
+
+export async function sendTrackerClientActionToAdminEmail(data: { actionStr: string; projectTitle: string; targetName: string; adminUrl: string; }): Promise<void> {
+  try {
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [getAdminEmail()],
+      subject: `Client ${data.actionStr} — ${data.projectTitle}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;padding:24px;">
+        <h2 style="color:#4f46e5;margin-top:0;">Client Action Logged</h2>
+        <p style="color:#374151;font-size:16px;">The client has <strong>${data.actionStr}</strong> for: <strong>${data.targetName}</strong>.</p>
+        <a href="${data.adminUrl}" style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Open Admin Dashboard</a>
+      </div>`,
+    });
+  } catch (err) { console.error("Email Error:", err); }
+}
 // ─── Invoice / proposal email ──────────────────────────────────────────────
 export async function sendInvoiceEmail(data: {
   clientName: string;

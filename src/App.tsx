@@ -47,6 +47,7 @@ import PaymentCancel from "./pages/PaymentCancel";
 import ClientInvoice from "./pages/ClientInvoice";
 import ClientProposal from "./pages/ClientProposal";
 import ClientContract from "./pages/ClientContract";
+import ClientProjectHub from "./pages/ClientProjectHub";
 import { DynamicFavicon } from "@/components/DynamicFavicon";
 
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ const AppRoutes = () => {
         <Route path="/invoice/:token" element={<ClientInvoice />} />
         <Route path="/proposal/:token" element={<ClientProposal />} />
         <Route path="/contract/:token" element={<ClientContract />} />
+        <Route path="/client/project/:token" element={<ClientProjectHub />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

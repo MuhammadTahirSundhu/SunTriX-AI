@@ -4,6 +4,7 @@ import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { Search, Filter, Trash2, Eye, ChevronDown, LayoutGrid, List as ListIcon, CheckSquare, Square, Copy, Check, X } from "lucide-react";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
+import AdminProjectHub from "../../components/AdminProjectHub";
 
 type TaskStatus = "new" | "in_review" | "proposal_sent" | "contract_sent" | "contract_signed" | "in_progress" | "completed" | "cancelled";
 
@@ -59,6 +60,7 @@ const AdminTasks = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Side panel state
+  const [showProjectHubModal, setShowProjectHubModal] = useState(false);
   const [statusNote, setStatusNote] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -459,7 +461,9 @@ const AdminTasks = () => {
               className="rounded-xl border border-border bg-card shrink-0 self-start flex flex-col h-full overflow-hidden"
             >
               <div className="p-4 border-b border-border flex items-center justify-between bg-muted/20">
-                <h3 className="font-semibold text-foreground">Task Details</h3>
+                <h3 className="font-semibold text-foreground">
+                  {(selectedTask.status === "contract_signed" || selectedTask.status === "in_progress" || selectedTask.status === "completed") ? "Project Hub" : "Task Details"}
+                </h3>
                 <button 
                   onClick={() => setSelectedTask(null)}
                   className="p-1.5 hover:bg-muted rounded-md text-muted-foreground transition-colors"
@@ -468,8 +472,27 @@ const AdminTasks = () => {
                 </button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-5">
-                <div className="mb-6">
+              {(selectedTask.status === "contract_signed" || selectedTask.status === "in_progress" || selectedTask.status === "completed") ? (
+                <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center text-center">
+                  <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-5 shadow-inner">
+                     <svg className="h-10 w-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                     </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">Project is Active</h3>
+                  <p className="text-sm text-muted-foreground mb-8 px-2 leading-relaxed">
+                    This task has transitioned to an active project. You can now manage milestones, files, chat, and deliverables in the full-screen Project Hub.
+                  </p>
+                  <button 
+                    onClick={() => setShowProjectHubModal(true)} 
+                    className="w-full py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
+                  >
+                    Open Project Hub
+                  </button>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto p-5">
+                  <div className="mb-6">
                   <h2 className="text-xl font-bold text-foreground mb-1">{selectedTask.projectTitle || "New Project"}</h2>
                   <p className="text-sm text-muted-foreground">{selectedTask.name} • {selectedTask.company || selectedTask.email}</p>
                 </div>
@@ -604,6 +627,7 @@ const AdminTasks = () => {
                   </div>
                 )}
               </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -614,6 +638,39 @@ const AdminTasks = () => {
         onClear={() => setSelectedIds(new Set())} 
         actions={bulkActions} 
       />
+
+      {/* Project Hub Full-Screen Modal */}
+      <AnimatePresence>
+        {showProjectHubModal && selectedTask && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-7xl bg-card rounded-2xl border border-border shadow-2xl h-[95vh] flex flex-col overflow-hidden"
+            >
+              <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/30">
+                <div>
+                  <h3 className="font-extrabold text-lg text-foreground flex items-center gap-2">
+                    <span className="text-primary">Project Hub</span> 
+                    <span className="text-muted-foreground font-normal mx-1">/</span>
+                    {selectedTask.projectTitle || selectedTask.name}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowProjectHubModal(false)} 
+                  className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden bg-background">
+                <AdminProjectHub key={selectedTask._id} taskId={selectedTask._id} />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Proposal Modal */}
       <AnimatePresence>
@@ -808,6 +865,6 @@ const AdminTasks = () => {
       </AnimatePresence>
     </div>
   );
-};
+}
 
 export default AdminTasks;

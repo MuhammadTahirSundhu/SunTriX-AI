@@ -109,10 +109,10 @@ const ClientContract = () => {
             <div className="space-y-3">
               {trackingToken && (
                 <Link
-                  to={`/track/${trackingToken}`}
+                  to={`/client/project/${trackingToken}`}
                   className="block w-full gradient-bg rounded-xl py-3 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
                 >
-                  Track My Project →
+                  Go to Project Hub →
                 </Link>
               )}
               <Link

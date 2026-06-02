@@ -4,6 +4,7 @@ import stripe from "../services/stripe";
 import Payment from "../models/Payment";
 import Pricing from "../models/Pricing";
 import TaskRequest from "../models/TaskRequest";
+import ProjectTracker from "../models/ProjectTracker";
 import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
 import { logAudit } from "../lib/audit";
@@ -185,6 +186,44 @@ router.post(
           const session = event.data.object as any;
           console.log(`[Webhook] checkout.session.completed — session.id: ${session.id}`);
 
+          if (session.metadata?.type === "tracker_milestone") {
+            try {
+              const { trackerId, milestoneId, trackerToken } = session.metadata;
+              const tracker = await ProjectTracker.findById(trackerId);
+              if (tracker) {
+                const milestone = tracker.milestones.id(milestoneId);
+                if (milestone && !milestone.paidAt) {
+                  milestone.paidAt = new Date();
+                  milestone.stripePaymentIntentId = session.payment_intent || "";
+                  
+                  // Optional audit log write
+                  tracker.auditLog.push({
+                    action: `Milestone paid: ${milestone.title}`,
+                    actor: "System",
+                    actorRole: "System",
+                    timestamp: new Date(),
+                    metadata: { amount: milestone.amount }
+                  });
+                  await tracker.save();
+
+                  const task = await TaskRequest.findById(tracker.taskRequestId).lean() as any;
+                  if (task) {
+                    const { sendTrackerPaymentConfirmedEmail } = await import("../services/email");
+                    await sendTrackerPaymentConfirmedEmail({
+                      clientEmail: task.email,
+                      projectTitle: task.projectTitle,
+                      milestoneTitle: milestone.title,
+                      amountFormatted: `$${(milestone.amount / 100).toFixed(2)}`,
+                      portalUrl: `${getAppUrl()}/client/project/${trackerToken}`,
+                    });
+                  }
+                  console.log(`[Webhook] Tracker milestone ${milestone.title} marked paid (checkout.session.completed)`);
+                }
+              }
+            } catch (e) { console.error("Error processing tracker milestone payment:", e); }
+            break;
+          }
+
           // Try to get receipt_url from the charge
           let receiptUrl = "";
           try {
@@ -270,6 +309,44 @@ router.post(
             payment_intent: pi.id,
             limit: 1,
           });
+
+          if (sessions.data.length > 0 && sessions.data[0].metadata?.type === "tracker_milestone") {
+            const session = sessions.data[0];
+            try {
+              const { trackerId, milestoneId, trackerToken } = session.metadata;
+              const tracker = await ProjectTracker.findById(trackerId);
+              if (tracker) {
+                const milestone = tracker.milestones.id(milestoneId);
+                if (milestone && !milestone.paidAt) {
+                  milestone.paidAt = new Date();
+                  milestone.stripePaymentIntentId = session.payment_intent || pi.id || "";
+                  
+                  tracker.auditLog.push({
+                    action: `Milestone paid: ${milestone.title}`,
+                    actor: "System",
+                    actorRole: "System",
+                    timestamp: new Date(),
+                    metadata: { amount: milestone.amount }
+                  });
+                  await tracker.save();
+
+                  const task = await TaskRequest.findById(tracker.taskRequestId).lean() as any;
+                  if (task) {
+                    const { sendTrackerPaymentConfirmedEmail } = await import("../services/email");
+                    await sendTrackerPaymentConfirmedEmail({
+                      clientEmail: task.email,
+                      projectTitle: task.projectTitle,
+                      milestoneTitle: milestone.title,
+                      amountFormatted: `$${(milestone.amount / 100).toFixed(2)}`,
+                      portalUrl: `${getAppUrl()}/client/project/${trackerToken}`,
+                    });
+                  }
+                  console.log(`[Webhook] Tracker milestone ${milestone.title} marked paid (payment_intent.succeeded)`);
+                }
+              }
+            } catch (e) { console.error("Error processing tracker milestone payment:", e); }
+            break;
+          }
 
           if (sessions.data.length > 0) {
             const sessionId = sessions.data[0].id;

@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import Contract from "../models/Contract";
 import TaskRequest from "../models/TaskRequest";
+import Proposal from "../models/Proposal";
+import ProjectTracker from "../models/ProjectTracker";
 import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
 import { sendContractSignedNotification } from "../services/email";
@@ -81,6 +83,31 @@ router.post("/:token/sign", async (req: Request, res: Response, next: NextFuncti
       { new: true }
     ).lean() as any;
 
+    // Auto-create ProjectTracker
+    const proposal = await Proposal.findById(contract.proposalId);
+    let trackerToken = "";
+    if (proposal) {
+      const deliverables = proposal.deliverables ? proposal.deliverables.split('\n').map(d => ({ title: d.replace(/^•\s*/, '').trim(), status: "Pending" as const, version: 1 })) : [];
+      const milestones = proposal.milestones.map(m => ({ title: m.title, amount: m.amount, linkedPhase: "Discovery" as const, dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }));
+      
+      const newTracker = await ProjectTracker.create({
+        taskRequestId: contract.taskRequestId,
+        proposalId: contract.proposalId,
+        currentPhase: "Discovery",
+        phases: [{ name: "Discovery", enteredAt: signedAt }],
+        deliverables,
+        milestones,
+        auditLog: [{
+          action: "Project Created",
+          actor: "System",
+          actorRole: "System",
+          timestamp: signedAt,
+          metadata: { contractToken: contract.contractToken }
+        }]
+      });
+      trackerToken = newTracker.trackerToken;
+    }
+
     // Notify admin that contract is signed and invoice can now be created
     await sendContractSignedNotification({
       clientName:    contract.clientName,
@@ -92,7 +119,7 @@ router.post("/:token/sign", async (req: Request, res: Response, next: NextFuncti
 
     res.json({
       message: "Contract signed successfully. The project is now confirmed.",
-      trackingToken: task?.trackingToken || "",
+      trackingToken: trackerToken || task?.trackingToken || "",
     });
   } catch (err) {
     next(err);
