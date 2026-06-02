@@ -148,6 +148,23 @@ const AdminProjectHub = ({ taskId }: AdminProjectHubProps) => {
     fetchTracker(true);
   };
 
+  const handleCompleteProject = async () => {
+    if (!confirm("Are you sure you want to mark this project as completely finished?")) return;
+    
+    const { error } = await apiRequest(ENDPOINTS.TASK_REQUEST_UPDATE_STATUS(taskId), {
+      method: "PUT",
+      body: { status: "completed", note: "Project marked as Completed from Project Hub" }
+    });
+
+    if (error) {
+      toast.error("Failed to complete project.");
+      return;
+    }
+
+    toast.success("Project marked as completed! Reloading...");
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex justify-center items-center h-64">
@@ -212,10 +229,16 @@ const AdminProjectHub = ({ taskId }: AdminProjectHubProps) => {
             </div>
           ))}
         </div>
-        {currentPhaseIdx < phases.length - 1 && (
+        {currentPhaseIdx < phases.length - 1 ? (
           <div className="mt-3 flex justify-end">
-            <button onClick={handleAdvancePhase} className="text-xs bg-primary text-white px-3 py-1 rounded-md font-bold hover:opacity-90">
+            <button onClick={handleAdvancePhase} className="text-xs bg-primary text-white px-3 py-1 rounded-md font-bold hover:opacity-90 transition-opacity">
               → Advance to {phases[currentPhaseIdx + 1]}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 flex justify-end">
+            <button onClick={handleCompleteProject} className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-md font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" /> Mark Project Completed
             </button>
           </div>
         )}
