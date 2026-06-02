@@ -13,7 +13,8 @@ const TestimonialsSection = () => {
 
   useEffect(() => {
     apiRequest<TestimonialItem[]>(ENDPOINTS.TESTIMONIALS_LIST).then(({ data }) => {
-      if (data) setTestimonials(data);
+      // Security/Sync: only show published testimonials on the public site
+      if (data) setTestimonials(data.filter(t => (t as any).status === "published"));
       setLoading(false);
     });
   }, []);

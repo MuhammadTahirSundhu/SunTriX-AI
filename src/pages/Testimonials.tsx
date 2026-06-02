@@ -1,17 +1,31 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Quote } from "lucide-react";
+import { Quote, Star } from "lucide-react";
 import Layout from "@/components/Layout";
+import { apiRequest, ENDPOINTS } from "@/lib/api";
 
-const testimonials = [
-  { quote: "SunTriX transformed our data pipeline with an agentic AI system that cut processing time by 10x. Their architectural depth is unmatched.", name: "Sarah Chen", role: "CTO", company: "DataFlow Inc.", metric: "10x Faster" },
-  { quote: "We went from concept to production-ready SaaS in 12 weeks. The team's ability to combine ML models with scalable infrastructure is remarkable.", name: "Marcus Johnson", role: "VP Engineering", company: "NeuralPath", metric: "12-Week Delivery" },
-  { quote: "Their computer vision solution achieved 94% accuracy on our quality inspection system. SunTriX delivered ahead of schedule.", name: "Emily Rodriguez", role: "Head of Product", company: "VisionTech", metric: "94% Accuracy" },
-  { quote: "The multi-agent customer support system handles 85% of tier-1 tickets autonomously. Game changer for our operations.", name: "James Park", role: "COO", company: "ServiceHub", metric: "85% Auto-Resolution" },
-  { quote: "SunTriX's MLOps expertise helped us reduce model deployment time from weeks to hours. Their team became an extension of ours.", name: "Priya Sharma", role: "Head of AI", company: "PredictAI", metric: "95% Faster Deploys" },
-  { quote: "Outstanding engineering quality. The SaaS platform they built handles 50,000 concurrent users without breaking a sweat.", name: "Alex Turner", role: "Founder", company: "ScaleUp", metric: "50K Concurrent Users" },
-];
+interface TestimonialItem {
+  _id: string;
+  quote: string;
+  name: string;
+  role: string;
+  company: string;
+  rating: number;
+  status: "published" | "draft";
+}
 
 const Testimonials = () => {
+  const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiRequest<TestimonialItem[]>(ENDPOINTS.TESTIMONIALS_LIST).then(({ data }) => {
+      // Only show published testimonials on the public site
+      if (data) setTestimonials(data.filter(t => t.status === "published"));
+      setLoading(false);
+    });
+  }, []);
+
   return (
     <Layout>
       <section className="pt-32 pb-20 bg-grid-pattern">
@@ -25,20 +39,30 @@ const Testimonials = () => {
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
-                className="rounded-xl border border-border bg-card p-6 flex flex-col">
-                <Quote className="h-6 w-6 text-primary/30 mb-4" />
-                <p className="text-sm text-foreground leading-relaxed italic flex-1 mb-6">"{t.quote}"</p>
-                <div className="flex items-center justify-between border-t border-border pt-4">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.role}, {t.company}</p>
+            {loading ? (
+              <div className="col-span-full text-center py-20 text-muted-foreground">Loading testimonials...</div>
+            ) : testimonials.length === 0 ? (
+              <div className="col-span-full text-center py-20 text-muted-foreground">No testimonials found.</div>
+            ) : (
+              testimonials.map((t, i) => (
+                <motion.div key={t._id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
+                  className="rounded-xl border border-border bg-card p-6 flex flex-col">
+                  <Quote className="h-6 w-6 text-primary/30 mb-4" />
+                  <p className="text-sm text-foreground leading-relaxed italic flex-1 mb-6">"{t.quote}"</p>
+                  <div className="flex items-center justify-between border-t border-border pt-4">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                      <p className="text-xs text-muted-foreground">{t.role}, {t.company}</p>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {[...Array(t.rating || 5)].map((_, j) => (
+                        <Star key={j} className="h-3 w-3 fill-primary text-primary" />
+                      ))}
+                    </div>
                   </div>
-                  <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">{t.metric}</span>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
       </section>

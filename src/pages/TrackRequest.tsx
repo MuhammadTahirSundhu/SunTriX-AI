@@ -5,7 +5,7 @@ import { apiRequest, ENDPOINTS } from "../lib/api";
 import { ArrowLeft, CheckCircle2, Clock, Mail, Search, CheckCircle } from "lucide-react";
 import Layout from "../components/Layout";
 
-type TaskStatus = "new" | "in_review" | "proposal_sent" | "in_progress" | "completed" | "cancelled";
+type TaskStatus = "new" | "in_review" | "proposal_sent" | "contract_sent" | "contract_signed" | "in_progress" | "completed" | "cancelled";
 
 interface StatusHistory {
   status: TaskStatus;
@@ -26,7 +26,9 @@ interface TrackedTask {
 const statusSteps = [
   { value: "new", label: "Request Received", desc: "We've received your project brief." },
   { value: "in_review", label: "In Review", desc: "Our team is reviewing your requirements." },
-  { value: "proposal_sent", label: "Proposal Sent", desc: "We've sent a proposal & invoice to your email." },
+  { value: "proposal_sent", label: "Proposal Sent", desc: "We've sent a proposal to your email for review." },
+  { value: "contract_sent", label: "Contract Sent", desc: "Proposal accepted. A service agreement has been sent to your email." },
+  { value: "contract_signed", label: "Contract Signed", desc: "Service agreement signed. Awaiting kickoff." },
   { value: "in_progress", label: "In Progress", desc: "We are actively working on your project." },
   { value: "completed", label: "Completed", desc: "Project delivered successfully." },
 ];

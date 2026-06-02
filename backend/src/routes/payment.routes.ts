@@ -7,6 +7,7 @@ import TaskRequest from "../models/TaskRequest";
 import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
 import { logAudit } from "../lib/audit";
+import { getSetting } from "../lib/configLoader";
 import {
   sendPaymentConfirmation,
   sendInvoiceEmail,
@@ -14,7 +15,8 @@ import {
 
 const router = Router();
 
-const APP_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+// Read dynamically so admin changes take effect without restart
+const getAppUrl = () => getSetting("FRONTEND_URL", "http://localhost:5173");
 
 const fmt = (cents: number, currency = "usd") =>
   new Intl.NumberFormat("en-US", {
@@ -133,9 +135,9 @@ router.get("/invoice/:token", async (req: Request, res: Response, next: NextFunc
       },
       // After payment: redirect to /track/:token so client sees "In Progress" immediately
       success_url: trackingToken
-        ? `${APP_URL}/track/${trackingToken}?paid=1`
-        : `${APP_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${APP_URL}/invoice/${payment.invoiceToken}`,
+        ? `${getAppUrl()}/track/${trackingToken}?paid=1`
+        : `${getAppUrl()}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${getAppUrl()}/invoice/${payment.invoiceToken}`,
     });
 
     // Update session id for webhook matching
@@ -160,7 +162,7 @@ router.post(
   "/webhook",
   async (req: Request, res: Response) => {
     const sig = req.headers["stripe-signature"];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = getSetting("STRIPE_WEBHOOK_SECRET");
 
     if (!webhookSecret) {
       console.error("STRIPE_WEBHOOK_SECRET not set");
@@ -252,7 +254,7 @@ router.post(
               description: updated.description,
               amountUSD: fmt(updated.amount, updated.currency),
               receiptUrl,
-              trackingUrl: resolvedTrackingToken ? `${APP_URL}/track/${resolvedTrackingToken}` : "",
+              trackingUrl: resolvedTrackingToken ? `${getAppUrl()}/track/${resolvedTrackingToken}` : "",
               paidAt: new Date().toLocaleDateString("en-US", { dateStyle: "long" }),
             });
           }
@@ -450,19 +452,12 @@ router.post("/admin/create-invoice", requireAuth, async (req: Request, res: Resp
     if (taskRequestId) {
       const tr = await TaskRequest.findById(taskRequestId).select("trackingToken projectTitle status").lean() as any;
       if (tr) {
+        if (tr.status !== "contract_signed" && tr.status !== "in_progress") {
+          return next(createError("Invoice can only be created after the contract is signed.", 400));
+        }
         trackingToken = tr.trackingToken || "";
         projectTitle = tr.projectTitle || "";
-        // Move task status to proposal_sent
-        await TaskRequest.findByIdAndUpdate(taskRequestId, {
-          status: "proposal_sent",
-          $push: {
-            statusHistory: {
-              status: "proposal_sent",
-              note: `Invoice of ${fmt(amountCents, "usd")} sent to ${clientEmail}`,
-              updatedAt: new Date(),
-            },
-          },
-        });
+        // Status remains unchanged (already contract_signed or in_progress)
       }
     }
 
@@ -482,7 +477,7 @@ router.post("/admin/create-invoice", requireAuth, async (req: Request, res: Resp
 
     await logAudit(req, "create", "payment_invoice", payment._id.toString(), description);
 
-    const invoiceUrl = `${APP_URL}/invoice/${invoiceToken}`;
+    const invoiceUrl = `${getAppUrl()}/invoice/${invoiceToken}`;
 
     // Auto-send invoice email to client
     await sendInvoiceEmail({
@@ -503,7 +498,10 @@ router.post("/admin/create-invoice", requireAuth, async (req: Request, res: Resp
 
 // ─────────────────────────────────────────────────────────────────
 // ADMIN: POST /payments/admin/create-payment-link
-// Quick retainer / ad-hoc link not tied to a task
+// Quick retainer / ad-hoc link not tied to a task.
+// Uses a Stripe Checkout Session (not a Payment Link) so that the
+// success redirect includes ?session_id= which PaymentSuccess.tsx
+// needs to verify the payment.
 // ─────────────────────────────────────────────────────────────────
 router.post("/admin/create-payment-link", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -517,17 +515,29 @@ router.post("/admin/create-payment-link", requireAuth, async (req: Request, res:
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    // Create a Stripe Payment Link (reusable)
-    const price = await stripe.prices.create({
-      currency: "usd",
-      unit_amount: amountCents,
-      product_data: { name: description },
-    });
-
-    const link = await stripe.paymentLinks.create({
-      line_items: [{ price: price.id, quantity: 1 }],
-      metadata: { invoiceToken, type: "retainer", clientEmail },
-      after_completion: { type: "redirect", redirect: { url: `${APP_URL}/payment/success` } },
+    // Create a Stripe Checkout Session so {CHECKOUT_SESSION_ID} is
+    // appended to the success URL — required by PaymentSuccess.tsx
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            unit_amount: amountCents,
+            product_data: { name: description },
+          },
+          quantity: 1,
+        },
+      ],
+      customer_email: clientEmail,
+      metadata: {
+        invoiceToken,
+        type: "retainer",
+        clientEmail,
+        planName: description,
+      },
+      success_url: `${getAppUrl()}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${getAppUrl()}/payment/cancel`,
     });
 
     const payment = await Payment.create({
@@ -539,12 +549,13 @@ router.post("/admin/create-payment-link", requireAuth, async (req: Request, res:
       clientName: clientName || "",
       description,
       invoiceToken,
+      stripeSessionId: session.id,
       expiresAt,
     });
 
     await logAudit(req, "create", "payment_retainer", payment._id.toString(), description);
 
-    res.status(201).json({ payment, paymentLinkUrl: link.url, invoiceToken });
+    res.status(201).json({ payment, paymentLinkUrl: session.url, invoiceToken });
   } catch (err) {
     next(err);
   }

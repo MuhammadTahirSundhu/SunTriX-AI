@@ -20,14 +20,21 @@ const values = [
 const About = () => {
   const [team, setTeam] = useState<any[]>([]);
   const [loadingTeam, setLoadingTeam] = useState(true);
+  const [companyInfo, setCompanyInfo] = useState<{ description?: string; tagline?: string; name?: string }>({});
 
   useEffect(() => {
+    // Fetch team + company info in parallel
     const fetchTeam = async () => {
       const { data } = await apiRequest<any[]>(ENDPOINTS.TEAM_LIST);
       if (data) setTeam(data);
       setLoadingTeam(false);
     };
+    const fetchCompany = async () => {
+      const { data } = await apiRequest<{ data: { description?: string; tagline?: string; name?: string } }>(ENDPOINTS.CMS_COMPANY);
+      if (data?.data) setCompanyInfo(data.data);
+    };
     fetchTeam();
+    fetchCompany();
   }, []);
 
   useSEO({
@@ -45,6 +52,10 @@ const About = () => {
   const displayCeoName = ceoMember?.name || "Alex Chen";
   const displayCeoRole = ceoMember?.role || "CEO & Co-Founder";
 
+  // Dynamic description — falls back to default if not set in admin
+  const heroDescription = companyInfo.description ||
+    "SunTriX is an AI-first technology partner helping enterprises design, build, and scale intelligent systems. We combine deep technical expertise with a relentless focus on business outcomes.";
+
   return (
     <Layout>
       {/* Hero */}
@@ -61,8 +72,9 @@ const About = () => {
                 {t("about.hero.headline")}{" "}
                 <span className="gradient-text">{t("about.hero.gradient")}</span>
               </h1>
+              {/* Dynamic description from CMS Company Info */}
               <p className="text-lg text-muted-foreground leading-relaxed">
-                SunTriX is an AI-first technology partner helping enterprises design, build, and scale intelligent systems. We combine deep technical expertise with a relentless focus on business outcomes.
+                {heroDescription}
               </p>
             </motion.div>
             <motion.div

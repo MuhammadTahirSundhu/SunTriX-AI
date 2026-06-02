@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { loadSettingsFromDB, seedDefaultSettings, getSetting } from "./lib/configLoader";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -28,6 +29,9 @@ import postRoutes from "./routes/post.routes";
 import auditRoutes from "./routes/audit.routes";
 import aiExtractRoutes from "./routes/aiExtract.routes";
 import paymentRoutes from "./routes/payment.routes";
+import settingsRoutes from "./routes/settings.routes";
+import proposalRoutes from "./routes/proposal.routes";
+import contractRoutes from "./routes/contract.routes";
 import { startScheduler } from "./lib/scheduler";
 
 const app = express();
@@ -57,10 +61,10 @@ app.use(
   })
 );
 
-// ─── Rate Limiting ────────────────────────────────────────────────
+// ─── Rate Limiting (dynamic — reads RATE_LIMIT_MAX from DB cache) ─
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
-  max: 500,
+  max: (_req, _res) => parseInt(getSetting("RATE_LIMIT_MAX", "500")),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
@@ -80,6 +84,22 @@ const chatLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
+
+// ─── Maintenance Mode (dynamic — reads MAINTENANCE_MODE from DB) ──
+// Admin routes, /health, and authenticated requests always bypass.
+const MAINTENANCE_BYPASS_PREFIXES = ["/health", "/v1/auth", "/v1/admin", "/v1/settings"];
+app.use((req, res, next) => {
+  if (getSetting("MAINTENANCE_MODE", "false") !== "true") return next();
+  const isAdminRoute = MAINTENANCE_BYPASS_PREFIXES.some((p) => req.path.startsWith(p));
+  if (isAdminRoute) return next();
+  // Authenticated admins always bypass maintenance
+  if (req.headers.authorization?.startsWith("Bearer ")) return next();
+  res.status(503).json({
+    error: "Service Temporarily Unavailable",
+    message: "The platform is undergoing scheduled maintenance. Please check back shortly.",
+    maintenanceMode: true,
+  });
+});
 
 // ─── Stripe Webhook Raw Body (MUST be before express.json) ──────
 // Only the webhook path gets raw Buffer — everything else gets JSON
@@ -133,6 +153,9 @@ app.use(`${V1}/posts`, postRoutes);
 app.use(`${V1}/audit`, auditRoutes);
 app.use(`${V1}/ai`, aiExtractRoutes);
 app.use(`${V1}/payments`, paymentRoutes);
+app.use(`${V1}/settings`, settingsRoutes);
+app.use(`${V1}/proposals`, proposalRoutes);
+app.use(`${V1}/contracts`, contractRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -145,6 +168,9 @@ app.use(errorHandler);
 // ─── Start ────────────────────────────────────────────────────────
 async function start() {
   await connectDB();
+  // Seed defaults then load all settings into process.env before any route runs
+  await seedDefaultSettings();
+  await loadSettingsFromDB();
   startScheduler();
   app.listen(PORT, () => {
     console.log(`\n🚀 SunTriX API running on http://localhost:${PORT}`);

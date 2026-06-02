@@ -27,43 +27,46 @@ The implemented flow follows these principles:
 * A `TaskRequest` document is created in the database with status `new`.
 * A unique `trackingToken` is generated so the client can monitor the request status.
 
-### 3. Admin Review & Invoice Creation
+### 3. Admin Review & Proposal Drafting
 * The Admin reviews the request in the Admin Dashboard (`/admin/tasks`).
-* The Admin scopes the project and creates an invoice via the **Create Invoice** modal.
-* **Backend (`POST /api/payments/admin/create-invoice`)**:
-  * Creates a `Payment` document with `type: "invoice"`, `status: "pending"`, and a generated `invoiceToken`.
-  * Links the `Payment` to the `TaskRequest` using `taskRequestId`.
+* Admin drafts a formal Proposal detailing Scope Items, Timeline, and Milestones. The Admin can use AI to automatically generate the draft.
+* **Backend (`POST /api/proposals/admin/create`)**:
+  * Creates a `Proposal` document.
   * Updates the `TaskRequest` status to `proposal_sent`.
-  * Automatically sends a beautifully branded **Invoice/Proposal Email** to the client using Resend (`sendInvoiceEmail`).
+  * Sends a branded **Proposal Email** to the client.
 
-### 4. Client Views the Invoice (`/invoice/:token`)
-* The client clicks the link in their email and lands on the `ClientInvoice` page.
-* The page displays:
-  * Project Title and Service Description.
-  * Total amount due.
-  * Expiry date (invoices expire in 30 days).
-  * "What happens next" expectations.
-* The client clicks **"Accept Proposal & Pay"**.
-* **Backend (`GET /api/payments/invoice/:token`)**:
-  * Generates a fresh **Stripe Checkout Session**.
-  * Sets the `success_url` to redirect to the project tracker (`/track/:trackingToken?paid=1`).
-  * Returns the Stripe `checkoutUrl`.
+### 4. Client Reviews Proposal (`/proposal/:token`)
+* Client views the detailed proposal online.
+* If revisions are needed, the client requests changes.
+* If approved, the client clicks **"Accept Proposal"**.
+* **Backend (`POST /api/proposals/:token/accept`)**:
+  * Generates the legal text for the contract based on the proposal terms.
+  * Creates a `Contract` document.
+  * Updates task status to `contract_sent`.
+  * Emails the **Contract Link** to the client.
 
-### 5. Stripe Checkout & Webhook
-* The client completes the payment on Stripe's securely hosted checkout page.
-* Stripe fires a webhook (`checkout.session.completed` and `payment_intent.succeeded`) to our backend.
-* **Backend (`POST /api/payments/webhook`)**:
-  * Verifies the Stripe signature.
-  * Finds the `Payment` document via `stripeSessionId` or metadata `invoiceToken`.
-  * Updates the `Payment` status to `paid` and saves the Stripe `receiptUrl`.
-  * Updates the associated `TaskRequest` status to `in_progress` (adding a status history note).
-  * Automatically sends a **Payment Confirmed (Receipt) Email** to the client (`sendPaymentConfirmation`) containing their Stripe receipt link and the Tracker URL.
+### 5. Client Signs Contract (`/contract/:token`)
+* The client views the generated contract.
+* They type their full name as a digital signature and agree to the terms.
+* **Backend (`POST /api/contracts/:token/sign`)**:
+  * Marks contract as signed and sets `contractSignedAt`.
+  * Updates task status to `contract_signed`.
+  * Sends an admin notification that the project is legally confirmed.
 
-### 6. Post-Payment Redirect (`/track/:token?paid=1` or `/payment/success`)
-* After successful payment, Stripe redirects the client.
-* Because we linked the task, they land on `/track/:trackingToken?paid=1`.
-* The `TrackRequest` frontend detects `?paid=1` and displays a prominent **Payment Confirmed — Project is Now Active!** green banner.
-* The timeline shows the project has moved through "Request Received", "In Review", "Proposal Sent", and is now officially "In Progress".
+### 6. Admin Creates Invoice
+* Once the contract is signed, the Admin's "Create Invoice" button unlocks in the dashboard.
+* Admin creates an invoice for the first milestone (or full amount).
+* **Backend (`POST /api/payments/admin/create-invoice`)**:
+  * Creates a `Payment` document linked to the task.
+  * Sends a branded **Invoice Email** to the client.
+
+### 7. Client Pays & Project Starts (`/invoice/:token`)
+* The client clicks the invoice link and lands on `ClientInvoice`.
+* Upon clicking "Pay", they are taken to a **Stripe Checkout Session**.
+* **Backend Webhook**:
+  * Verifies the payment.
+  * Updates task status to `in_progress`.
+  * Sends a receipt email with the project tracker link.
 
 ---
 

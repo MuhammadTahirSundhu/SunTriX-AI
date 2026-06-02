@@ -13,6 +13,7 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [services, setServices] = useState<{name: string, desc: string, href: string}[]>([]);
+  const [companyName, setCompanyName] = useState("SunTriX");
   const { t } = useI18n();
   const suntrixLogo = useMedia("suntrix-logo");
 
@@ -26,7 +27,17 @@ const Navbar = () => {
         })));
       }
     });
+    apiRequest<{ data: { name?: string } }>(ENDPOINTS.CMS_COMPANY).then(({ data }) => {
+      if (data?.data?.name) setCompanyName(data.data.name);
+    });
   }, []);
+
+  const renderLogoText = () => {
+    if (companyName.toLowerCase().includes("suntrix")) {
+      return <>Sun<span className="text-primary">Tri</span>X</>;
+    }
+    return companyName;
+  };
 
   return (
     <nav className="sticky top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/70 backdrop-blur-xl">
@@ -34,7 +45,7 @@ const Navbar = () => {
         <Link to="/" className="flex items-center gap-2.5">
           <img src={suntrixLogo} alt="SunTriX" className="h-9 w-9 rounded-lg object-contain" />
           <span className="text-xl font-display font-bold text-foreground">
-            Sun<span className="text-primary">Tri</span>X
+            {renderLogoText()}
           </span>
         </Link>
 

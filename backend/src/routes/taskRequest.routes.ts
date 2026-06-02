@@ -16,17 +16,25 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
       return next(createError("Name, email, service, and description are required", 400));
     }
     const trackingToken = crypto.randomBytes(20).toString("hex");
-    const task = await TaskRequest.create({ ...req.body, trackingToken });
+    const task = await TaskRequest.create({
+      ...req.body,
+      trackingToken,
+      // Sanitize plan fields — they're optional (only set when coming from /pricing)
+      selectedPlan: req.body.selectedPlan || "",
+      planBudget:   Number(req.body.planBudget) || 0,
+    });
 
     sendTaskNotification({
       name: task.name, email: task.email, company: task.company,
       service: task.service, budget: task.budget, priority: task.priority,
       projectTitle: task.projectTitle, description: task.description,
+      selectedPlan: task.selectedPlan,
     }).catch(console.error);
 
     res.status(201).json({ message: "Task request submitted successfully", id: task._id, trackingToken });
   } catch (err) { next(err); }
 });
+
 
 // GET /task-requests/track/:token — PUBLIC client portal
 router.get("/track/:token", async (req: Request, res: Response, next: NextFunction) => {

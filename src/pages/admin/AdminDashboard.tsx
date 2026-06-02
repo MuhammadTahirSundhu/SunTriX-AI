@@ -37,6 +37,7 @@ interface ActivityData {
 // ── Constants ────────────────────────────────────────────────────
 const PIPE_COLORS: Record<string, string> = {
   new: "#6366f1", in_review: "#f59e0b", proposal_sent: "#8b5cf6",
+  contract_sent: "#d946ef", contract_signed: "#3b82f6",
   in_progress: "#f97316", completed: "#10b981", cancelled: "#ef4444",
 };
 const FEED_COLORS: Record<string, { bg: string; icon: React.ReactNode }> = {

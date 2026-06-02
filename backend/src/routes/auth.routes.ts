@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/Admin";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
+import { getSetting } from "../lib/configLoader";
 
 const router = Router();
 
@@ -24,10 +25,15 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
       return next(createError("Invalid email or password", 401));
     }
 
-    const secret = process.env.JWT_SECRET!;
-    const refreshSecret = process.env.JWT_REFRESH_SECRET!;
-    const expiresIn = (process.env.JWT_EXPIRES_IN || "1h") as `${number}${"s"|"m"|"h"|"d"|"w"}`;
-    const refreshExpiresIn = (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as `${number}${"s"|"m"|"h"|"d"|"w"}`;
+    const secret = getSetting("JWT_SECRET");
+    if (!secret) throw new Error("JWT_SECRET not configured. Set it in Admin → Settings → Security.");
+    
+    // Derive refresh secret so rotating the main secret also invalidates old refresh tokens
+    const refreshSecret = secret + "_refresh_token_salt";
+    
+    const expiresIn = getSetting("JWT_EXPIRY", "7d") as `${number}${"s"|"m"|"h"|"d"|"w"}`;
+    const refreshExpiresIn = "30d"; // refresh tokens last 30 days
+
     
     const payload = { id: admin._id, email: admin.email, role: admin.role, name: admin.name };
     const token = jwt.sign(payload, secret, { expiresIn });
@@ -62,8 +68,11 @@ router.post("/refresh", async (req: Request, res: Response, next: NextFunction) 
       return next(createError("Refresh token is required", 401));
     }
 
-    const refreshSecret = process.env.JWT_REFRESH_SECRET!;
-    if (!refreshSecret) throw new Error("JWT_REFRESH_SECRET not configured");
+    const secret = getSetting("JWT_SECRET");
+    if (!secret) throw new Error("JWT_SECRET not configured. Set it in Admin → Settings → Security.");
+    
+    const refreshSecret = secret + "_refresh_token_salt";
+
 
     let decoded;
     try {
@@ -75,9 +84,9 @@ router.post("/refresh", async (req: Request, res: Response, next: NextFunction) 
     const admin = await Admin.findById(decoded.id).select("-password");
     if (!admin) return next(createError("User not found", 404));
     
-    const secret = process.env.JWT_SECRET!;
-    const expiresIn = (process.env.JWT_EXPIRES_IN || "1h") as `${number}${"s"|"m"|"h"|"d"|"w"}`;
-    const refreshExpiresIn = (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as `${number}${"s"|"m"|"h"|"d"|"w"}`;
+    const expiresIn = getSetting("JWT_EXPIRY", "7d") as `${number}${"s"|"m"|"h"|"d"|"w"}`;
+    const refreshExpiresIn = "30d";
+
     
     const payload = { id: admin._id, email: admin.email, role: admin.role, name: admin.name };
     const newToken = jwt.sign(payload, secret, { expiresIn });

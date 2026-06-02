@@ -15,14 +15,30 @@ const Footer = () => {
   const { t } = useI18n();
   const suntrixLogo = useMedia("suntrix-logo");
   const [socialLinks, setSocialLinks] = useState<{platform: string, url: string, enabled: boolean}[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<{ name?: string; tagline?: string }>({});
 
   useEffect(() => {
+    // Fetch social links
     apiRequest<{links: {platform: string, url: string, enabled: boolean}[]}>(ENDPOINTS.CMS_SOCIAL_LINKS).then(({ data }) => {
       if (data && data.links) setSocialLinks(data.links);
+    });
+    // Fetch company name + tagline for copyright and footer description
+    apiRequest<{ data: { name?: string; tagline?: string } }>(ENDPOINTS.CMS_COMPANY).then(({ data }) => {
+      if (data?.data) setCompanyInfo(data.data);
     });
   }, []);
 
   const activeLinks = socialLinks.filter((l) => l.enabled && l.url && l.url !== "#");
+  const companyName = companyInfo.name || "SunTriX AI Solutions";
+  const footerTagline = companyInfo.tagline || t("footer.tagline") || "Your AI-first technology partner delivering end-to-end AI engineering.";
+
+  const renderLogoText = () => {
+    if (companyName.toLowerCase().includes("suntrix")) {
+      return <>Sun<span className="text-primary">Tri</span>X</>;
+    }
+    return companyName;
+  };
+
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,11 +76,12 @@ const Footer = () => {
                 <img src={suntrixLogo} alt="SunTriX" className="h-full w-full object-contain brightness-0 invert" />
               </div>
               <span className="text-xl font-display font-black text-foreground tracking-tight">
-                Sun<span className="text-primary">Tri</span>X
+                {renderLogoText()}
               </span>
             </Link>
+            {/* Dynamic company tagline from CMS */}
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              {t("footer.tagline") || "Engineering Intelligence That Perceives, Reasons, and Acts. Your AI-first technology partner delivering end-to-end AI engineering."}
+              {footerTagline}
             </p>
             <div className="flex items-center gap-3 pt-2">
               {activeLinks.slice(0, 5).map((link) => {
@@ -113,7 +130,7 @@ const Footer = () => {
               <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
                 <Mail className="h-4 w-4 text-primary" /> Join our Newsletter
               </h4>
-              <p className="text-xs text-muted-foreground mb-4">Get the latest AI insights and updates from SunTriX engineering team.</p>
+              <p className="text-xs text-muted-foreground mb-4">Get the latest AI insights and updates from the {companyName} team.</p>
               
               <form onSubmit={handleSubscribe} className="space-y-3">
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)}
@@ -143,8 +160,9 @@ const Footer = () => {
 
         <div className="border-t border-border pt-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+            {/* Dynamic company name in copyright */}
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-              © {new Date().getFullYear()} SunTriX Automation Systems
+              © {new Date().getFullYear()} {companyName}
             </p>
             <div className="flex items-center gap-6">
               <Link to="/legal" className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors font-bold">Privacy</Link>

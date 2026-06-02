@@ -3,48 +3,43 @@ export { cloudinary };
 import multer from "multer";
 import path from "path";
 import crypto from "crypto";
+import { getSetting } from "../lib/configLoader";
+import MediaAsset from "../models/MediaAsset";
 
-// Helper to generate md5 hash of file buffer
-function getFileHash(buffer: Buffer): string {
+// ─── Apply current config before every operation ──────────────────────────
+function applyConfig(): void {
+  cloudinary.config({
+    cloud_name:  getSetting("CLOUDINARY_CLOUD_NAME"),
+    api_key:     getSetting("CLOUDINARY_API_KEY"),
+    api_secret:  getSetting("CLOUDINARY_API_SECRET"),
+    secure: true,
+  });
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+export function getFileHash(buffer: Buffer): string {
   return crypto.createHash("md5").update(buffer).digest("hex");
 }
 
-// Helper to check if asset already exists
-async function getExistingAsset(
-  publicId: string,
-  resourceType: "image" | "video" | "raw"
-): Promise<{ url: string; publicId: string } | null> {
-  try {
-    const result = await cloudinary.api.resource(publicId, { resource_type: resourceType });
-    if (result && result.secure_url) {
-      return { url: result.secure_url, publicId: result.public_id };
-    }
-  } catch (error: any) {
-    if (error?.http_code === 404) return null;
-    console.error("Cloudinary resource check error:", error?.message || error);
-  }
-  return null;
+function getDefaultFolder(): string {
+  return getSetting("UPLOAD_DEFAULT_FOLDER", "suntrix");
 }
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+function getMaxFileSizeBytes(): number {
+  const mb = parseInt(getSetting("UPLOAD_MAX_SIZE_MB", "50"));
+  return mb * 1024 * 1024;
+}
 
-// Multer memory storage — we upload buffer directly to Cloudinary
+// ─── Multer — reads max size dynamically ──────────────────────────────────
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  limits: {
+    get fileSize() { return getMaxFileSizeBytes(); },
+  },
   fileFilter(_req, file, cb) {
     const allowed = [
-      // Images
       ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg",
-      // Videos
       ".mp4", ".mov", ".webm",
-      // Documents
       ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt",
     ];
     const ext = path.extname(file.originalname).toLowerCase();
@@ -56,87 +51,192 @@ export const upload = multer({
   },
 });
 
+// ─── Upload image ──────────────────────────────────────────────────────────
 export async function uploadImage(
   buffer: Buffer,
-  folder = "suntrix",
+  folder?: string,
   publicId?: string
-): Promise<{ url: string; publicId: string }> {
+): Promise<{ url: string; publicId: string; width?: number; height?: number; format?: string }> {
+  applyConfig();
+  const targetFolder = folder || getDefaultFolder();
   const hash = getFileHash(buffer);
-  const targetPublicId = publicId || `${folder}/${hash}`;
 
-  const existing = await getExistingAsset(targetPublicId, "image");
-  if (existing) return existing;
+  // DB Deduplication check
+  const existingAsset = await MediaAsset.findOne({ hash, resourceType: "image" });
+  if (existingAsset) {
+    return { 
+      url: existingAsset.url, 
+      publicId: existingAsset.publicId,
+      width: existingAsset.width,
+      height: existingAsset.height,
+      format: existingAsset.format
+    };
+  }
+
+  const targetPublicId = publicId || `${targetFolder}/${hash}`;
 
   return new Promise((resolve, reject) => {
     const options: Record<string, unknown> = {
-      folder: publicId ? folder : undefined, // If passing exact publicId, we might not need folder if it's included
       resource_type: "image" as const,
       public_id: publicId || hash,
     };
+    if (!publicId) options.folder = targetFolder;
 
-    if (!publicId) options.folder = folder;
-
-    const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
+    const stream = cloudinary.uploader.upload_stream(options, async (err, result) => {
       if (err || !result) return reject(err || new Error("Upload failed"));
-      resolve({ url: result.secure_url, publicId: result.public_id });
-    });
+      
+      // Save to DB
+      try {
+        await MediaAsset.create({
+          hash,
+          publicId: result.public_id,
+          url: result.secure_url,
+          resourceType: "image",
+          format: result.format,
+          bytes: result.bytes,
+          width: result.width,
+          height: result.height,
+          folder: targetFolder
+        });
+      } catch (dbErr) {
+        console.error("Failed to save MediaAsset to DB:", dbErr);
+      }
 
+      resolve({ 
+        url: result.secure_url, 
+        publicId: result.public_id,
+        width: result.width,
+        height: result.height,
+        format: result.format
+      });
+    });
     stream.end(buffer);
   });
 }
 
+// ─── Upload video ──────────────────────────────────────────────────────────
 export async function uploadVideo(
   buffer: Buffer,
-  folder = "suntrix/videos"
-): Promise<{ url: string; publicId: string }> {
+  folder?: string
+): Promise<{ url: string; publicId: string; width?: number; height?: number; format?: string }> {
+  applyConfig();
+  const targetFolder = folder || `${getDefaultFolder()}/videos`;
   const hash = getFileHash(buffer);
-  const targetPublicId = `${folder}/${hash}`;
 
-  const existing = await getExistingAsset(targetPublicId, "video");
-  if (existing) return existing;
+  // DB Deduplication check
+  const existingAsset = await MediaAsset.findOne({ hash, resourceType: "video" });
+  if (existingAsset) {
+    return { 
+      url: existingAsset.url, 
+      publicId: existingAsset.publicId,
+      width: existingAsset.width,
+      height: existingAsset.height,
+      format: existingAsset.format
+    };
+  }
 
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder, public_id: hash, resource_type: "video" },
-      (err, result) => {
+      { folder: targetFolder, public_id: hash, resource_type: "video" },
+      async (err, result) => {
         if (err || !result) return reject(err || new Error("Upload failed"));
-        resolve({ url: result.secure_url, publicId: result.public_id });
+        
+        // Save to DB
+        try {
+          await MediaAsset.create({
+            hash,
+            publicId: result.public_id,
+            url: result.secure_url,
+            resourceType: "video",
+            format: result.format,
+            bytes: result.bytes,
+            width: result.width,
+            height: result.height,
+            folder: targetFolder
+          });
+        } catch (dbErr) {
+          console.error("Failed to save MediaAsset to DB:", dbErr);
+        }
+
+        resolve({ 
+          url: result.secure_url, 
+          publicId: result.public_id,
+          width: result.width,
+          height: result.height,
+          format: result.format
+        });
       }
     );
     stream.end(buffer);
   });
 }
 
+// ─── Upload document ──────────────────────────────────────────────────────
 export async function uploadDocument(
   buffer: Buffer,
   originalName: string,
-  folder = "suntrix/docs"
-): Promise<{ url: string; publicId: string }> {
+  folder?: string
+): Promise<{ url: string; publicId: string; format?: string }> {
+  applyConfig();
+  const targetFolder = folder || `${getDefaultFolder()}/docs`;
   const hash = getFileHash(buffer);
   const ext = path.extname(originalName);
-  const targetPublicId = `${folder}/${hash}${ext}`;
 
-  const existing = await getExistingAsset(targetPublicId, "raw");
-  if (existing) return existing;
+  // DB Deduplication check
+  const existingAsset = await MediaAsset.findOne({ hash, resourceType: "raw" });
+  if (existingAsset) {
+    return { 
+      url: existingAsset.url, 
+      publicId: existingAsset.publicId,
+      format: existingAsset.format
+    };
+  }
 
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
-        folder,
+        folder: targetFolder,
         resource_type: "raw",
         public_id: `${hash}${ext}`,
         use_filename: true,
         unique_filename: false,
       },
-      (err, result) => {
+      async (err, result) => {
         if (err || !result) return reject(err || new Error("Upload failed"));
-        resolve({ url: result.secure_url, publicId: result.public_id });
+        
+        // Save to DB
+        try {
+          await MediaAsset.create({
+            hash,
+            publicId: result.public_id,
+            url: result.secure_url,
+            resourceType: "raw",
+            format: result.format || ext.replace(".", ""),
+            bytes: result.bytes,
+            folder: targetFolder,
+            originalName
+          });
+        } catch (dbErr) {
+          console.error("Failed to save MediaAsset to DB:", dbErr);
+        }
+
+        resolve({ 
+          url: result.secure_url, 
+          publicId: result.public_id,
+          format: result.format || ext.replace(".", "")
+        });
       }
     );
     stream.end(buffer);
   });
 }
 
-export async function deleteAsset(publicId: string, resourceType: "image" | "video" | "raw" = "image"): Promise<void> {
+// ─── Delete asset ──────────────────────────────────────────────────────────
+export async function deleteAsset(
+  publicId: string,
+  resourceType: "image" | "video" | "raw" = "image"
+): Promise<void> {
+  applyConfig();
   await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+  await MediaAsset.deleteOne({ publicId });
 }

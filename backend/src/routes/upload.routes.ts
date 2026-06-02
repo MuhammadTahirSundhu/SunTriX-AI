@@ -51,7 +51,19 @@ router.get("/", requireAuth, async (_req: Request, res: Response, next: NextFunc
       createdAt: r.created_at as string,
     }));
 
-    res.json([...imageAssets, ...videoAssets]);
+    // Deduplicate existing Cloudinary assets by hash/filename (the last part of publicId)
+    // This hides old duplicates from the UI
+    const uniqueAssets = new Map<string, any>();
+    
+    [...imageAssets, ...videoAssets].forEach((asset: any) => {
+      const parts = asset.publicId.split("/");
+      const hashOrName = parts[parts.length - 1]; // This is the MD5 hash we generated
+      if (!uniqueAssets.has(hashOrName)) {
+        uniqueAssets.set(hashOrName, asset);
+      }
+    });
+
+    res.json(Array.from(uniqueAssets.values()));
   } catch (err) {
     next(err);
   }

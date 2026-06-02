@@ -1,10 +1,20 @@
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { useSEO } from "@/hooks/useSEO";
+
+interface CompanyInfo {
+  email?: string;
+  phone?: string;
+  address?: string;
+  responseTime?: string;
+  name?: string;
+  tagline?: string;
+}
+
 
 const Contact = () => {
   useSEO({
@@ -15,6 +25,15 @@ const Contact = () => {
 
   const [form, setForm] = useState({ name: "", email: "", company: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
+  const [company, setCompany] = useState<CompanyInfo>({});
+
+  // Fetch company info from CMS — email, phone, address, response time
+  useEffect(() => {
+    apiRequest<{ data: CompanyInfo }>(ENDPOINTS.CMS_COMPANY)
+      .then(({ data }) => { if (data?.data) setCompany(data.data); })
+      .catch(() => {});
+  }, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,13 +101,31 @@ const Contact = () => {
               </form>
             </motion.div>
 
-            {/* Contact Info */}
+            {/* Contact Info — dynamic from CMS */}
             <motion.div className="lg:col-span-2 space-y-6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               {[
-                { icon: Mail, title: "Email", value: "hello@suntrix.com", link: "mailto:hello@suntrix.com" },
-                { icon: Phone, title: "Phone", value: "+1 (555) 123-4567", link: "tel:+15551234567" },
-                { icon: MapPin, title: "Location", value: "San Francisco, CA & Remote" },
-                { icon: Clock, title: "Response Time", value: "Within 24 hours" },
+                {
+                  icon: Mail,
+                  title: "Email",
+                  value: company.email || "hello@suntrix.com",
+                  link: `mailto:${company.email || "hello@suntrix.com"}`,
+                },
+                {
+                  icon: Phone,
+                  title: "Phone",
+                  value: company.phone || "+1 (555) 123-4567",
+                  link: company.phone ? `tel:${company.phone.replace(/[^+\d]/g, "")}` : "tel:+15551234567",
+                },
+                {
+                  icon: MapPin,
+                  title: "Location",
+                  value: company.address || "San Francisco, CA & Remote",
+                },
+                {
+                  icon: Clock,
+                  title: "Response Time",
+                  value: company.responseTime || "Within 24 hours",
+                },
               ].map((item) => (
                 <div key={item.title} className="rounded-xl border border-border bg-card p-6 flex items-start gap-4">
                   <div className="rounded-lg bg-muted p-2.5">

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { createError } from "./errorHandler";
+import { getSetting } from "../lib/configLoader";
 
 export interface AuthRequest extends Request {
   user?: { id: string; email: string; role: string; name: string };
@@ -14,8 +15,8 @@ export function requireAuth(req: AuthRequest, _res: Response, next: NextFunction
     }
 
     const token = authHeader.split(" ")[1];
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error("JWT_SECRET not configured");
+    const secret = getSetting("JWT_SECRET");
+    if (!secret) throw new Error("JWT_SECRET not configured. Set it in Admin → Settings → Security.");
 
     const decoded = jwt.verify(token, secret) as { id: string; email: string; role: string; name: string };
     req.user = decoded;

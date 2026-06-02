@@ -5,7 +5,7 @@ import { Search, Filter, Trash2, Eye, ChevronDown, LayoutGrid, List as ListIcon,
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
 
-type TaskStatus = "new" | "in_review" | "proposal_sent" | "in_progress" | "completed" | "cancelled";
+type TaskStatus = "new" | "in_review" | "proposal_sent" | "contract_sent" | "contract_signed" | "in_progress" | "completed" | "cancelled";
 
 interface StatusHistory {
   status: TaskStatus;
@@ -24,19 +24,27 @@ interface TaskRequest {
   timeline: string;
   description: string;
   priority: string;
+  techStack: string;
   status: TaskStatus;
   statusHistory?: StatusHistory[];
   trackingToken?: string;
+  selectedPlan?: string;
+  planBudget?: number;
+  contractToken?: string;
+  contractSignedAt?: string;
+  contractClientName?: string;
   createdAt: string;
 }
 
 const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
-  { value: "new", label: "New Request", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-  { value: "in_review", label: "In Review", color: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
-  { value: "proposal_sent", label: "Proposal Sent", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-  { value: "in_progress", label: "In Progress", color: "bg-primary/10 text-primary border-primary/20" },
-  { value: "completed", label: "Completed", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-  { value: "cancelled", label: "Cancelled", color: "bg-red-500/10 text-red-500 border-red-500/20" },
+  { value: "new",              label: "New Request",     color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+  { value: "in_review",       label: "In Review",       color: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
+  { value: "proposal_sent",   label: "Proposal Sent",   color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
+  { value: "contract_sent",   label: "Contract Sent",   color: "bg-violet-500/10 text-violet-500 border-violet-500/20" },
+  { value: "contract_signed", label: "Contract Signed", color: "bg-teal-500/10 text-teal-500 border-teal-500/20" },
+  { value: "in_progress",     label: "In Progress",     color: "bg-primary/10 text-primary border-primary/20" },
+  { value: "completed",       label: "Completed",       color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
+  { value: "cancelled",       label: "Cancelled",       color: "bg-red-500/10 text-red-500 border-red-500/20" },
 ];
 
 const AdminTasks = () => {
@@ -46,7 +54,7 @@ const AdminTasks = () => {
   const [selectedTask, setSelectedTask] = useState<TaskRequest | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "board">("board");
   const [sortOption, setSortOption] = useState<SortOption>("date-desc");
-  
+
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -55,15 +63,33 @@ const AdminTasks = () => {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const fetchTasks = async () => {
+  // Proposal panel state
+  const [showProposalPanel, setShowProposalPanel] = useState(false);
+  const [proposalDraft, setProposalDraft] = useState({
+    title: "", 
+    executiveSummary: "",
+    scopeOfWork: "", deliverables: "", timeline: "", pricingBreakdown: "",
+    revisionsPolicy: "", clientResponsibilities: "", supportAndWarranty: "", paymentTerms: "", nextSteps: "",
+    milestones: [{ title: "Milestone 1", description: "", amount: "", dueWeek: "" }],
+  });
+  const [aiDrafting, setAiDrafting] = useState(false);
+  const [sendingProposal, setSendingProposal] = useState(false);
+
+  // Invoice panel state
+  const [showInvoicePanel, setShowInvoicePanel] = useState(false);
+  const [invoiceDraft, setInvoiceDraft] = useState({ amountUSD: "", description: "" });
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+
+  const fetchTasks = async (currentTaskId?: string) => {
     const { data } = await apiRequest<{ tasks: TaskRequest[] }>(ENDPOINTS.TASK_REQUEST_LIST);
     if (data?.tasks) {
       setTasks(data.tasks);
-      // Update selected task if open
-      if (selectedTask) {
-        const updated = data.tasks.find((t) => t._id === selectedTask._id);
-        if (updated) setSelectedTask(updated);
-      }
+      setSelectedTask((prev) => {
+        const activeId = currentTaskId || prev?._id;
+        if (!activeId) return null;
+        const updated = data.tasks.find((t) => t._id === activeId);
+        return updated || prev;
+      });
     }
   };
 
@@ -106,7 +132,15 @@ const AdminTasks = () => {
     });
     setStatusNote("");
     setUpdatingStatus(false);
-    fetchTasks();
+    fetchTasks(id);
+  };
+
+  const handleSelectTask = async (task: TaskRequest) => {
+    setSelectedTask(task);
+    if (task.status === "new") {
+      // Automatically transition new tasks to in_review when admin opens them
+      await updateStatus(task._id, "in_review", "Admin opened for review");
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -127,6 +161,112 @@ const AdminTasks = () => {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleAiDraftProposal = async () => {
+    if (!selectedTask) return;
+    setAiDrafting(true);
+    const { data, error } = await apiRequest<{ draft: any }>(ENDPOINTS.PROPOSAL_ADMIN_AI_DRAFT, {
+      method: "POST",
+      body: { taskRequestId: selectedTask._id },
+    });
+    setAiDrafting(false);
+    if (data?.draft) {
+      const d = data.draft;
+      setProposalDraft({
+        title:                     d.title || "",
+        executiveSummary:          d.executiveSummary || "",
+        scopeOfWork:               d.scopeOfWork || "",
+        deliverables:              d.deliverables || "",
+        timeline:                  d.timeline || "",
+        pricingBreakdown:          d.pricingBreakdown || "",
+        revisionsPolicy:           d.revisionsPolicy || "",
+        clientResponsibilities:    d.clientResponsibilities || "",
+        supportAndWarranty:        d.supportAndWarranty || "",
+        paymentTerms:              d.paymentTerms || "",
+        nextSteps:                 d.nextSteps || "",
+        milestones:   Array.isArray(d.milestones) && d.milestones.length > 0
+          ? d.milestones.map((m: any, i: number) => ({
+              title:       m.title       || `Milestone ${i + 1}`,
+              description: m.description || "",
+              amount:      String(m.amount || ""),
+              dueWeek:     String(m.dueWeek || ""),
+            }))
+          : [{ title: "Milestone 1", description: "", amount: "", dueWeek: "" }],
+      });
+    } else {
+      alert(error || "AI draft failed. Please fill in manually.");
+    }
+  };
+
+  const handleSendProposal = async () => {
+    if (!selectedTask || !proposalDraft.title || !proposalDraft.milestones.length) return;
+    setSendingProposal(true);
+    const { error } = await apiRequest(ENDPOINTS.PROPOSAL_ADMIN_CREATE, {
+      method: "POST",
+      body: {
+        taskRequestId: selectedTask._id,
+        clientEmail:   selectedTask.email,
+        clientName:    selectedTask.name,
+        title:                     proposalDraft.title,
+        executiveSummary:          proposalDraft.executiveSummary,
+        scopeOfWork:               proposalDraft.scopeOfWork,
+        deliverables:              proposalDraft.deliverables,
+        timeline:                  proposalDraft.timeline,
+        pricingBreakdown:          proposalDraft.pricingBreakdown,
+        revisionsPolicy:           proposalDraft.revisionsPolicy,
+        clientResponsibilities:    proposalDraft.clientResponsibilities,
+        supportAndWarranty:        proposalDraft.supportAndWarranty,
+        paymentTerms:              proposalDraft.paymentTerms,
+        nextSteps:                 proposalDraft.nextSteps,
+        milestones:    proposalDraft.milestones.map((m, i) => ({
+          title:       m.title,
+          description: m.description,
+          amount:      parseFloat(m.amount) || 0,
+          dueWeek:     parseInt(m.dueWeek) || 0,
+          order:       i,
+        })),
+        aiDrafted: aiDrafting,
+      },
+    });
+    setSendingProposal(false);
+    if (!error) {
+      setShowProposalPanel(false);
+      setProposalDraft({
+        title: "", 
+        executiveSummary: "",
+        scopeOfWork: "", deliverables: "", timeline: "", pricingBreakdown: "",
+        revisionsPolicy: "", clientResponsibilities: "", supportAndWarranty: "", paymentTerms: "", nextSteps: "",
+        milestones: [{ title: "Milestone 1", description: "", amount: "", dueWeek: "" }],
+      });
+      fetchTasks();
+    } else {
+      alert(error);
+    }
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!selectedTask || !invoiceDraft.amountUSD || !invoiceDraft.description) return;
+    setCreatingInvoice(true);
+    const { error } = await apiRequest(ENDPOINTS.PAYMENT_ADMIN_CREATE_INVOICE, {
+      method: "POST",
+      body: {
+        taskRequestId: selectedTask._id,
+        clientEmail: selectedTask.email,
+        clientName: selectedTask.name,
+        amountUSD: parseFloat(invoiceDraft.amountUSD) || 0,
+        description: invoiceDraft.description,
+      },
+    });
+    setCreatingInvoice(false);
+    if (!error) {
+      setShowInvoicePanel(false);
+      setInvoiceDraft({ amountUSD: "", description: "" });
+      fetchTasks();
+      alert("Invoice created and sent successfully!");
+    } else {
+      alert(error);
+    }
+  };
+
   const bulkActions = [
     {
       label: "Delete Selected",
@@ -135,6 +275,9 @@ const AdminTasks = () => {
       onClick: handleBulkDelete
     }
   ];
+
+  // ── Import ENDPOINTS for proposal/contract actions ──
+  const ENDPOINTS_LOCAL = ENDPOINTS;
 
   return (
     <div className="p-6 lg:p-8 flex h-[calc(100vh-theme(spacing.16))] flex-col">
@@ -211,7 +354,7 @@ const AdminTasks = () => {
                         return (
                           <div 
                             key={task._id}
-                            onClick={() => setSelectedTask(task)}
+                            onClick={() => handleSelectTask(task)}
                             className={`p-4 rounded-lg bg-card border cursor-pointer hover:border-primary/50 transition-colors relative group
                               ${selectedTask?._id === task._id ? "border-primary shadow-sm" : "border-border shadow-sm"}
                               ${isSelected ? "ring-1 ring-primary" : ""}
@@ -270,7 +413,7 @@ const AdminTasks = () => {
                       filteredTasks.map((task) => (
                         <tr 
                           key={task._id} 
-                          onClick={() => setSelectedTask(task)}
+                          onClick={() => handleSelectTask(task)}
                           className={`hover:bg-muted/30 transition-colors cursor-pointer ${selectedTask?._id === task._id ? 'bg-primary/5' : ''}`}
                         >
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -379,6 +522,37 @@ const AdminTasks = () => {
                   </div>
                 </div>
 
+                <div className="pt-5 border-t border-border mb-8">
+                  <h4 className="text-sm font-semibold text-foreground mb-4">Actions</h4>
+                  <div className="space-y-3">
+                    {selectedTask.status === "in_review" && (
+                      <button
+                        onClick={() => setShowProposalPanel(true)}
+                        className="w-full rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors"
+                      >
+                        Draft & Send Proposal
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (selectedTask.status !== "contract_signed" && selectedTask.status !== "in_progress") {
+                          alert("Invoice can only be created after the contract is signed.");
+                          return;
+                        }
+                        setShowInvoicePanel(true);
+                      }}
+                      className={`w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                        selectedTask.status === "contract_signed" || selectedTask.status === "in_progress"
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                          : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                      }`}
+                      title={selectedTask.status === "contract_signed" || selectedTask.status === "in_progress" ? "Create Invoice" : "Contract must be signed first"}
+                    >
+                      Create Invoice
+                    </button>
+                  </div>
+                </div>
+
                 <div className="pt-5 border-t border-border">
                   <h4 className="text-sm font-semibold text-foreground mb-4">Update Status</h4>
                   <div className="space-y-4">
@@ -440,6 +614,198 @@ const AdminTasks = () => {
         onClear={() => setSelectedIds(new Set())} 
         actions={bulkActions} 
       />
+
+      {/* Proposal Modal */}
+      <AnimatePresence>
+        {showProposalPanel && selectedTask && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-3xl bg-card rounded-xl border border-border shadow-xl max-h-[90vh] flex flex-col overflow-hidden"
+            >
+              <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
+                <h3 className="font-bold text-foreground">Draft Proposal</h3>
+                <button onClick={() => setShowProposalPanel(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                <div className="flex justify-end mb-2">
+                  <button
+                    onClick={handleAiDraftProposal}
+                    disabled={aiDrafting}
+                    className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    {aiDrafting ? "Generating with AI..." : "✨ Generate with AI"}
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Proposal Title</label>
+                  <input
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.title}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Executive Summary</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-32 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.executiveSummary}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, executiveSummary: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Scope of Work</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-32 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.scopeOfWork}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, scopeOfWork: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Deliverables</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-32 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.deliverables}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, deliverables: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Timeline</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-24 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.timeline}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, timeline: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Pricing Breakdown</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-24 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.pricingBreakdown}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, pricingBreakdown: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Revisions Policy</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-16 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.revisionsPolicy}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, revisionsPolicy: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Client Responsibilities</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-20 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.clientResponsibilities}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, clientResponsibilities: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Support & Warranty</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-16 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.supportAndWarranty}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, supportAndWarranty: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Payment Terms</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-16 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.paymentTerms}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, paymentTerms: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Next Steps</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-20 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={proposalDraft.nextSteps}
+                    onChange={(e) => setProposalDraft({ ...proposalDraft, nextSteps: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="p-4 border-t border-border flex justify-end gap-3 bg-muted/20">
+                <button
+                  onClick={() => setShowProposalPanel(false)}
+                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendProposal}
+                  disabled={sendingProposal || !proposalDraft.title}
+                  className="bg-primary px-4 py-2 rounded-lg text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {sendingProposal ? "Sending..." : "Send Proposal"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Invoice Modal */}
+      <AnimatePresence>
+        {showInvoicePanel && selectedTask && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-card rounded-xl border border-border shadow-xl overflow-hidden"
+            >
+              <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
+                <h3 className="font-bold text-foreground">Create Invoice</h3>
+                <button onClick={() => setShowInvoicePanel(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Amount (USD)</label>
+                  <input
+                    type="number"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={invoiceDraft.amountUSD}
+                    onChange={(e) => setInvoiceDraft({ ...invoiceDraft, amountUSD: e.target.value })}
+                    placeholder="e.g. 5000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Description (Milestone Details)</label>
+                  <textarea
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-24 focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={invoiceDraft.description}
+                    onChange={(e) => setInvoiceDraft({ ...invoiceDraft, description: e.target.value })}
+                    placeholder="e.g. Milestone 1 of 3: UI Design Delivery"
+                  />
+                </div>
+              </div>
+              <div className="p-4 border-t border-border flex justify-end gap-3 bg-muted/20">
+                <button
+                  onClick={() => setShowInvoicePanel(false)}
+                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateInvoice}
+                  disabled={creatingInvoice || !invoiceDraft.amountUSD || !invoiceDraft.description}
+                  className="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {creatingInvoice ? "Sending..." : "Send Invoice"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

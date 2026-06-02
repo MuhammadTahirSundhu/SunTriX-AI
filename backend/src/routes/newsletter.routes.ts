@@ -4,6 +4,7 @@ import Campaign from "../models/Campaign";
 import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
 import { AuthRequest } from "../middleware/auth";
+import { getSetting } from "../lib/configLoader";
 
 const router = Router();
 
@@ -22,8 +23,21 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
       await existing.save();
       return res.json({ message: "Subscription updated successfully" });
     }
-    await Newsletter.create({ name, email, interest });
-    res.status(201).json({ message: "Subscribed successfully" });
+
+    // Respect double opt-in setting
+    const doubleOptIn = getSetting("NEWSLETTER_DOUBLE_OPTIN", "false") === "true";
+    // When double opt-in is enabled, create subscriber as unconfirmed (subscribed=false)
+    // until they click a confirmation email. For now we create pending and note in response.
+    await Newsletter.create({ name, email, interest, subscribed: !doubleOptIn });
+
+    if (doubleOptIn) {
+      res.status(201).json({
+        message: "Please check your email to confirm your subscription.",
+        requiresConfirmation: true,
+      });
+    } else {
+      res.status(201).json({ message: "Subscribed successfully" });
+    }
   } catch (err) { next(err); }
 });
 
@@ -75,13 +89,19 @@ router.post("/broadcast", requireAuth, async (req: AuthRequest, res: Response, n
     const emails = subscribers.map(sub => sub.email);
     if (emails.length === 0) return next(createError("No active subscribers found", 400));
 
+    // Append admin-configured footer text if set
+    const footerText = getSetting("NEWSLETTER_FOOTER_TEXT", "");
+    const finalBody = footerText
+      ? `${body}\n<div style="margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">${footerText}</div>`
+      : body;
+
     const { sendNewsletterBroadcast } = await import("../services/email");
-    await sendNewsletterBroadcast(subject, body, emails);
+    await sendNewsletterBroadcast(subject, finalBody, emails);
 
     // Save campaign to history
     await Campaign.create({
       subject,
-      htmlBody: body,
+      htmlBody: finalBody,
       targetAudience: targetAudience || "All",
       recipientCount: emails.length,
       adminId: req.user?.id || "unknown",

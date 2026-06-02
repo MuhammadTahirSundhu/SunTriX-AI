@@ -16,24 +16,21 @@ const SocialProofBar = () => {
     const fetchClients = async () => {
       try {
         const { data } = await apiRequest<{ clients: Client[] }>(ENDPOINTS.CLIENTS_LIST);
+        // Only set real clients from the database — no fake fallbacks
         if (data?.clients && data.clients.length > 0) {
           setClients(data.clients);
-        } else {
-          // Fallback if no clients are returned from API
-          setClients([
-            { _id: "1", name: "Google", logoUrl: "", websiteUrl: "" },
-            { _id: "2", name: "Microsoft", logoUrl: "", websiteUrl: "" },
-            { _id: "3", name: "AWS", logoUrl: "", websiteUrl: "" },
-            { _id: "4", name: "Meta", logoUrl: "", websiteUrl: "" },
-            { _id: "5", name: "Tesla", logoUrl: "", websiteUrl: "" },
-          ]);
         }
+        // If no clients, state stays empty and the section won't render
       } catch (err) {
         console.error("Failed to fetch clients", err);
       }
     };
     fetchClients();
   }, []);
+
+  // Don't render the section if there are no real clients to show
+  if (clients.length === 0) return null;
+
 
   return (
     <section className="border-y border-border/50 bg-card/30 backdrop-blur-sm py-10 overflow-hidden">

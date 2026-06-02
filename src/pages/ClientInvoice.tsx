@@ -36,8 +36,9 @@ const ClientInvoice = () => {
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [companyName, setCompanyName] = useState("SunTriX AI Solutions");
 
   useEffect(() => {
     if (!token) {
@@ -45,12 +46,19 @@ const ClientInvoice = () => {
       setLoading(false);
       return;
     }
-    apiRequest<InvoiceData>(ENDPOINTS.PAYMENT_INVOICE(token))
-      .then(({ data, error: err }) => {
-        if (err || !data) setError("Invoice not found or has expired.");
-        else setInvoice(data);
-      })
-      .finally(() => setLoading(false));
+
+    const fetchInvoice = async () => {
+      const { data, error: err } = await apiRequest<InvoiceData>(ENDPOINTS.PAYMENT_INVOICE(token));
+      if (err || !data) setError("Invoice not found or has expired.");
+      else setInvoice(data);
+    };
+    
+    const fetchCompany = async () => {
+      const { data } = await apiRequest<{ data: { name?: string } }>(ENDPOINTS.CMS_COMPANY);
+      if (data?.data?.name) setCompanyName(data.data.name);
+    };
+
+    Promise.all([fetchInvoice(), fetchCompany()]).finally(() => setLoading(false));
   }, [token]);
 
   const fmt = (cents: number, currency = "usd") =>
@@ -108,8 +116,8 @@ const ClientInvoice = () => {
             <FileText className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="text-xs font-mono text-primary uppercase tracking-widest">
-              SunTriX AI Solutions
+            <p className="text-sm font-bold text-foreground">
+              {companyName}
             </p>
             <h1 className="text-xl font-extrabold text-foreground">
               {invoice.alreadyPaid ? "Paid Invoice" : "Invoice & Proposal"}
@@ -278,7 +286,7 @@ const ClientInvoice = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © {new Date().getFullYear()} SunTriX AI Solutions
+          © {new Date().getFullYear()} {companyName}
         </p>
       </motion.div>
     </div>

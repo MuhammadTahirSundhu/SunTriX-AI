@@ -206,6 +206,25 @@ export const ENDPOINTS = {
   PAYMENT_ADMIN_CREATE_INVOICE: `${BASE_URL}/payments/admin/create-invoice`,
   PAYMENT_ADMIN_CREATE_LINK: `${BASE_URL}/payments/admin/create-payment-link`,
   PAYMENT_ADMIN_REFUND: (id: string) => `${BASE_URL}/payments/admin/refund/${id}`,
+
+  // Proposals
+  PROPOSAL_ADMIN_AI_DRAFT:   `${BASE_URL}/proposals/admin/ai-draft`,
+  PROPOSAL_ADMIN_CREATE:     `${BASE_URL}/proposals/admin/create`,
+  PROPOSAL_ADMIN_BY_TASK: (taskId: string) => `${BASE_URL}/proposals/admin/by-task/${taskId}`,
+  PROPOSAL_BY_TOKEN:      (token: string)  => `${BASE_URL}/proposals/${token}`,
+  PROPOSAL_ACCEPT:        (token: string)  => `${BASE_URL}/proposals/${token}/accept`,
+  PROPOSAL_REQUEST_CHANGES: (token: string) => `${BASE_URL}/proposals/${token}/request-changes`,
+
+  // Contracts
+  CONTRACT_BY_TOKEN:   (token: string) => `${BASE_URL}/contracts/${token}`,
+  CONTRACT_SIGN:       (token: string) => `${BASE_URL}/contracts/${token}/sign`,
+  CONTRACT_ADMIN_BY_TASK: (taskId: string) => `${BASE_URL}/contracts/admin/by-task/${taskId}`,
+
+  // System Settings (Admin)
+  SETTINGS_LIST:  `${BASE_URL}/settings`,
+  SETTINGS_BULK:  `${BASE_URL}/settings/bulk`,
+  SETTINGS_UPDATE: (key: string) => `${BASE_URL}/settings/${key}`,
+  SETTINGS_PUBLIC: `${BASE_URL}/settings/public`,
 } as const;
 
 // ─── Grok Chat Helper Types ──────────────────────────────────────

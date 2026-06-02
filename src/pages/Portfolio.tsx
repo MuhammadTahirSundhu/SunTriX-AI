@@ -11,7 +11,6 @@ import { useSEO } from "@/hooks/useSEO";
 
 interface PortfolioProject { _id: string; title: string; slug: string; category: string; shortDescription: string; metric: string; metricLabel: string; thumbnailImage: string; coverImage: string; videoUrl: string; tools: { name: string; icon: string }[]; }
 
-const categories = ["All", "Agentic AI", "AI & ML", "Computer Vision", "SaaS Platform"];
 
 const Portfolio = () => {
   useSEO({
@@ -32,6 +31,9 @@ const Portfolio = () => {
   }, []);
 
   const getCover = (project: PortfolioProject) => project.thumbnailImage || project.coverImage || "";
+
+  // Derive categories dynamically from project data — no hardcoding
+  const categories = ["All", ...Array.from(new Set(projects.map((p) => p.category).filter(Boolean)))];
 
   const filtered = activeCategory === "All" ? projects : projects.filter((p) => p.category === activeCategory);
 
