@@ -92,16 +92,6 @@ router.put("/:id", requireAuth, async (req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 });
 
-// DELETE /task-requests/:id — admin
-router.delete("/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const task = await TaskRequest.findByIdAndDelete(req.params.id);
-    if (!task) return next(createError("Task not found", 404));
-    await logAudit(req, "delete", "task", req.params.id, task.projectTitle || task.name);
-    res.json({ message: "Task deleted" });
-  } catch (err) { next(err); }
-});
-
 // DELETE /task-requests/bulk — bulk delete
 router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -110,6 +100,16 @@ router.delete("/bulk", requireAuth, async (req: Request, res: Response, next: Ne
     await TaskRequest.deleteMany({ _id: { $in: ids } });
     await logAudit(req, "bulk_delete", "task", "", `${ids.length} tasks`);
     res.json({ message: `Deleted ${ids.length} tasks` });
+  } catch (err) { next(err); }
+});
+
+// DELETE /task-requests/:id — admin
+router.delete("/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const task = await TaskRequest.findByIdAndDelete(req.params.id);
+    if (!task) return next(createError("Task not found", 404));
+    await logAudit(req, "delete", "task", req.params.id, task.projectTitle || task.name);
+    res.json({ message: "Task deleted" });
   } catch (err) { next(err); }
 });
 

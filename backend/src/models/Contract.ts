@@ -20,6 +20,8 @@ export interface IContract extends Document {
   status: "pending" | "signed" | "expired";
   signedAt?: Date;
   clientSignatureName: string;  // typed full name
+  clientIp?: string;            // captured on sign for legal evidence
+  userAgent?: string;           // browser/device info
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -48,6 +50,8 @@ const ContractSchema = new Schema<IContract>(
     },
     signedAt:            { type: Date },
     clientSignatureName: { type: String, default: "" },
+    clientIp:            { type: String, default: "" },
+    userAgent:           { type: String, default: "" },
     expiresAt:           { type: Date, required: true },
   },
   { timestamps: true }

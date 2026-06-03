@@ -124,6 +124,17 @@ const ClientProjectHub = () => {
     if (error) { toast.error("Failed to send message."); fetchTracker(true); }
   };
 
+  const [approvingCompletion, setApprovingCompletion] = useState(false);
+  const handleApproveCompletion = async () => {
+    if (!confirm("Are you sure you want to approve this project as fully complete? This action is final.")) return;
+    setApprovingCompletion(true);
+    const { error } = await apiRequest(ENDPOINTS.TRACKER_CLIENT_COMPLETION_APPROVE(token!), { method: "POST" });
+    setApprovingCompletion(false);
+    if (error) return toast.error("Failed to approve completion. Please try again.");
+    toast.success("Project marked as completed! Thank you!");
+    fetchTracker(true);
+  };
+
   // ─── Loading State ───────────────────────────────────────────────
   if (loading) {
     return (
@@ -187,6 +198,47 @@ const ClientProjectHub = () => {
               </button>
             </div>
           </div>
+
+          {/* ── Approval Banner ── */}
+          {tracker.completionRequestedAt && !tracker.completionApprovedAt && (
+            <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-emerald-500/5">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                  <span className="text-2xl">🎉</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Project Ready for Sign-Off!</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    The team has completed all deliverables and is requesting your final approval. Please review everything and click approve to officially close the project.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleApproveCompletion}
+                disabled={approvingCompletion}
+                className="shrink-0 w-full md:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-3 rounded-xl font-bold shadow-md hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {approvingCompletion ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" />
+                    Approving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-5 w-5" />
+                    Approve & Complete Project
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+          
+          {tracker.completionApprovedAt && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-center gap-3">
+              <CheckCircle className="h-6 w-6 text-emerald-500" />
+              <p className="text-emerald-500 font-bold">This project has been officially completed and approved!</p>
+            </div>
+          )}
 
           {/* ── Phase Stepper ── */}
           <div className="bg-card border border-border rounded-2xl p-6">

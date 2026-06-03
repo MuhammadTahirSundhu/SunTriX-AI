@@ -48,6 +48,10 @@ const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
   { value: "cancelled",       label: "Cancelled",       color: "bg-red-500/10 text-red-500 border-red-500/20" },
 ];
 
+// Excludes 'completed' — use Project Hub two-step flow for proper client sign-off
+const editableStatusOptions = statusOptions.filter(s => s.value !== "completed");
+
+
 const AdminTasks = () => {
   const [tasks, setTasks] = useState<TaskRequest[]>([]);
   const [search, setSearch] = useState("");
@@ -494,8 +498,22 @@ const AdminTasks = () => {
                 <div className="flex-1 overflow-y-auto p-5">
                   <div className="mb-6">
                   <h2 className="text-xl font-bold text-foreground mb-1">{selectedTask.projectTitle || "New Project"}</h2>
-                  <p className="text-sm text-muted-foreground">{selectedTask.name} • {selectedTask.company || selectedTask.email}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedTask.name} • {selectedTask.company || selectedTask.email} 
+                    {selectedTask.role ? ` • ${selectedTask.role}` : ""}
+                    {selectedTask.phone ? ` • ${selectedTask.phone}` : ""}
+                  </p>
                 </div>
+
+                {selectedTask.selectedPlan && (
+                  <div className="mb-6 p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-purple-500 uppercase tracking-wider">Selected Plan</span>
+                    <p className="text-sm font-medium text-foreground">
+                      {selectedTask.selectedPlan} 
+                      {selectedTask.planBudget ? ` (Starts at $${selectedTask.planBudget})` : ""}
+                    </p>
+                  </div>
+                )}
 
                 {selectedTask.trackingToken && (
                   <div className="mb-6 p-4 rounded-lg border border-primary/20 bg-primary/5 flex flex-col gap-2">
@@ -535,14 +553,50 @@ const AdminTasks = () => {
                       <p className="text-xs text-muted-foreground mb-1">Priority</p>
                       <p className="text-sm font-medium text-foreground">{selectedTask.priority || "Normal"}</p>
                     </div>
+                    {selectedTask.techStack && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Tech Stack</p>
+                        <p className="text-sm font-medium text-foreground">{selectedTask.techStack}</p>
+                      </div>
+                    )}
+                    {selectedTask.existingCode && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Existing Code?</p>
+                        <p className="text-sm font-medium text-foreground">{selectedTask.existingCode}</p>
+                      </div>
+                    )}
+                    {selectedTask.integrations && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground mb-1">Integrations</p>
+                        <p className="text-sm font-medium text-foreground">{selectedTask.integrations}</p>
+                      </div>
+                    )}
                   </div>
                   
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Description</p>
+                    <p className="text-xs text-muted-foreground mb-1">Project Description</p>
                     <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap p-3 bg-muted/30 rounded-lg border border-border">
                       {selectedTask.description}
                     </p>
                   </div>
+
+                  {selectedTask.codeDetails && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Code/Architecture Details</p>
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap p-3 bg-muted/30 rounded-lg border border-border">
+                        {selectedTask.codeDetails}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedTask.notes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Additional Notes</p>
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap p-3 bg-muted/30 rounded-lg border border-border">
+                        {selectedTask.notes}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-5 border-t border-border mb-8">
@@ -587,7 +641,7 @@ const AdminTasks = () => {
                         disabled={updatingStatus}
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       >
-                        {statusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        {editableStatusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
                     </div>
                     <div>

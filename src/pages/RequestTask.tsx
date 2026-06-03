@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams, Link } from "react-router-dom";
 import { ArrowRight, ArrowLeft, CheckCircle, Shield, Clock, Users, Sparkles, Tag } from "lucide-react";
@@ -31,13 +31,23 @@ const RequestTask = () => {
 
   const [form, setForm] = useState({
     name: "", email: "", phone: "", company: "", role: "",
-    projectTitle: "", projectType: "", description: "", startDate: "", duration: "",
+    projectTitle: "", projectType: selectedPlanName || "", description: "", startDate: "", duration: "",
     // Pre-fill budget from URL param (closest tier) — fully dynamic, never hardcoded
     budget: getPlanBudgetLabel(selectedPlanPrice),
     priority: "Medium",
     techStack: "", existingCode: "No", codeDetails: "", integrations: "",
     notes: "", consent: false, projectLink: "",
   });
+
+  useEffect(() => {
+    if (selectedPlanName || selectedPlanPrice > 0) {
+      setForm(prev => ({
+        ...prev,
+        budget: getPlanBudgetLabel(selectedPlanPrice),
+        projectType: selectedPlanName || prev.projectType,
+      }));
+    }
+  }, [selectedPlanName, selectedPlanPrice]);
 
   const updateField = (field: string, value: string | boolean) => setForm({ ...form, [field]: value });
 
@@ -222,6 +232,9 @@ const RequestTask = () => {
                           <label className={labelClass}>Project Type *</label>
                           <select id="rt-project-type" value={form.projectType} onChange={(e) => updateField("projectType", e.target.value)} className={inputClass}>
                             <option value="">Select type...</option>
+                            {selectedPlanName && !["Agentic AI & Automation", "AI & Machine Learning", "Computer Vision", "AI Product / SaaS", "Dedicated Team", "Other"].includes(selectedPlanName) && (
+                              <option value={selectedPlanName}>{selectedPlanName}</option>
+                            )}
                             <option>Agentic AI & Automation</option><option>AI & Machine Learning</option><option>Computer Vision</option><option>AI Product / SaaS</option><option>Dedicated Team</option><option>Other</option>
                           </select>
                         </div>

@@ -618,4 +618,143 @@ export async function sendContractSignedNotification(data: {
     console.error("Failed to send contract signed notification:", err.message || err);
   }
 }
+// ─── Tracker: Completion sign-off request to client ──────────────────────────
+export async function sendTrackerCompletionRequestEmail(data: {
+  clientEmail: string;
+  clientName: string;
+  projectTitle: string;
+  portalUrl: string;
+}): Promise<void> {
+  try {
+    const { error } = await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.clientEmail],
+      subject: `✅ Your Project is Ready for Final Sign-Off — ${data.projectTitle}`,
+      html: `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#0f0f0f;color:#f3f4f6;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#16a34a,#065f46);padding:40px 32px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+            <h1 style="margin:0;font-size:26px;font-weight:800;color:#fff;">Project Ready for Sign-Off</h1>
+            <p style="margin:8px 0 0;color:#bbf7d0;font-size:15px;">${getBrandName()}</p>
+          </div>
+          <div style="padding:36px 32px;">
+            <p style="font-size:16px;line-height:1.7;margin:0 0 20px;">Hi ${data.clientName},</p>
+            <p style="font-size:16px;line-height:1.7;margin:0 0 24px;">
+              Great news! The team has completed all deliverables for <strong>${data.projectTitle}</strong> and is requesting your final approval to officially close this project.
+            </p>
+            <div style="background:#1a1a1a;border:1px solid #16a34a;border-radius:12px;padding:20px;margin-bottom:28px;">
+              <p style="margin:0;font-size:14px;color:#86efac;font-weight:700;text-transform:uppercase;letter-spacing:1px;">What happens next?</p>
+              <p style="margin:8px 0 0;font-size:14px;color:#d1d5db;line-height:1.6;">Visit your project portal and click <strong>"Approve & Complete Project"</strong>. By approving, you confirm that all deliverables meet your expectations.</p>
+            </div>
+            <div style="text-align:center;margin:32px 0;">
+              <a href="${data.portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;text-decoration:none;padding:16px 40px;border-radius:50px;font-weight:800;font-size:16px;box-shadow:0 8px 24px rgba(22,163,74,0.4);">
+                ✅ Review & Approve Project
+              </a>
+            </div>
+            <p style="font-size:13px;color:#6b7280;text-align:center;">Thank you for working with us. It's been a pleasure building this for you.</p>
+          </div>
+          <div style="padding:20px 32px;border-top:1px solid #1f2937;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#374151;">© ${getBrandName()} · <a href="${getBrandWebsite()}" style="color:#16a34a;">${getBrandWebsite()}</a></p>
+          </div>
+        </div>`,
+    });
+    if (error) console.error("Resend Completion Request Error:", error.message);
+  } catch (err: any) {
+    console.error("Failed to send completion request email:", err.message || err);
+  }
+}
 
+// ─── Tracker: Completion approved — notify admin ──────────────────────────────
+export async function sendTrackerCompletionApprovedEmail(data: {
+  projectTitle: string;
+  clientName: string;
+  adminUrl: string;
+}): Promise<void> {
+  try {
+    const { error } = await getResend().emails.send({
+      from: getFromAddress(),
+      to: [getAdminEmail()],
+      subject: `🏆 Project Completed & Approved — ${data.projectTitle}`,
+      html: `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#0f0f0f;color:#f3f4f6;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#7c3aed,#4c1d95);padding:40px 32px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:12px;">🏆</div>
+            <h1 style="margin:0;font-size:26px;font-weight:800;color:#fff;">Project Officially Completed!</h1>
+            <p style="margin:8px 0 0;color:#ddd6fe;font-size:15px;">${getBrandName()} Admin</p>
+          </div>
+          <div style="padding:36px 32px;">
+            <div style="background:#1a1a1a;border:1px solid #7c3aed;border-radius:12px;padding:20px;margin-bottom:28px;">
+              <table style="width:100%;border-collapse:collapse;">
+                <tr><td style="padding:8px;font-weight:bold;color:#a78bfa;">Project</td><td style="padding:8px;color:#f3f4f6;">${data.projectTitle}</td></tr>
+                <tr style="background:#0f0f0f;"><td style="padding:8px;font-weight:bold;color:#a78bfa;">Client</td><td style="padding:8px;color:#f3f4f6;">${data.clientName}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#a78bfa;">Completed On</td><td style="padding:8px;color:#f3f4f6;">${new Date().toLocaleDateString("en-US", { dateStyle: "long" })}</td></tr>
+              </table>
+            </div>
+            <div style="text-align:center;margin:28px 0;">
+              <a href="${data.adminUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-weight:700;font-size:15px;">
+                View in Admin Dashboard →
+              </a>
+            </div>
+          </div>
+        </div>`,
+    });
+    if (error) console.error("Resend Completion Approved Error:", error.message);
+  } catch (err: any) {
+    console.error("Failed to send completion approved email:", err.message || err);
+  }
+}
+
+// ─── Signed Contract: Send docx attachment to both parties ───────────────────
+export async function sendSignedContractEmail(data: {
+  clientEmail: string;
+  clientName: string;
+  adminEmail: string;
+  projectTitle: string;
+  signedAt: string;
+  docxBuffer: Buffer;
+  filename: string;
+}): Promise<void> {
+  const subject = `📄 Signed Contract — ${data.projectTitle}`;
+  const html = `
+    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#0f0f0f;color:#f3f4f6;border-radius:16px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#f97316,#ea580c);padding:40px 32px;text-align:center;">
+        <div style="font-size:48px;margin-bottom:12px;">📄</div>
+        <h1 style="margin:0;font-size:24px;font-weight:800;color:#fff;">Your Contract is Signed</h1>
+        <p style="margin:8px 0 0;color:#fed7aa;font-size:15px;">${getBrandName()}</p>
+      </div>
+      <div style="padding:36px 32px;">
+        <p style="font-size:16px;line-height:1.7;margin:0 0 20px;">Hi ${data.clientName},</p>
+        <p style="font-size:15px;line-height:1.7;margin:0 0 20px;">
+          This email confirms that the contract for <strong>${data.projectTitle}</strong> has been digitally signed on <strong>${data.signedAt}</strong>.
+        </p>
+        <div style="background:#1a1a1a;border:1px solid #f97316;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="margin:0 0 8px;font-size:14px;color:#fb923c;font-weight:700;">📎 Attachment</p>
+          <p style="margin:0;font-size:14px;color:#d1d5db;">The signed contract document is attached to this email as a Word document (.docx). Please save it for your records.</p>
+        </div>
+        <p style="font-size:13px;color:#6b7280;text-align:center;">Thank you for choosing ${getBrandName()}. We're excited to begin!</p>
+      </div>
+    </div>`;
+
+  const attachmentContent = data.docxBuffer.toString("base64");
+
+  try {
+    // Send to client
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.clientEmail],
+      subject,
+      html,
+      attachments: [{ filename: data.filename, content: attachmentContent }],
+    });
+    // Send to admin
+    await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.adminEmail],
+      subject: `[Admin Copy] ${subject}`,
+      html,
+      attachments: [{ filename: data.filename, content: attachmentContent }],
+    });
+  } catch (err: any) {
+    console.error("Failed to send signed contract email:", err.message || err);
+  }
+}

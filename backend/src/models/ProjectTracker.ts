@@ -35,6 +35,7 @@ export interface IProjectTracker extends Document {
     amount: number; // stored in cents
     linkedPhase: PhaseEnum;
     dueDate: Date;
+    paymentRequestedAt?: Date;     // set when admin sends payment request
     paidAt?: Date;
     stripePaymentIntentId?: string;
     invoiceId?: Types.ObjectId;
@@ -79,6 +80,8 @@ export interface IProjectTracker extends Document {
     metadata?: Record<string, any>;
   }>;
 
+  completionRequestedAt?: Date;  // set when admin requests final sign-off
+  completionApprovedAt?: Date;   // set when client approves completion
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +115,7 @@ const ProjectTrackerSchema = new Schema<IProjectTracker>(
       amount: { type: Number, required: true }, // cents
       linkedPhase: { type: String, enum: ["Discovery", "Design", "Development", "Testing", "Delivery"] },
       dueDate: { type: Date, required: true },
+      paymentRequestedAt: { type: Date },
       paidAt: { type: Date },
       stripePaymentIntentId: { type: String, default: "" },
       invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice" },
@@ -147,6 +151,8 @@ const ProjectTrackerSchema = new Schema<IProjectTracker>(
       timestamp: { type: Date, default: Date.now },
       metadata: { type: Schema.Types.Mixed },
     }],
+    completionRequestedAt: { type: Date },
+    completionApprovedAt: { type: Date },
   },
   { timestamps: true }
 );

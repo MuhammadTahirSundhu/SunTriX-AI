@@ -273,6 +273,71 @@ router.post("/client/:token/chat", async (req: Request, res: Response, next: Nex
   } catch (err) { next(err); }
 });
 
+// ─── ADMIN: Request final client sign-off ──────────────────────────
+router.post("/admin/:id/completion/request", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tracker = await ProjectTracker.findById(req.params.id);
+    if (!tracker) return next(createError("Tracker not found", 404));
+    if (tracker.completionRequestedAt) return next(createError("Sign-off already requested", 400));
+
+    tracker.completionRequestedAt = new Date();
+    await writeAudit(tracker, "Requested final client sign-off", "Admin", "Admin");
+    await tracker.save();
+
+    const task = await TaskRequest.findById(tracker.taskRequestId).lean() as any;
+    if (task) {
+      const { sendTrackerCompletionRequestEmail } = await import("../services/email");
+      await sendTrackerCompletionRequestEmail({
+        clientEmail: task.email,
+        clientName: task.name,
+        projectTitle: task.projectTitle,
+        portalUrl: getClientPortalUrl(tracker.trackerToken),
+      });
+    }
+
+    res.json({ message: "Sign-off request sent to client", tracker });
+  } catch (err) { next(err); }
+});
+
+// ─── CLIENT: Approve project completion ────────────────────────────
+router.post("/client/:token/completion/approve", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tracker = await ProjectTracker.findOne({ trackerToken: req.params.token });
+    if (!tracker) return next(createError("Invalid token", 404));
+    if (!tracker.completionRequestedAt) return next(createError("No sign-off requested yet", 400));
+    if (tracker.completionApprovedAt) return next(createError("Already approved", 400));
+
+    tracker.completionApprovedAt = new Date();
+    const task = await TaskRequest.findById(tracker.taskRequestId).lean() as any;
+    await writeAudit(tracker, `Project completion approved by client: ${task?.name || "Client"}`, task?.name || "Client", "Client");
+    await tracker.save();
+
+    // Mark task as completed
+    await TaskRequest.findByIdAndUpdate(tracker.taskRequestId, {
+      status: "completed",
+      $push: {
+        statusHistory: {
+          status: "completed",
+          note: `Project completed and approved by client on ${new Date().toLocaleDateString("en-US", { dateStyle: "long" })}`,
+          updatedAt: new Date(),
+        }
+      }
+    });
+
+    // Notify admin
+    if (task) {
+      const { sendTrackerCompletionApprovedEmail } = await import("../services/email");
+      await sendTrackerCompletionApprovedEmail({
+        projectTitle: task.projectTitle,
+        clientName: task.name,
+        adminUrl: getAdminUrl(),
+      });
+    }
+
+    res.json({ message: "Project marked as completed. Thank you!" });
+  } catch (err) { next(err); }
+});
+
 // ─── ADMIN: Mark milestone payable → create Stripe Checkout ────────
 router.post("/admin/:id/milestone/:mId/mark-payable", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -314,6 +379,7 @@ router.post("/admin/:id/milestone/:mId/mark-payable", requireAuth, async (req: R
       cancel_url:  `${appUrl}/client/project/${tracker.trackerToken}`,
     });
 
+    milestone.paymentRequestedAt = new Date();
     await writeAudit(tracker, `Milestone marked payable: ${milestone.title}`, "Admin", "Admin");
     await tracker.save();
 
@@ -390,56 +456,6 @@ router.get("/admin/:id/audit", requireAuth, async (req: Request, res: Response, 
     if (!tracker) return next(createError("Tracker not found", 404));
     res.json({ auditLog: tracker.auditLog });
   } catch (err) { next(err); }
-});
-
-// ─── STRIPE WEBHOOK for tracker milestones ─────────────────────────
-// Note: Must be registered with raw body parser in app.ts
-router.post("/webhook/stripe", async (req: Request, res: Response) => {
-  const sig = req.headers["stripe-signature"];
-  const stripe = (await import("../services/stripe")).default;
-  const { getSetting: getS } = await import("../lib/configLoader");
-  const webhookSecret = getS("STRIPE_WEBHOOK_SECRET");
-  if (!webhookSecret) { console.error("STRIPE_WEBHOOK_SECRET not set"); return res.sendStatus(500); }
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig as string, webhookSecret);
-  } catch (err: any) {
-    console.error("Tracker webhook sig failed:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as any;
-    if (session.metadata?.type === "tracker_milestone") {
-      try {
-        const { trackerId, milestoneId, trackerToken } = session.metadata;
-        const tracker = await ProjectTracker.findById(trackerId);
-        if (tracker) {
-          const milestone = tracker.milestones.id(milestoneId);
-          if (milestone && !milestone.paidAt) {
-            milestone.paidAt = new Date();
-            milestone.stripePaymentIntentId = session.payment_intent || "";
-            await writeAudit(tracker, `Milestone paid: ${milestone.title}`, "System", "System", { amount: milestone.amount });
-            await tracker.save();
-
-            const task = await TaskRequest.findById(tracker.taskRequestId).lean() as any;
-            if (task) {
-              const { sendTrackerPaymentConfirmedEmail } = await import("../services/email");
-              await sendTrackerPaymentConfirmedEmail({
-                clientEmail: task.email,
-                projectTitle: task.projectTitle,
-                milestoneTitle: milestone.title,
-                amountFormatted: `$${(milestone.amount / 100).toFixed(2)}`,
-                portalUrl: getClientPortalUrl(trackerToken),
-              });
-            }
-          }
-        }
-      } catch (e) { console.error("Error processing tracker milestone payment:", e); }
-    }
-  }
-  res.json({ received: true });
 });
 
 // ─── CLIENT: Approve file ──────────────────────────────────────────

@@ -244,6 +244,8 @@ export const ENDPOINTS = {
   TRACKER_CLIENT_UPDATE_ACK:          (token: string, uId: string) => `${BASE_URL}/tracker/client/${token}/update/${uId}/acknowledge`,
   TRACKER_CLIENT_CHAT:                (token: string) => `${BASE_URL}/tracker/client/${token}/chat`,
   TRACKER_CLIENT_MILESTONE_CHECKOUT:  (token: string, mId: string) => `${BASE_URL}/tracker/client/${token}/milestone/${mId}/checkout`,
+  TRACKER_ADMIN_COMPLETION_REQUEST:   (id: string) => `${BASE_URL}/tracker/admin/${id}/completion/request`,
+  TRACKER_CLIENT_COMPLETION_APPROVE:  (token: string) => `${BASE_URL}/tracker/client/${token}/completion/approve`,
 } as const;
 
 // ─── Grok Chat Helper Types ──────────────────────────────────────
