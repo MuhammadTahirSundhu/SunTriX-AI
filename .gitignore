@@ -26,3 +26,4 @@ dist-ssr
 # Backend secrets — NEVER commit .env
 backend/.env
 backend/dist/
+.vercel
