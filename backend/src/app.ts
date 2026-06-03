@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { loadSettingsFromDB, seedDefaultSettings, getSetting } from "./lib/configLoader";
+import { loadSettingsFromDB, getSetting } from "./lib/configLoader";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -171,8 +171,7 @@ app.use(errorHandler);
 // ─── Start ────────────────────────────────────────────────────────
 async function start() {
   await connectDB();
-  // Seed defaults then load all settings into process.env before any route runs
-  await seedDefaultSettings();
+  // Load all settings into process.env before any route runs
   await loadSettingsFromDB();
   startScheduler();
   app.listen(PORT, () => {
