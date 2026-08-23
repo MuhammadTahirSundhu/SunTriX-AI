@@ -10,15 +10,19 @@ router.post(
   requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { module, text } = req.body as { module: string; text: string };
+      const module = req.body.module;
+      const text = (req.body.text || req.body.prompt || "").toString().trim();
 
-      if (!module || !text?.trim()) {
-        res.status(400).json({ error: "module and text are required" });
+      if (!module || !text) {
+        res.status(400).json({ error: "module and text (or prompt) are required" });
         return;
       }
 
-      const fields = await extractFields(module, text.trim());
-      res.json({ fields });
+      const fields = await extractFields(module, text);
+      res.json({
+        fields,
+        html: typeof fields === "string" ? fields : (fields as any)?.html || JSON.stringify(fields),
+      });
     } catch (err) {
       next(err);
     }

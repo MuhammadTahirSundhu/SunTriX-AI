@@ -37,6 +37,9 @@ import { startScheduler } from "./lib/scheduler";
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// ─── Trust Proxy (Required for reverse proxies like Render/Vercel/Nginx) ──
+app.set("trust proxy", 1);
+
 // ─── Security ────────────────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
@@ -50,7 +53,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow requests with no origin (mobile apps, Postman, curl)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error(`CORS: origin ${origin} not allowed`));
@@ -61,39 +63,67 @@ app.use(
   })
 );
 
-// ─── Rate Limiting (dynamic — reads RATE_LIMIT_MAX from DB cache) ─
+// ─── Rate Limiting ───────────────────────────────────────────────
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: (_req, _res) => parseInt(getSetting("RATE_LIMIT_MAX", "500")),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
 });
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 5, // 5 login attempts per 15 min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts. Please try again in 15 minutes." },
+  skip: (req) => !req.path.endsWith("/login") || req.method !== "POST",
+});
+
 const formLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20,
-  message: { error: "Too many submissions, please try again later." },
+  windowMs: 60 * 60 * 1000,
+  max: (_req, _res) => parseInt(getSetting("RATE_LIMIT_CONTACT", "5")),
+  message: { error: "Too many submissions. Please try again in an hour." },
   skip: (req) => req.method !== "POST",
 });
 
 const chatLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 min
-  max: 30,
-  message: { error: "Chat rate limit exceeded, please wait." },
+  windowMs: 60 * 1000,
+  max: (_req, _res) => parseInt(getSetting("RATE_LIMIT_CHAT", "10")),
+  message: { error: "Chat rate limit exceeded. Please wait a moment." },
 });
 
 app.use(globalLimiter);
 
-// ─── Maintenance Mode (dynamic — reads MAINTENANCE_MODE from DB) ──
-// Admin routes, /health, and authenticated requests always bypass.
-const MAINTENANCE_BYPASS_PREFIXES = ["/health", "/v1/auth", "/v1/admin", "/v1/settings"];
+// ─── Maintenance Mode ────────────────────────────────────────────
+const MAINTENANCE_BYPASS_PREFIXES = [
+  "/health",
+  "/v1/auth",
+  "/v1/admin",
+  "/v1/settings",
+  "/v1/tracker/client",
+  "/v1/proposals",
+  "/v1/contracts",
+  "/v1/payments/invoice",
+  "/v1/payments/verify",
+  "/v1/payments/webhook",
+  "/v1/newsletter/confirm",
+];
 app.use((req, res, next) => {
   if (getSetting("MAINTENANCE_MODE", "false") !== "true") return next();
   const isAdminRoute = MAINTENANCE_BYPASS_PREFIXES.some((p) => req.path.startsWith(p));
   if (isAdminRoute) return next();
-  // Authenticated admins always bypass maintenance
-  if (req.headers.authorization?.startsWith("Bearer ")) return next();
+  if (req.headers.authorization?.startsWith("Bearer ")) {
+    try {
+      const token = req.headers.authorization.split(" ")[1];
+      const jwt = require("jsonwebtoken");
+      jwt.verify(token, getSetting("JWT_SECRET"));
+      return next();
+    } catch {
+      // Invalid token — block request during maintenance
+    }
+  }
   res.status(503).json({
     error: "Service Temporarily Unavailable",
     message: "The platform is undergoing scheduled maintenance. Please check back shortly.",
@@ -136,7 +166,7 @@ const V1 = "/v1";
 
 import trackerRoutes from "./routes/tracker.routes";
 
-app.use(`${V1}/auth`, authRoutes);
+app.use(`${V1}/auth`, authLimiter, authRoutes);
 app.use(`${V1}/portfolio`, portfolioRoutes);
 app.use(`${V1}/case-studies`, caseStudyRoutes);
 app.use(`${V1}/testimonials`, testimonialRoutes);
@@ -181,9 +211,11 @@ async function start() {
   });
 }
 
-start().catch((err) => {
-  console.error("Fatal startup error:", err);
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== "test") {
+  start().catch((err) => {
+    console.error("Fatal startup error:", err);
+    process.exit(1);
+  });
+}
 
 export default app;

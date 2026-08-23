@@ -89,10 +89,6 @@ const AdminLogin = () => {
               {loading ? "Signing in…" : "Sign In"}
             </button>
           </form>
-
-          <p className="text-xs text-muted-foreground/50 text-center mt-6">
-            Default: admin@suntrix.com / admin123
-          </p>
         </div>
       </motion.div>
     </div>

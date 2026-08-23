@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export type ProposalStatus =
   | "draft"
   | "sent"
+  | "processing"
   | "accepted"
   | "changes_requested"
   | "rejected";
@@ -90,7 +91,7 @@ const ProposalSchema = new Schema<IProposal>(
     nextSteps:                 { type: String, default: "" },
     status: {
       type: String,
-      enum: ["draft", "sent", "accepted", "changes_requested", "rejected"],
+      enum: ["draft", "sent", "processing", "accepted", "changes_requested", "rejected"],
       default: "draft",
     },
     aiDrafted:   { type: Boolean, default: false },

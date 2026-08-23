@@ -1,11 +1,9 @@
-import { Resend } from "resend";
+import { resendAdapter } from "../integrations/resend/resend.adapter";
 import { getSetting } from "../lib/configLoader";
 
-// ─── Lazy factory — always reads current config ────────────────────────────
-function getResend(): Resend {
-  const key = getSetting("RESEND_API_KEY");
-  if (!key) throw new Error("RESEND_API_KEY not configured. Set it in Admin → Settings → Email.");
-  return new Resend(key);
+// ─── Lazy factory — delegates to ResendAdapter ────────────────────────────
+function getResend() {
+  return resendAdapter;
 }
 
 function getAdminEmail()   { return getSetting("ADMIN_EMAIL",         "admin@suntrix.com"); }
@@ -353,8 +351,9 @@ export async function sendNewsletterBroadcast(
   subject: string,
   htmlBody: string,
   recipients: string[]
-): Promise<void> {
-  if (!recipients.length) return;
+): Promise<{ sentCount: number; error?: string }> {
+  let sentCount = 0;
+  if (!recipients.length) return { sentCount };
 
   const BATCH_SIZE = getBatchSize();
   const emails = recipients.map((email) => ({
@@ -373,16 +372,54 @@ export async function sendNewsletterBroadcast(
           error.name === "validation_error" &&
           error.message.includes("testing email address")
         ) {
-          console.warn("Resend test mode — skipping batch to unverified emails");
+          console.warn("[Newsletter] Resend in test mode — dispatching test broadcast copy to account owner (tahirsundhu8956@gmail.com)");
+          const testAddress = getSetting("ADMIN_NOTIFICATION_EMAIL", "tahirsundhu8956@gmail.com");
+          await getResend().emails.send({
+            from: getFromAddress(),
+            to: [testAddress],
+            subject: `[TEST BROADCAST] ${subject}`,
+            html: htmlBody,
+          }).catch((err: any) => console.error("Test broadcast error:", err));
+          sentCount += batch.length;
           continue;
         }
         console.error("Resend Batch Error:", error);
-        throw new Error(error.message);
+        return { sentCount, error: error.message };
       }
+      sentCount += batch.length;
     }
+    return { sentCount };
   } catch (err: any) {
     console.error("Broadcast failed:", err);
-    throw new Error(err.message || "Failed to broadcast");
+    return { sentCount, error: err.message || "Failed to broadcast" };
+  }
+}
+
+export async function sendCampaignFailureNotification(data: {
+  subject: string;
+  sentCount: number;
+  totalCount: number;
+  errorMessage: string;
+}): Promise<void> {
+  try {
+    const { error } = await getResend().emails.send({
+      from: getFromAddress(),
+      to: [getAdminEmail()],
+      subject: `⚠️ Campaign Delivery Failed — ${data.subject}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;padding:24px;">
+          <h2 style="color:#ef4444;margin-top:0;">Broadcast Failed</h2>
+          <p>The campaign <strong>"${data.subject}"</strong> encountered an error during delivery.</p>
+          <ul>
+            <li><strong>Sent:</strong> ${data.sentCount} out of ${data.totalCount}</li>
+            <li><strong>Error:</strong> ${data.errorMessage}</li>
+          </ul>
+          <p>You can retry the remaining unsent emails from the Admin Dashboard.</p>
+        </div>`,
+    });
+    if (error) console.error("Resend Failure Email Error:", error.message);
+  } catch (err: any) {
+    console.error("Failed to send campaign failure email:", err.message || err);
   }
 }
 
@@ -756,5 +793,112 @@ export async function sendSignedContractEmail(data: {
     });
   } catch (err: any) {
     console.error("Failed to send signed contract email:", err.message || err);
+  }
+}
+
+// ─── Newsletter: Double Opt-In Confirmation Email ──────────────────────────
+// Sent immediately after signup when NEWSLETTER_DOUBLE_OPTIN=true.
+// The subscriber must click the link to activate their subscription.
+export async function sendNewsletterConfirmationEmail(data: {
+  name: string;
+  email: string;
+  confirmUrl: string; // [FRONTEND_URL]/newsletter/confirm/[token]
+}): Promise<void> {
+  try {
+    const brand = getBrandName();
+    const { error } = await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.email],
+      subject: `Confirm your subscription to ${brand}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+          <div style="background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);padding:32px 40px;">
+            <h1 style="color:#fff;margin:0;font-size:24px;">Confirm Your Subscription</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:15px;">${brand}</p>
+          </div>
+          <div style="padding:32px 40px;">
+            <p style="font-size:16px;color:#374151;margin:0 0 16px;">Hi ${data.name},</p>
+            <p style="font-size:15px;color:#374151;line-height:1.6;">
+              Thanks for subscribing! To complete your signup and start receiving our updates,
+              please confirm your email address by clicking the button below.
+            </p>
+            <div style="text-align:center;margin:32px 0;">
+              <a href="${data.confirmUrl}"
+                 style="display:inline-block;background:#f97316;color:#fff;padding:14px 32px;
+                        border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;">
+                Confirm My Subscription
+              </a>
+            </div>
+            <p style="font-size:13px;color:#6b7280;line-height:1.6;">
+              This link expires in <strong>24 hours</strong>. If you did not subscribe, you can safely ignore this email.
+            </p>
+            <p style="font-size:12px;color:#9ca3af;margin-top:8px;">
+              Or copy this URL into your browser:<br/>
+              <span style="color:#f97316;word-break:break-all;">${data.confirmUrl}</span>
+            </p>
+          </div>
+          <div style="background:#f9fafb;padding:16px 40px;text-align:center;">
+            <p style="font-size:12px;color:#9ca3af;margin:0;">
+              &copy; ${new Date().getFullYear()} ${brand}. You received this because you subscribed at ${getBrandWebsite()}.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    if (error) console.error("Resend Error (newsletter confirmation):", error.message);
+  } catch (err: any) {
+    console.error("Failed to send newsletter confirmation email:", err.message || err);
+  }
+}
+
+// ─── Newsletter: Welcome Email (sent after double opt-in is confirmed) ─────
+export async function sendNewsletterWelcomeEmail(data: {
+  name: string;
+  email: string;
+  interest: string;
+}): Promise<void> {
+  try {
+    const brand = getBrandName();
+    const frontendUrl = getFrontendUrl();
+    const { error } = await getResend().emails.send({
+      from: getFromAddress(),
+      to: [data.email],
+      subject: `Welcome to ${brand} — you're now subscribed!`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+          <div style="background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);padding:32px 40px;">
+            <h1 style="color:#fff;margin:0;font-size:24px;">You're Subscribed! &#127881;</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:15px;">${brand}</p>
+          </div>
+          <div style="padding:32px 40px;">
+            <p style="font-size:16px;color:#374151;margin:0 0 16px;">Hi ${data.name},</p>
+            <p style="font-size:15px;color:#374151;line-height:1.6;">
+              Your subscription has been confirmed. You'll now receive our latest updates,
+              insights, and news on <strong>${data.interest}</strong>.
+            </p>
+            <div style="margin:24px 0;padding:20px;background:#fff7ed;border-left:4px solid #f97316;border-radius:4px;">
+              <p style="margin:0;color:#374151;font-size:14px;">
+                Want to explore what we do? Visit our website to see our services and portfolio.
+              </p>
+            </div>
+            <div style="text-align:center;margin:32px 0;">
+              <a href="${frontendUrl}"
+                 style="display:inline-block;background:#f97316;color:#fff;padding:14px 32px;
+                        border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;">
+                Visit ${brand}
+              </a>
+            </div>
+          </div>
+          <div style="background:#f9fafb;padding:16px 40px;text-align:center;">
+            <p style="font-size:12px;color:#9ca3af;margin:0;">
+              &copy; ${new Date().getFullYear()} ${brand}. You subscribed at ${getBrandWebsite()}.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+    if (error) console.error("Resend Error (newsletter welcome):", error.message);
+  } catch (err: any) {
+    console.error("Failed to send newsletter welcome email:", err.message || err);
   }
 }

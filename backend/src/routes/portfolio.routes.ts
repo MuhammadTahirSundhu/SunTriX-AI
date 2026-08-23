@@ -10,8 +10,8 @@ const router = Router();
 // GET /portfolio  — public lists published; admin sees all
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const isAdmin = req.headers.authorization?.startsWith("Bearer ");
-    const filter = isAdmin ? {} : { status: "published" };
+    const showAll = req.query.all === "true" || req.headers.authorization?.startsWith("Bearer ");
+    const filter = showAll ? {} : { status: "published" };
     const projects = await Portfolio.find(filter).sort({ order: 1, createdAt: -1 });
     res.json(projects);
   } catch (err) { next(err); }

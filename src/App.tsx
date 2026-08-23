@@ -50,7 +50,7 @@ import ClientContract from "./pages/ClientContract";
 import ClientProjectHub from "./pages/ClientProjectHub";
 import { DynamicFavicon } from "@/components/DynamicFavicon";
 
-const queryClient = new QueryClient();
+import { queryClient } from "@/lib/query-client";
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();

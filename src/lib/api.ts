@@ -225,6 +225,7 @@ export const ENDPOINTS = {
   SETTINGS_BULK:  `${BASE_URL}/settings/bulk`,
   SETTINGS_UPDATE: (key: string) => `${BASE_URL}/settings/${key}`,
   SETTINGS_PUBLIC: `${BASE_URL}/settings/public`,
+  SETTINGS_AI_MODELS: (refresh = false) => `${BASE_URL}/settings/ai/models${refresh ? "?refresh=true" : ""}`,
 
   // Project Tracker
   TRACKER_ADMIN_LIST:  `${BASE_URL}/tracker/admin/list`,
@@ -269,6 +270,8 @@ export interface GrokChatResponse {
 }
 
 // ─── HTTP Client ─────────────────────────────────────────────────
+import { authManager } from "./auth";
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -282,7 +285,7 @@ export async function apiRequest<T = unknown>(
   const { method = "GET", body, headers = {} } = options;
 
   try {
-    const token = localStorage.getItem("auth_token");
+    const token = authManager.getToken();
     let res = await fetch(endpoint, {
       method,
       headers: {

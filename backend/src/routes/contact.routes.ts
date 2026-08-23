@@ -2,23 +2,22 @@ import { Router, Request, Response, NextFunction } from "express";
 import ContactMessage from "../models/ContactMessage";
 import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
+import { validate, ContactSchema } from "../middleware/validate";
 import { sendContactNotification } from "../services/email";
 
 const router = Router();
 
 // POST /contact — public
-router.post("/", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/", validate(ContactSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, message } = req.body;
-    if (!name || !email || !message) {
-      return next(createError("Name, email, and message are required", 400));
-    }
+    const { name, email, message, company, subject } = req.body;
+    // No need for manual required checks — Zod validate() handles them above
 
     const msg = await ContactMessage.create({
       name,
       email,
-      company: req.body.company || "",
-      subject: req.body.subject || "Website Contact",
+      company: company || "",
+      subject: subject || "Website Contact",
       message,
     });
 

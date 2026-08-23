@@ -1,14 +1,14 @@
 import { Router, Request, Response, NextFunction } from "express";
-import ProjectTracker, { IProjectTracker, PhaseEnum } from "../models/ProjectTracker";
+import ProjectTracker from "../models/ProjectTracker";
+import TrackerMessage from "../models/TrackerMessage";
 import TaskRequest from "../models/TaskRequest";
-import Proposal from "../models/Proposal";
 import { requireAuth } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
+import { validate, ChatMessageSchema, TrackerUpdateSchema } from "../middleware/validate";
 import { 
   sendTrackerPhaseAdvancedEmail, 
   sendTrackerDeliverableReviewEmail,
   sendTrackerUpdateEmail,
-  sendTrackerFileEmail,
   sendTrackerClientActionToAdminEmail 
 } from "../services/email";
 import { getSetting } from "../lib/configLoader";
@@ -25,7 +25,7 @@ const writeAudit = async (tracker: any, action: string, actor: string, role: "Ad
 
 // ─── ADMIN ENDPOINTS ───────────────────────────────────────────────
 
-router.get("/admin/list", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.get("/admin/list", requireAuth, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const trackers = await ProjectTracker.find()
       .populate("taskRequestId", "name projectTitle company service status")
@@ -42,7 +42,15 @@ router.get("/admin/:id", requireAuth, async (req: Request, res: Response, next: 
       .populate("proposalId")
       .lean();
     if (!tracker) return next(createError("Tracker not found", 404));
-    res.json({ tracker });
+
+    // Fetch messages from separate collection and merge with legacy embedded messages
+    const newMessages = await TrackerMessage.find({ trackerId: tracker._id }).sort({ sentAt: 1 }).lean();
+    const legacyMessages = tracker.messages || [];
+    const allMessages = [...legacyMessages, ...newMessages].sort((a: any, b: any) => 
+      new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+    );
+    
+    res.json({ tracker: { ...tracker, messages: allMessages } });
   } catch (err) { next(err); }
 });
 
@@ -110,9 +118,11 @@ router.post("/admin/:id/deliverable/:dId/complete", requireAuth, async (req: Req
   } catch (err) { next(err); }
 });
 
-router.post("/admin/:id/update", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/admin/:id/update", requireAuth, validate(TrackerUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { type, body, nextUpdateDue } = req.body;
+    const { title, content, nextUpdateDue } = req.body;
+    const type = title; // Schema validates 'title' representing update type
+    const body = content; // Schema validates 'content'
     const tracker = await ProjectTracker.findById(req.params.id);
     if (!tracker) return next(createError("Tracker not found", 404));
 
@@ -135,16 +145,17 @@ router.post("/admin/:id/update", requireAuth, async (req: Request, res: Response
   } catch (err) { next(err); }
 });
 
-router.post("/admin/:id/chat", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/admin/:id/chat", requireAuth, validate(ChatMessageSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { text } = req.body;
+    // Zod validate() enforces text constraints
     const tracker = await ProjectTracker.findById(req.params.id);
     if (!tracker) return next(createError("Tracker not found", 404));
 
-    tracker.messages.push({
+    await TrackerMessage.create({
+      trackerId: tracker._id,
       sender: "Admin",
       text,
-      sentAt: new Date(),
       readByAdmin: true,
       readByClient: false
     });
@@ -171,6 +182,14 @@ router.get("/client/:token", async (req: Request, res: Response, next: NextFunct
     const sanitized: any = { ...tracker };
     delete sanitized.auditLog;
     
+    // Fetch messages from separate collection and merge with legacy embedded messages
+    const newMessages = await TrackerMessage.find({ trackerId: tracker._id }).sort({ sentAt: 1 }).lean();
+    const legacyMessages = sanitized.messages || [];
+    const allMessages = [...legacyMessages, ...newMessages].sort((a: any, b: any) => 
+      new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+    );
+    sanitized.messages = allMessages;
+
     res.json({ tracker: sanitized });
   } catch (err) { next(err); }
 });
@@ -252,16 +271,17 @@ router.post("/client/:token/update/:uId/acknowledge", async (req: Request, res: 
   } catch (err) { next(err); }
 });
 
-router.post("/client/:token/chat", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/client/:token/chat", validate(ChatMessageSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { text } = req.body;
+    // Zod validate() enforces text constraints
     const tracker = await ProjectTracker.findOne({ trackerToken: req.params.token });
     if (!tracker) return next(createError("Invalid token", 404));
 
-    tracker.messages.push({
+    await TrackerMessage.create({
+      trackerId: tracker._id,
       sender: "Client",
       text,
-      sentAt: new Date(),
       readByAdmin: false,
       readByClient: true
     });
@@ -279,6 +299,15 @@ router.post("/admin/:id/completion/request", requireAuth, async (req: Request, r
     const tracker = await ProjectTracker.findById(req.params.id);
     if (!tracker) return next(createError("Tracker not found", 404));
     if (tracker.completionRequestedAt) return next(createError("Sign-off already requested", 400));
+
+    // Preconditions check
+    const pendingDeliverables = tracker.deliverables.filter(d => d.status !== "Approved");
+    if (pendingDeliverables.length > 0) return next(createError(`Cannot request sign-off: ${pendingDeliverables.length} deliverable(s) are pending client approval.`, 400));
+    
+    const unpaidMilestones = tracker.milestones.filter(m => !m.paidAt);
+    if (unpaidMilestones.length > 0) return next(createError(`Cannot request sign-off: ${unpaidMilestones.length} milestone(s) are unpaid.`, 400));
+    
+    if (tracker.currentPhase !== "Delivery") return next(createError(`Cannot request sign-off: Project phase must be "Delivery" (currently "${tracker.currentPhase}").`, 400));
 
     tracker.completionRequestedAt = new Date();
     await writeAudit(tracker, "Requested final client sign-off", "Admin", "Admin");
@@ -394,6 +423,37 @@ router.post("/admin/:id/milestone/:mId/mark-payable", requireAuth, async (req: R
     });
 
     res.json({ checkoutUrl: session.url, sessionId: session.id });
+  } catch (err) { next(err); }
+});
+
+// ─── ADMIN: Mark milestone paid manually (wire, check, outside stripe) ─
+router.post("/admin/:id/milestone/:mId/mark-paid-manually", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { paymentMethod, note } = req.body;
+    const tracker = await ProjectTracker.findById(req.params.id);
+    if (!tracker) return next(createError("Tracker not found", 404));
+
+    const milestone = tracker.milestones.id(req.params.mId);
+    if (!milestone) return next(createError("Milestone not found", 404));
+    if (milestone.paidAt) return next(createError("Milestone already paid", 400));
+
+    milestone.paidAt = new Date();
+    await writeAudit(tracker, `Milestone marked paid manually: ${milestone.title}`, "Admin", "Admin", { paymentMethod, note });
+    await tracker.save();
+
+    const task = await TaskRequest.findById(tracker.taskRequestId).lean() as any;
+    if (task) {
+      const { sendTrackerPaymentConfirmedEmail } = await import("../services/email");
+      await sendTrackerPaymentConfirmedEmail({
+        clientEmail: task.email,
+        projectTitle: task.projectTitle,
+        milestoneTitle: milestone.title,
+        amountFormatted: `$${(milestone.amount / 100).toFixed(2)}`,
+        portalUrl: getClientPortalUrl(tracker.trackerToken),
+      });
+    }
+
+    res.json({ message: "Milestone marked as paid manually", tracker });
   } catch (err) { next(err); }
 });
 
@@ -533,4 +593,33 @@ router.post("/client/:token/milestone/:mId/checkout", async (req: Request, res: 
   } catch (err) { next(err); }
 });
 
+// ─── ADMIN: Generate short-lived signed download URL for a project file ──────
+// Prevents permanent public Cloudinary URLs from being shared or indexed.
+// Signed URLs expire after 5 minutes — admin must request a fresh one each time.
+router.get("/admin/:id/file/:fId/download-url", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tracker = await ProjectTracker.findById(req.params.id).lean();
+    if (!tracker) return next(createError("Tracker not found", 404));
+
+    const file = tracker.files.find((f) => f._id?.toString() === req.params.fId);
+    if (!file) return next(createError("File not found", 404));
+
+    const { cloudinary: cloudinaryInstance } = await import("../services/cloudinary");
+
+    // Generate a signed URL valid for 300 seconds (5 minutes)
+    const signedUrl = cloudinaryInstance.url(file.cloudinaryPublicId, {
+      sign_url: true,
+      resource_type: "raw",
+      expires_at: Math.floor(Date.now() / 1000) + 300,
+    });
+
+    res.json({
+      url: signedUrl,
+      filename: file.filename,
+      expiresInSeconds: 300,
+    });
+  } catch (err) { next(err); }
+});
+
 export default router;
+

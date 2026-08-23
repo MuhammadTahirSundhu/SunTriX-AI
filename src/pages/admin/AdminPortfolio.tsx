@@ -10,6 +10,7 @@ import { SortableList } from "@/components/admin/SortableList";
 import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
 import { CSVImporter, ExpectedField } from "@/components/admin/CSVImporter";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { UploadCloud } from "lucide-react";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 
@@ -27,6 +28,7 @@ interface PortfolioProject {
   coverImage: string;
   thumbnailImage: string;
   videoUrl: string;
+  images?: string[];
   tags: string[];
   highlights: string[];
   tools: { name: string; icon: string }[];
@@ -35,6 +37,8 @@ interface PortfolioProject {
   industry: string;
   displayType: "video" | "images";
   liveUrl: string;
+  status: "published" | "draft";
+  featured: boolean;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -250,34 +254,33 @@ const AdminPortfolio = () => {
   };
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Portfolio</h1>
-          <p className="text-sm text-muted-foreground">Manage projects and case studies</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { handleNew(); setAiMode(true); }}
-            className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 hover:bg-purple-500/20 transition-colors"
-          >
-            <span>✨</span> Add via AI
-          </button>
-          <button
-            onClick={() => setShowImport(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
-          >
-            <UploadCloud className="h-4 w-4" /> Import CSV
-          </button>
-          <button
-            onClick={() => { handleNew(); setAiMode(false); }}
-            className="gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
-          >
-            <Plus className="h-4 w-4" /> Add Manually
-          </button>
-        </div>
-
-      </div>
+    <div className="space-y-6 font-sans">
+      <AdminPageHeader
+        title="Portfolio Showcase & Case Studies"
+        description="Public project portfolio, AI case study drafting, and client showcase management."
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { handleNew(); setAiMode(true); }}
+              className="px-3.5 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs font-semibold text-purple-400 hover:bg-purple-500/20 transition-all inline-flex items-center gap-1.5"
+            >
+              <span>✨</span> Draft via AI
+            </button>
+            <button
+              onClick={() => setShowImport(true)}
+              className="px-3.5 py-1.5 rounded-lg border border-border/60 bg-background text-xs font-semibold text-foreground hover:bg-muted transition-all inline-flex items-center gap-1.5"
+            >
+              <UploadCloud className="h-3.5 w-3.5" /> Import CSV
+            </button>
+            <button
+              onClick={() => { handleNew(); setAiMode(false); }}
+              className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 transition-all inline-flex items-center gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Project
+            </button>
+          </div>
+        }
+      />
 
       {/* Filters & Sort */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -442,6 +445,35 @@ const AdminPortfolio = () => {
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1">Slug</label>
                     <input value={editing.slug} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} placeholder="auto-generated" className={inp} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Publish Status *</label>
+                    <select
+                      value={editing.status || "draft"}
+                      onChange={(e) => setEditing({ ...editing, status: e.target.value as "published" | "draft" })}
+                      className={inp}
+                    >
+                      <option value="published">🟢 Published (Visible on Website)</option>
+                      <option value="draft">🟡 Draft (Admin Only)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Featured Showcase</label>
+                    <button
+                      type="button"
+                      onClick={() => setEditing({ ...editing, featured: !editing.featured })}
+                      className={`w-full py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                        editing.featured
+                          ? "border-amber-500/50 bg-amber-500/10 text-amber-500 shadow-2xs"
+                          : "border-border bg-card text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      <Star className={`h-4 w-4 ${editing.featured ? "fill-amber-500 text-amber-500" : ""}`} />
+                      <span>{editing.featured ? "Featured Project" : "Standard Project"}</span>
+                    </button>
                   </div>
                 </div>
 
