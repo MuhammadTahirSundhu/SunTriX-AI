@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { ENDPOINTS, apiRequest } from "@/lib/api";
-import { authStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   Bot, Mail, CreditCard, HardDrive, Building2, MessageSquare,
   Newspaper, Shield, Eye, EyeOff, Save, RefreshCw, CheckCircle2,
   AlertCircle, ChevronRight, Loader2, ToggleLeft, ToggleRight,
-  Settings2, Lock, Info,
+  Settings2, Lock, Info, Sparkles,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -21,6 +22,15 @@ interface Setting {
   isSecret: boolean;
 }
 
+interface DiscoveredModel {
+  id: string;
+  name: string;
+  ownedBy: string;
+  active: boolean;
+  capabilities: string[];
+  planEligibility: string;
+}
+
 type SectionId = "ai" | "email" | "payment" | "storage" | "brand" | "chatbot" | "newsletter" | "security";
 
 // ─── Section metadata ─────────────────────────────────────────────────────
@@ -33,7 +43,7 @@ const SECTIONS: {
   border: string;
   description: string;
 }[] = [
-  { id: "ai",         label: "AI & Groq",       icon: Bot,          color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/30", description: "Model selection, API keys and AI behaviour" },
+  { id: "ai",         label: "AI & Groq",       icon: Bot,          color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/30", description: "Dynamic Groq models discovery, API keys and AI behaviour" },
   { id: "chatbot",    label: "Chatbot",          icon: MessageSquare,color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/30",   description: "Website chatbot prompt, links and toggles" },
   { id: "email",      label: "Email",            icon: Mail,         color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30", description: "Resend key, sender address and notification toggles" },
   { id: "payment",    label: "Payments",         icon: CreditCard,   color: "text-green-400",  bg: "bg-green-500/10",  border: "border-green-500/30",  description: "Stripe keys, mode toggle and invoice settings" },
@@ -48,10 +58,12 @@ function SettingField({
   setting,
   localValue,
   onChange,
+  discoveredModels,
 }: {
   setting: Setting;
   localValue: string;
   onChange: (key: string, value: string) => void;
+  discoveredModels: DiscoveredModel[];
 }) {
   const [showSecret, setShowSecret] = useState(false);
   const isModified = localValue !== setting.value;
@@ -78,18 +90,43 @@ function SettingField({
   }
 
   if (setting.type === "select") {
+    const isModelSetting = setting.key === "GROQ_CHAT_MODEL" || setting.key === "GROQ_EXTRACT_MODEL";
+    const availableOptions = isModelSetting && discoveredModels.length > 0
+      ? discoveredModels.map((m) => m.id)
+      : setting.options || [];
+
+    const activeModel = discoveredModels.find((m) => m.id === localValue);
+
     return (
-      <select
-        value={localValue}
-        onChange={(e) => onChange(setting.key, e.target.value)}
-        className={baseInput + " cursor-pointer"}
-      >
-        {setting.options?.map((opt) => (
-          <option key={opt} value={opt} className="bg-zinc-900">
-            {opt}
-          </option>
-        ))}
-      </select>
+      <div className="flex flex-col gap-2 w-full">
+        <select
+          value={localValue}
+          onChange={(e) => onChange(setting.key, e.target.value)}
+          className={baseInput + " cursor-pointer font-mono text-xs"}
+        >
+          {availableOptions.map((opt) => {
+            const m = discoveredModels.find((dm) => dm.id === opt);
+            return (
+              <option key={opt} value={opt} className="bg-zinc-900">
+                {m ? `${m.name} (${m.id})` : opt}
+              </option>
+            );
+          })}
+        </select>
+        {isModelSetting && (
+          <div className="flex items-center justify-between gap-2 text-xs pt-1">
+            {activeModel ? (
+              <span className="text-green-400 flex items-center gap-1.5 font-medium">
+                <CheckCircle2 className="h-3.5 w-3.5" /> ✅ Available on Groq API — Capabilities: {activeModel.capabilities.join(", ")}
+              </span>
+            ) : (
+              <span className="text-amber-400 flex items-center gap-1.5 font-medium">
+                <AlertCircle className="h-3.5 w-3.5" /> ⚠️ Selected model ID is unverified or restricted for this API key
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -107,7 +144,7 @@ function SettingField({
 
   if (setting.type === "password") {
     return (
-      <div className="relative">
+      <div className="relative w-full">
         <input
           type={showSecret ? "text" : "password"}
           value={localValue === "••••••••••••" ? "" : localValue}
@@ -131,7 +168,7 @@ function SettingField({
 
   // text / url / number
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <input
         type={setting.type === "number" ? "number" : "text"}
         value={localValue}
@@ -156,6 +193,9 @@ function SectionPanel({
   onSave,
   saving,
   savedKeys,
+  discoveredModels,
+  onRefreshModels,
+  refreshingModels,
 }: {
   section: typeof SECTIONS[0];
   settings: Setting[];
@@ -164,46 +204,65 @@ function SectionPanel({
   onSave: (sectionId: string) => void;
   saving: string | null;
   savedKeys: Set<string>;
+  discoveredModels: DiscoveredModel[];
+  onRefreshModels: () => void;
+  refreshingModels: boolean;
 }) {
   const Icon = section.icon;
   const isSaving = saving === section.id;
   const hasChanges = settings.some((s) => {
     const lv = localValues[s.key] ?? s.value;
-    // For password fields: only dirty if they typed something new (non-empty, non-masked)
     if (s.isSecret) return lv !== "" && lv !== "••••••••••••" && lv !== s.value;
     return lv !== s.value;
   });
 
   return (
-    <div className={`rounded-2xl border ${section.border} bg-[#111] overflow-hidden`}>
-      {/* Section header */}
-      <div className={`${section.bg} border-b ${section.border} px-6 py-4 flex items-start justify-between gap-4`}>
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${section.bg} border ${section.border}`}>
-            <Icon className={`h-5 w-5 ${section.color}`} />
+    <div className="rounded-xl border border-border/50 bg-card shadow-xs overflow-hidden">
+      {/* Section Header */}
+      <div className="px-6 py-4 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-foreground">{section.label}</h2>
+            {hasChanges && (
+              <span className="text-[10px] font-mono text-primary font-bold px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20">
+                Unsaved Changes
+              </span>
+            )}
           </div>
-          <div>
-            <h2 className="text-sm font-semibold text-white">{section.label}</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">{section.description}</p>
-          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">{section.description}</p>
         </div>
-        <button
-          onClick={() => onSave(section.id)}
-          disabled={isSaving || !hasChanges}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-            isSaving
-              ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-              : hasChanges
-              ? "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20"
-              : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
-          }`}
-        >
-          {isSaving ? (
-            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
-          ) : (
-            <><Save className="h-3.5 w-3.5" /> Save Section</>
+
+        <div className="flex items-center gap-2">
+          {section.id === "ai" && (
+            <button
+              onClick={onRefreshModels}
+              disabled={refreshingModels}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background hover:bg-muted text-foreground border border-border/60 transition-all shrink-0"
+              title="Refresh models catalog directly from Groq API"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshingModels ? "animate-spin text-primary" : ""}`} />
+              {refreshingModels ? "Discovering…" : "Refresh Models"}
+            </button>
           )}
-        </button>
+
+          <button
+            onClick={() => onSave(section.id)}
+            disabled={isSaving || !hasChanges}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+              isSaving
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : hasChanges
+                ? "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            }`}
+          >
+            {isSaving ? (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
+            ) : (
+              <><Save className="h-3.5 w-3.5" /> Save Section</>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Fields */}
@@ -218,12 +277,16 @@ function SectionPanel({
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-zinc-200">{setting.label}</span>
                   {setting.isSecret && <Lock className="h-3 w-3 text-zinc-600" />}
-                  {justSaved && <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />}
+                  {justSaved && (
+                    <span className="flex items-center gap-1 text-[11px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">
+                      <CheckCircle2 className="h-3 w-3" /> Saved
+                    </span>
+                  )}
                 </div>
                 {setting.description && (
-                  <p className="text-xs text-zinc-600 mt-1 leading-relaxed">{setting.description}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{setting.description}</p>
                 )}
-                <code className="text-[10px] text-zinc-700 font-mono mt-1 block">{setting.key}</code>
+                <code className="text-[10px] text-zinc-600 font-mono mt-1 inline-block">{setting.key}</code>
               </div>
 
               {/* Input */}
@@ -232,6 +295,7 @@ function SectionPanel({
                   setting={setting}
                   localValue={lv}
                   onChange={onChange}
+                  discoveredModels={discoveredModels}
                 />
               </div>
             </div>
@@ -244,7 +308,7 @@ function SectionPanel({
 
 // ─── Main page ─────────────────────────────────────────────────────────────
 const AdminSettings = () => {
-  const user = authStore.getSession();
+  const { user } = useAuth();
   const [settings, setSettings] = useState<Setting[]>([]);
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
   const [activeSection, setActiveSection] = useState<SectionId>("ai");
@@ -252,6 +316,23 @@ const AdminSettings = () => {
   const [saving, setSaving] = useState<string | null>(null);
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [discoveredModels, setDiscoveredModels] = useState<DiscoveredModel[]>([]);
+  const [refreshingModels, setRefreshingModels] = useState(false);
+
+  // ── Fetch dynamic Groq models from backend ──────────────────────────────
+  const fetchModels = useCallback(async (refresh = false) => {
+    setRefreshingModels(true);
+    const { data, error } = await apiRequest<{ models: DiscoveredModel[] }>(
+      ENDPOINTS.SETTINGS_AI_MODELS(refresh)
+    );
+    if (data?.models) {
+      setDiscoveredModels(data.models);
+      if (refresh) showToast("success", `Discovered ${data.models.length} active models from Groq API`);
+    } else if (error) {
+      showToast("error", "Could not fetch dynamic Groq models list.");
+    }
+    setRefreshingModels(false);
+  }, []);
 
   // ── Fetch all settings ──────────────────────────────────────────────────
   const fetchSettings = useCallback(async () => {
@@ -263,7 +344,6 @@ const AdminSettings = () => {
       showToast("error", error || "Failed to load settings");
     } else {
       setSettings(data.settings);
-      // Build local state — for secrets, keep the masked value as-is
       const vals: Record<string, string> = {};
       for (const s of data.settings) vals[s.key] = s.value;
       setLocalValues(vals);
@@ -271,7 +351,10 @@ const AdminSettings = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+  useEffect(() => {
+    fetchSettings();
+    fetchModels(false);
+  }, [fetchSettings, fetchModels]);
 
   // ── Toast helper ────────────────────────────────────────────────────────
   const showToast = (type: "success" | "error", msg: string) => {
@@ -291,12 +374,16 @@ const AdminSettings = () => {
 
     const updates = sectionSettings
       .map((s) => ({ key: s.key, value: localValues[s.key] ?? s.value }))
-      // Skip password fields that are still masked or empty (user didn't change them)
       .filter(({ key, value }) => {
         const setting = sectionSettings.find((s) => s.key === key);
         if (setting?.isSecret && (value === "••••••••••••" || value === "")) return false;
         return true;
       });
+
+    if (updates.length === 0) {
+      setSaving(null);
+      return;
+    }
 
     const { data, error } = await apiRequest<{ saved: number; errors?: string[] }>(
       ENDPOINTS.SETTINGS_BULK,
@@ -305,161 +392,100 @@ const AdminSettings = () => {
 
     setSaving(null);
 
-    if (error || !data) {
-      showToast("error", error || "Save failed");
-      return;
-    }
-
-    if (data.errors?.length) {
-      showToast("error", `Saved ${data.saved}, but errors: ${data.errors.join(", ")}`);
+    if (error || (data && data.errors && data.errors.length > 0)) {
+      showToast("error", error || (data?.errors ? data.errors.join(", ") : "Failed to save settings"));
     } else {
-      showToast("success", `${data.saved} setting${data.saved !== 1 ? "s" : ""} saved successfully`);
+      showToast("success", `Saved ${sectionId.toUpperCase()} settings successfully`);
+      const keys = new Set(updates.map((u) => u.key));
+      setSavedKeys(keys);
+      setTimeout(() => setSavedKeys(new Set()), 3000);
+      fetchSettings();
     }
-
-    // Mark saved keys briefly
-    const savedSet = new Set(sectionSettings.map((s) => s.key));
-    setSavedKeys(savedSet);
-    setTimeout(() => setSavedKeys(new Set()), 2500);
-
-    // Re-fetch so masks update correctly for secrets
-    await fetchSettings();
   };
 
-  // ── Active section settings ─────────────────────────────────────────────
-  const activeSectionMeta = SECTIONS.find((s) => s.id === activeSection)!;
-  const activeSectionSettings = settings.filter((s) => s.section === activeSection);
+  const activeSectionData = SECTIONS.find((s) => s.id === activeSection)!;
+  const sectionSettings = settings.filter((s) => s.section === activeSection);
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      {/* Toast */}
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* Toast alert */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl text-sm font-medium transition-all animate-in fade-in slide-in-from-top-2 ${
+          className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl transition-all animate-in fade-in slide-in-from-top-3 ${
             toast.type === "success"
-              ? "bg-green-950 border-green-500/40 text-green-300"
-              : "bg-red-950 border-red-500/40 text-red-300"
+              ? "bg-green-950/90 border-green-500/40 text-green-300"
+              : "bg-red-950/90 border-red-500/40 text-red-300"
           }`}
         >
           {toast.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" />
           ) : (
-            <AlertCircle className="h-4 w-4 shrink-0" />
+            <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
           )}
-          {toast.msg}
+          <span className="text-sm font-medium">{toast.msg}</span>
         </div>
       )}
 
-      <div className="flex h-screen overflow-hidden">
-        {/* ── Left Sidebar nav ─────────────────────────────────────────────── */}
-        <aside className="w-64 shrink-0 border-r border-[#1a1a1a] bg-[#0d0d0d] flex flex-col overflow-y-auto">
-          {/* Header */}
-          <div className="px-5 py-5 border-b border-[#1a1a1a]">
-            <div className="flex items-center gap-2.5 mb-1">
-              <div className="h-8 w-8 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
-                <Settings2 className="h-4 w-4 text-orange-400" />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold text-white">Settings</h1>
-                <p className="text-[11px] text-zinc-600">System Configuration</p>
-              </div>
-            </div>
-          </div>
+      {/* Header */}
+      <AdminPageHeader
+        title="System Settings & AI Configuration"
+        description="Dynamic Groq AI model discovery, vendor credentials, chatbot prompts, and system configurations."
+      />
 
-          {/* Section navigation */}
-          <nav className="flex-1 p-3 space-y-1">
+      {/* Main layout */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-3">
+          <Loader2 className="h-8 w-8 text-orange-500 animate-spin" />
+          <p className="text-xs text-zinc-500 font-mono">Loading system settings…</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar navigation */}
+          <div className="space-y-1">
             {SECTIONS.map((sec) => {
-              const SIcon = sec.icon;
+              const Icon = sec.icon;
               const isActive = activeSection === sec.id;
-              const sectionSettings = settings.filter((s) => s.section === sec.id);
-              const hasUnsaved = sectionSettings.some((s) => {
-                const lv = localValues[s.key] ?? s.value;
-                if (s.isSecret) return lv !== "" && lv !== "••••••••••••" && lv !== s.value;
-                return lv !== s.value;
-              });
+              const count = settings.filter((s) => s.section === sec.id).length;
+
               return (
                 <button
                   key={sec.id}
                   onClick={() => setActiveSection(sec.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all text-left ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                     isActive
-                      ? `${sec.bg} ${sec.border} border text-white font-medium`
-                      : "text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
+                      ? "bg-zinc-800 text-white font-semibold shadow-inner border border-zinc-700/60"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-[#161616]"
                   }`}
                 >
-                  <SIcon className={`h-4 w-4 shrink-0 ${isActive ? sec.color : ""}`} />
-                  <span className="flex-1">{sec.label}</span>
-                  {hasUnsaved && (
-                    <span className="h-2 w-2 rounded-full bg-orange-500 shrink-0" />
-                  )}
-                  {isActive && <ChevronRight className={`h-3.5 w-3.5 ${sec.color}`} />}
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`h-4 w-4 ${sec.color}`} />
+                    <span>{sec.label}</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800">
+                    {count}
+                  </span>
                 </button>
               );
             })}
-          </nav>
-
-          {/* Admin info */}
-          <div className="p-3 border-t border-[#1a1a1a]">
-            <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-white/5">
-              <div className="h-7 w-7 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
-                <span className="text-xs font-bold text-orange-400">{user?.name?.[0] ?? "A"}</span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-zinc-200 truncate">{user?.name}</p>
-                <p className="text-[10px] text-zinc-600 truncate capitalize">{user?.role}</p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* ── Main content ──────────────────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto">
-          {/* Top bar */}
-          <div className="sticky top-0 z-10 bg-[#0a0a0a]/90 backdrop-blur border-b border-[#1a1a1a] px-8 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-1.5 rounded-lg ${activeSectionMeta.bg}`}>
-                <activeSectionMeta.icon className={`h-4 w-4 ${activeSectionMeta.color}`} />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-white">{activeSectionMeta.label}</h2>
-                <p className="text-xs text-zinc-500">{activeSectionMeta.description}</p>
-              </div>
-            </div>
-            <button
-              onClick={fetchSettings}
-              disabled={loading}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-[#2a2a2a] transition-all"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
           </div>
 
-          <div className="p-8">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-32 gap-3">
-                <Loader2 className="h-8 w-8 text-orange-400 animate-spin" />
-                <p className="text-sm text-zinc-500">Loading settings…</p>
-              </div>
-            ) : activeSectionSettings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-32 gap-3">
-                <Info className="h-8 w-8 text-zinc-700" />
-                <p className="text-sm text-zinc-500">No settings found for this section.</p>
-              </div>
-            ) : (
-              <SectionPanel
-                section={activeSectionMeta}
-                settings={activeSectionSettings}
-                localValues={localValues}
-                onChange={handleChange}
-                onSave={handleSave}
-                saving={saving}
-                savedKeys={savedKeys}
-              />
-            )}
+          {/* Active section settings panel */}
+          <div className="lg:col-span-3">
+            <SectionPanel
+              section={activeSectionData}
+              settings={sectionSettings}
+              localValues={localValues}
+              onChange={handleChange}
+              onSave={handleSave}
+              saving={saving}
+              savedKeys={savedKeys}
+              discoveredModels={discoveredModels}
+              onRefreshModels={() => fetchModels(true)}
+              refreshingModels={refreshingModels}
+            />
           </div>
-        </main>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

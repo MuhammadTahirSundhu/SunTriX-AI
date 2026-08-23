@@ -10,6 +10,8 @@ export type TaskStatus =
   | "completed"
   | "cancelled";
 
+export type TaskRequestStatus = TaskStatus;
+
 export interface ITaskRequest extends Document {
   name: string;
   email: string;
@@ -27,6 +29,9 @@ export interface ITaskRequest extends Document {
   codeDetails: string;
   integrations: string;
   notes: string;
+  // Soft Delete fields
+  deletedAt?: Date | null;
+  deletedBy?: string;
   // Plan differentiation (from pricing page — fully dynamic, not hardcoded)
   selectedPlan: string;   // plan name exactly as admin configured it in /admin/pricing
   planBudget: number;     // plan's starting price in USD (0 if not from pricing page)
@@ -60,6 +65,8 @@ const TaskRequestSchema = new Schema<ITaskRequest>(
     codeDetails: { type: String, default: "" },
     integrations: { type: String, default: "" },
     notes: { type: String, default: "" },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: String, default: "" },
     // Plan differentiation — dynamic from pricing page
     selectedPlan: { type: String, default: "" },
     planBudget:   { type: Number, default: 0 },

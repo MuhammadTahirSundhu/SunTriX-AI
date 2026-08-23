@@ -14,8 +14,13 @@ export function errorHandler(
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
 
+  // Only log full stack trace for 500+ server errors or non-operational errors
   if (process.env.NODE_ENV === "development") {
-    console.error("❌ Error:", err);
+    if (statusCode >= 500 || !err.isOperational) {
+      console.error("❌ Server Error:", err);
+    } else {
+      console.warn(`[${statusCode}] ${message}`);
+    }
   }
 
   res.status(statusCode).json({

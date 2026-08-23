@@ -9,8 +9,8 @@ const router = Router();
 // GET /pricing — public (enabled only) or admin all
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const all = req.query.all === "true";
-    const filter = all ? {} : { isVisible: true };
+    const showAll = req.query.all === "true" || req.headers.authorization?.startsWith("Bearer ");
+    const filter = showAll ? {} : { isVisible: true };
     const plans = await Pricing.find(filter).sort({ order: 1 });
     res.json({ plans });
   } catch (err) { next(err); }

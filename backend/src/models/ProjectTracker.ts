@@ -157,7 +157,7 @@ const ProjectTrackerSchema = new Schema<IProjectTracker>(
   { timestamps: true }
 );
 
-ProjectTrackerSchema.index({ taskRequestId: 1 });
+ProjectTrackerSchema.index({ taskRequestId: 1 }, { unique: true });
 ProjectTrackerSchema.index({ proposalId: 1 });
 
 export default mongoose.model<IProjectTracker>("ProjectTracker", ProjectTrackerSchema);

@@ -1,8 +1,43 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Trash2, Bot, User } from "lucide-react";
-import { chatStore, type ChatMessage } from "@/lib/store";
 import { apiRequest, ENDPOINTS, type GrokChatMessage } from "@/lib/api";
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+}
+
+const getChatHistory = (): ChatMessage[] => {
+  try {
+    return JSON.parse(localStorage.getItem("suntrix_chat") || "[]");
+  } catch {
+    return [];
+  }
+};
+
+const saveChatMessage = (role: "user" | "assistant", content: string): ChatMessage => {
+  const msg: ChatMessage = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    role,
+    content,
+    timestamp: new Date().toISOString(),
+  };
+  const current = getChatHistory();
+  current.push(msg);
+  try {
+    localStorage.setItem("suntrix_chat", JSON.stringify(current));
+  } catch (_) {}
+  return msg;
+};
+
+const clearChatHistory = () => {
+  try {
+    localStorage.removeItem("suntrix_chat");
+  } catch (_) {}
+};
 
 interface PublicSettings {
   CHATBOT_ENABLED: string;
@@ -53,7 +88,7 @@ const AIChatbot = () => {
   }, []);
 
   useEffect(() => {
-    setMessages(chatStore.getHistory());
+    setMessages(getChatHistory());
   }, []);
 
   useEffect(() => {
@@ -62,7 +97,7 @@ const AIChatbot = () => {
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    const userMsg = chatStore.addMessage("user", input.trim());
+    const userMsg = saveChatMessage("user", input.trim());
     setMessages((prev) => [...prev, userMsg]);
     const userInput = input.trim();
     setInput("");
@@ -91,13 +126,13 @@ const AIChatbot = () => {
       responseText = `Thanks for your message! For immediate assistance, please email us at ${companyInfo.email || config.BRAND_EMAIL} or visit our contact page.`;
     }
 
-    const aiMsg = chatStore.addMessage("assistant", responseText);
+    const aiMsg = saveChatMessage("assistant", responseText);
     setMessages((prev) => [...prev, aiMsg]);
     setIsTyping(false);
   };
 
   const clearChat = () => {
-    chatStore.clear();
+    clearChatHistory();
     setMessages([]);
   };
 

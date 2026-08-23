@@ -1,23 +1,14 @@
-import Stripe from "stripe";
-import { getSetting } from "../lib/configLoader";
+import { stripeAdapter } from "../integrations/stripe/stripe.adapter";
 
-// ─── Lazy factory — reads current STRIPE_SECRET_KEY each call ─────────────
-// This means admin can rotate Stripe keys without a server restart.
-export function getStripeClient(): any {
-  const key = getSetting("STRIPE_SECRET_KEY");
-  if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured. Set it in Admin → Settings → Payments.");
-  }
-  return new Stripe(key, { typescript: true });
+export function getStripeClient() {
+  return stripeAdapter.getClient();
 }
 
-// Keep a default export for files that import `stripe` directly
-// (payment.routes.ts) — it proxies all calls via the lazy factory.
-const stripeProxy = new Proxy({} as any, {
-  get(_target, prop) {
-    const client = getStripeClient();
+const stripeProxy = new Proxy({} as ReturnType<typeof getStripeClient>, {
+  get(_target, prop: string | symbol) {
+    const client = stripeAdapter.getClient();
     const value = (client as any)[prop];
-    return typeof value === "function" ? value.bind(client) : value;
+    return typeof value === "function" ? (value as Function).bind(client) : value;
   },
 });
 

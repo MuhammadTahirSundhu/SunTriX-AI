@@ -8,6 +8,7 @@ import { SortableList } from "@/components/admin/SortableList";
 import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
 import { toast } from "sonner";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 
 interface Client {
@@ -34,8 +35,8 @@ const AdminClients = () => {
 
   const fetch_ = async () => {
     setLoading(true);
-    const { data } = await apiRequest<{ clients: Client[] }>(ENDPOINTS.CLIENTS_LIST);
-    if (data?.clients) setClients(data.clients);
+    const { data } = await apiRequest<any>(`${ENDPOINTS.CLIENTS_LIST}?all=true`);
+    if (data) setClients(Array.isArray(data) ? data : data.clients || []);
     setLoading(false);
   };
 
@@ -123,24 +124,27 @@ const AdminClients = () => {
   });
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Client Logo Wall</h1>
-          <p className="text-sm text-muted-foreground">Manage partner and client logos displayed on the homepage</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { openCreate(); setAiMode(true); }}
-            className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 hover:bg-purple-500/20 transition-colors"
-          >
-            <span>✨</span> Add via AI
-          </button>
-          <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
-            <Plus className="h-4 w-4" /> Add Manually
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6 font-sans">
+      <AdminPageHeader
+        title="Client Directory & Logo Showcase"
+        description="Manage client directory profiles, partner logos, and trust badges."
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { openCreate(); setAiMode(true); }}
+              className="px-3.5 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs font-semibold text-purple-400 hover:bg-purple-500/20 transition-all inline-flex items-center gap-1.5"
+            >
+              <span>✨</span> Draft via AI
+            </button>
+            <button
+              onClick={openCreate}
+              className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 transition-all inline-flex items-center gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Client
+            </button>
+          </div>
+        }
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-20">

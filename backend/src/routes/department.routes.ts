@@ -9,8 +9,8 @@ const router = Router();
 // GET /departments — public
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const isAdmin = req.headers.authorization?.startsWith("Bearer ");
-    const filter = isAdmin ? {} : { enabled: true };
+    const showAll = req.query.all === "true" || req.headers.authorization?.startsWith("Bearer ");
+    const filter = showAll ? {} : { enabled: true };
     const depts = await Department.find(filter).sort({ order: 1 });
     res.json(depts);
   } catch (err) {

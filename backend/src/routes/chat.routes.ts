@@ -1,33 +1,47 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { sendChat, ChatMessage } from "../services/groq";
+import { groqAdapter } from "../integrations/groq/groq.adapter";
+import { boundChatContext } from "../services/groq";
 
 const router = Router();
 
-// POST /chat — public
+const MAX_MESSAGE_LENGTH = 5000;
+const MAX_MESSAGES = 50;
+
+// POST /chat — public AI chat assistant
 router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { messages } = req.body as { messages: ChatMessage[] };
+    const { messages } = req.body as { messages: Array<{ role: "user" | "assistant"; content: string }> };
 
     if (!Array.isArray(messages) || messages.length === 0) {
       res.status(400).json({ error: "messages array is required" });
       return;
     }
 
-    // Validate message format
+    const recentMessages = messages.slice(-MAX_MESSAGES);
     const validRoles = ["user", "assistant"];
-    const valid = messages.every(
-      (m) => m && typeof m.content === "string" && validRoles.includes(m.role)
+    const valid = recentMessages.every(
+      (m) => m && typeof m.content === "string" && validRoles.includes(m.role) && m.content.length <= MAX_MESSAGE_LENGTH
     );
+
     if (!valid) {
-      res.status(400).json({ error: "Invalid message format" });
+      res.status(400).json({ error: `Invalid message format or message content exceeds ${MAX_MESSAGE_LENGTH} characters` });
       return;
     }
 
-    // Limit context window
-    const contextMessages = messages.slice(-20);
-    const content = await sendChat(contextMessages);
+    const bounded = boundChatContext(recentMessages);
+    const systemPrompt = "You are SunTriX AI Assistant, an elite software engineering and AI solutions consultant.";
+    
+    let content = "";
+    try {
+      content = await groqAdapter.generateChatCompletion({
+        systemPrompt,
+        messages: bounded.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+      });
+    } catch (err: any) {
+      console.error("Groq AI Error in chat route:", err.message || err);
+      content = "The AI assistant is currently unavailable. Please try again shortly or contact support.";
+    }
 
-    // Return OpenAI-compatible response shape (matches frontend expectations)
     res.json({
       choices: [{ message: { role: "assistant", content } }],
       usage: {},

@@ -6,6 +6,7 @@ import AIAssistPanel from "@/components/admin/AIAssistPanel";
 import { SortableList } from "@/components/admin/SortableList";
 import { SortableItem, DragHandle } from "@/components/admin/SortableItem";
 import { SortControl, SortOption } from "@/components/admin/SortControl";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { toast } from "sonner";
 
 interface PricingPlan {
@@ -40,8 +41,8 @@ const AdminPricing = () => {
 
   const fetch_ = async () => {
     setLoading(true);
-    const { data } = await apiRequest<{ plans: PricingPlan[] }>(ENDPOINTS.PRICING_LIST);
-    if (data?.plans) setPlans(data.plans);
+    const { data } = await apiRequest<any>(`${ENDPOINTS.PRICING_LIST}?all=true`);
+    if (data) setPlans(Array.isArray(data) ? data : data.plans || []);
     setLoading(false);
   };
 
@@ -129,24 +130,27 @@ const AdminPricing = () => {
   });
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Pricing Plans</h1>
-          <p className="text-sm text-muted-foreground">Manage service pricing</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { openCreate(); setAiMode(true); }}
-            className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 hover:bg-purple-500/20 transition-colors"
-          >
-            <span>✨</span> Add via AI
-          </button>
-          <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
-            <Plus className="h-4 w-4" /> Add Manually
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6 font-sans">
+      <AdminPageHeader
+        title="Service Pricing Plans"
+        description="Manage pricing tiers, feature highlights, and subscription packages."
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { openCreate(); setAiMode(true); }}
+              className="px-3.5 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs font-semibold text-purple-400 hover:bg-purple-500/20 transition-all inline-flex items-center gap-1.5"
+            >
+              <span>✨</span> Draft via AI
+            </button>
+            <button
+              onClick={openCreate}
+              className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 transition-all inline-flex items-center gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Plan
+            </button>
+          </div>
+        }
+      />
 
       <div className="flex justify-end mb-6">
         <SortControl value={sortOption} onChange={setSortOption} />

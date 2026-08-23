@@ -4,16 +4,15 @@ import Admin from "../models/Admin";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { createError } from "../middleware/errorHandler";
 import { getSetting } from "../lib/configLoader";
+import { validate, LoginSchema, RefreshTokenSchema } from "../middleware/validate";
 
 const router = Router();
 
 // POST /auth/login
-router.post("/login", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/login", validate(LoginSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return next(createError("Email and password are required", 400));
-    }
+    // Zod validate() enforces email format and password length
 
     const admin = await Admin.findOne({ email: email.toLowerCase() });
     if (!admin) {
@@ -28,8 +27,8 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
     const secret = getSetting("JWT_SECRET");
     if (!secret) throw new Error("JWT_SECRET not configured. Set it in Admin → Settings → Security.");
     
-    // Derive refresh secret so rotating the main secret also invalidates old refresh tokens
-    const refreshSecret = secret + "_refresh_token_salt";
+    // Use dedicated refresh secret, fallback to derived secret for backward compatibility
+    const refreshSecret = getSetting("JWT_REFRESH_SECRET", secret + "_refresh_token_salt");
     
     const expiresIn = getSetting("JWT_EXPIRY", "7d") as `${number}${"s"|"m"|"h"|"d"|"w"}`;
     const refreshExpiresIn = "30d"; // refresh tokens last 30 days
@@ -61,17 +60,16 @@ router.get("/me", requireAuth, async (req: AuthRequest, res: Response, next: Nex
 });
 
 // POST /auth/refresh — issue new tokens using a valid refresh token
-router.post("/refresh", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/refresh", validate(RefreshTokenSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return next(createError("Refresh token is required", 401));
-    }
+    // Zod validate() enforces refreshToken presence
 
     const secret = getSetting("JWT_SECRET");
     if (!secret) throw new Error("JWT_SECRET not configured. Set it in Admin → Settings → Security.");
     
-    const refreshSecret = secret + "_refresh_token_salt";
+    // Use dedicated refresh secret, fallback to derived secret for backward compatibility
+    const refreshSecret = getSetting("JWT_REFRESH_SECRET", secret + "_refresh_token_salt");
 
 
     let decoded;

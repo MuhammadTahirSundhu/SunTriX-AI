@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Mail } from "lucide-react";
-import { newsletterStore } from "@/lib/store";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";

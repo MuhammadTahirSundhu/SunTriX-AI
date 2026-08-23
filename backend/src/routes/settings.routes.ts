@@ -3,13 +3,13 @@ import SystemSetting from "../models/SystemSetting";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { updateSettingCache, getSetting } from "../lib/configLoader";
 import AuditLog from "../models/AuditLog";
+import { groqAdapter } from "../integrations/groq/groq.adapter";
 
 const router = Router();
 
 const MASKED = "••••••••••••";
 
 // ─── GET /v1/settings/public — no auth — safe config for frontend ─
-// Only returns non-secret settings that the website UI needs.
 const PUBLIC_KEYS = [
   "CHATBOT_ENABLED",
   "CHATBOT_NAME",
@@ -35,7 +35,20 @@ router.get("/public", async (_req: Request, res: Response, next: NextFunction) =
   }
 });
 
-
+// ─── GET /v1/settings/ai/models — dynamically discover available Groq models ─
+router.get("/ai/models", requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const forceRefresh = req.query.refresh === "true";
+    const models = await groqAdapter.listAvailableModels({ forceRefresh });
+    res.json({
+      models,
+      selectedChatModel: getSetting("GROQ_CHAT_MODEL", "llama-3.1-8b-instant"),
+      selectedExtractModel: getSetting("GROQ_EXTRACT_MODEL", "llama-3.1-8b-instant"),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ─── GET /v1/settings — all settings grouped by section (secrets masked) ──
 router.get("/", requireAuth, async (_req: AuthRequest, res: Response, next: NextFunction) => {
@@ -79,11 +92,20 @@ router.patch(
         // Skip if the admin sent back the masked placeholder for a secret field
         if (value === MASKED) continue;
 
+        // Model selection validation against discovered catalog
+        if (key === "GROQ_CHAT_MODEL" || key === "GROQ_EXTRACT_MODEL") {
+          const check = await groqAdapter.validateModelAvailability(String(value));
+          if (!check.isValid) {
+            errors.push(`${key}: ${check.message}`);
+            continue;
+          }
+        }
+
         try {
           const setting = await SystemSetting.findOneAndUpdate(
             { key },
-            { value: String(value), updatedBy: req.user?.id },
-            { new: false } // Get the old document so we can diff if we want, or just log the new value
+            { $set: { value: String(value), updatedBy: req.user?.id } },
+            { upsert: true, new: true }
           );
 
           if (setting) {
@@ -103,12 +125,14 @@ router.patch(
                 newValue: setting.isSecret ? MASKED : String(value),
               },
             });
-          } else {
-            errors.push(`Key not found: ${key}`);
           }
         } catch (e: any) {
           errors.push(`${key}: ${e.message}`);
         }
+      }
+
+      if (saved === 0 && errors.length > 0) {
+        return res.status(400).json({ error: errors.join("; "), saved: 0, errors });
       }
 
       res.json({ saved, errors: errors.length ? errors : undefined });
@@ -136,15 +160,19 @@ router.patch(
         return res.status(400).json({ error: "Provide a real value, not the masked placeholder" });
       }
 
+      // Model selection validation against discovered catalog
+      if (key === "GROQ_CHAT_MODEL" || key === "GROQ_EXTRACT_MODEL") {
+        const check = await groqAdapter.validateModelAvailability(String(value));
+        if (!check.isValid) {
+          return res.status(400).json({ error: check.message });
+        }
+      }
+
       const setting = await SystemSetting.findOneAndUpdate(
         { key },
-        { value: String(value), updatedBy: req.user?.id },
-        { new: false }
+        { $set: { value: String(value), updatedBy: req.user?.id } },
+        { upsert: true, new: true }
       );
-
-      if (!setting) {
-        return res.status(404).json({ error: `Setting '${key}' not found` });
-      }
 
       // Hot-reload immediately — no restart required
       updateSettingCache(key, String(value));
@@ -163,12 +191,7 @@ router.patch(
         },
       });
 
-      res.json({
-        setting: {
-          ...setting.toObject(),
-          value: setting.isSecret ? MASKED : String(value),
-        },
-      });
+      res.json({ setting });
     } catch (err) {
       next(err);
     }

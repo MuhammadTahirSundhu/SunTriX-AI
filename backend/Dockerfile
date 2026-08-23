@@ -41,6 +41,10 @@ COPY --from=builder --chown=node:node /app/dist ./dist
 # Expose the backend API port
 EXPOSE 4000
 
+# Add a healthcheck so orchestrators know if the app is actually responding
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:4000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+
 # Start the application using 'node' directly rather than 'npm start'
 # This reduces memory overhead and improves signal handling (SIGTERM)
 CMD ["node", "dist/app.js"]

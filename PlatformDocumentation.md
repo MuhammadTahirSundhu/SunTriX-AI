@@ -197,8 +197,9 @@ Vercel Edge Network (Frontend)
     │       ├─ 7. MongoDB Sanitizer (strips $ and . from inputs)
     │       ├─ 8. Morgan Logger
     │       ├─ 9. Route Handler (JWT verified where required)
-    │       ├─ 10. Controller Logic + DB Query
-    │       └─ 11. Error Handler (formats all errors)
+    │       ├─ 10. Zod Validation Middleware (validates req.body structure)
+    │       ├─ 11. Controller Logic + DB Query
+    │       └─ 12. Error Handler (formats all errors + Zod validation errors)
     ▼
 MongoDB Atlas / Cloudinary / Stripe / Resend / Groq
 ```
@@ -390,8 +391,10 @@ Developer Machine
 **Campaign Broadcast:**
 1. Admin writes subject + HTML body (or uses AI to generate it)
 2. Clicks "Send Broadcast"
-3. Backend sends via Resend in configurable batches (default 100 emails/batch)
-4. Campaign is recorded in `Campaign` collection for history
+3. Backend responds instantly (202 Accepted) and processes emails in the background (asynchronous event loop).
+4. Sends via Resend in configurable batches (default 100 emails/batch)
+5. Campaign is recorded in `Campaign` collection, with real-time tracking of `sentCount` and `recipientCount`.
+6. If a batch fails mid-send, an alert email is sent to the Admin with the exact `sentCount`, and the admin can click "Retry" (`POST /v1/newsletter/admin/campaigns/:id/retry`) to resume exactly where it left off.
 
 **Unsubscribe:** Admin can toggle `subscribed` field per subscriber.
 
@@ -521,7 +524,7 @@ Handles these events:
 
 **Purpose:** Real-time project management portal. After contract signing, both admin and client access the same project through different views.
 
-**The ProjectTracker document is the single source of truth for an active project.** It stores everything: phases, deliverables, milestones, file attachments, chat messages, and a full audit log.
+**The ProjectTracker document is the single source of truth for an active project.** It stores everything: phases, deliverables, milestones, file attachments, and a full audit log. (Note: Chat messages use a standalone `TrackerMessage` collection to prevent MongoDB 16MB document size limits and race conditions during high-frequency chatting).
 
 **Project Phases (in order):**
 `Discovery` → `Design` → `Development` → `Testing` → `Delivery`
@@ -595,6 +598,7 @@ Not to be confused with "clients" as in people — this is for displaying client
 **Admin override:** If `CHATBOT_SYSTEM_PROMPT` is set to a non-empty string (>50 chars), it completely replaces the auto-generated prompt.
 
 **Rate limit:** 30 requests per minute per IP.
+**Context Limit:** The endpoint automatically trims the incoming history to the last 50 messages to protect memory and prevent context-stuffing. Each individual message is capped at 5000 characters.
 **Master toggle:** `AI_ENABLED = false` disables all AI endpoints.
 
 ---
@@ -838,10 +842,13 @@ Admin writes subject + HTML body
 Admin clicks "Send Broadcast"
 POST /v1/newsletter/broadcast
         │
+        ├─ Route returns 202 Accepted immediately
+        ├─ Background Task Starts (setImmediate)
         ├─ Fetches all subscribed emails
         ├─ Splits into batches (NEWSLETTER_BATCH_SIZE, default 100)
         ├─ Sends each batch via Resend batch.send()
-        └─ Campaign saved to Campaign collection
+        ├─ Updates Campaign.sentCount in real-time
+        └─ If error occurs, sends admin notification email for safe retry.
 ```
 
 ---
@@ -1003,7 +1010,6 @@ POST /v1/newsletter/broadcast
 | `milestones` | Array | [{title, amount (cents), linkedPhase, dueDate, paymentRequestedAt, paidAt, stripePaymentIntentId}] |
 | `updates` | Array | [{type, body, postedAt, nextUpdateDue, clientAcknowledgedAt}] |
 | `files` | Array | [{filename, cloudinaryUrl, cloudinaryPublicId, version, uploadedAt, approvalStatus, clientComment, approvedAt}] |
-| `messages` | Array | [{sender, text, sentAt, readByClient, readByAdmin}] |
 | `auditLog` | Array | [{action, actor, actorRole, timestamp, metadata}] |
 | `completionRequestedAt` | Date | When admin requested sign-off |
 | `completionApprovedAt` | Date | When client approved completion |
@@ -1175,6 +1181,8 @@ POST /v1/newsletter/broadcast
 | `htmlBody` | String | Full HTML email body |
 | `targetAudience` | String | Audience filter used |
 | `recipientCount` | Number | Total recipients |
+| `sentCount` | Number | Number of emails actually sent |
+| `status` | String | completed/failed |
 | `adminId` | String | Sending admin's ID |
 | `adminName` | String | Sending admin's name |
 | `sentAt` | Date | Send timestamp |
@@ -1240,7 +1248,22 @@ POST /v1/newsletter/broadcast
 
 ---
 
-### 6.21 Entity Relationship Diagram
+### 6.21 TrackerMessage
+
+| Field | Type | Description |
+|---|---|---|
+| `trackerId` | ObjectId → ProjectTracker | The project this message belongs to |
+| `sender` | String | admin/client |
+| `text` | String | Message content |
+| `sentAt` | Date | Timestamp of message |
+| `readByClient` | Boolean | Whether client has seen it |
+| `readByAdmin` | Boolean | Whether admin has seen it |
+
+**Indexes:** `trackerId + sentAt`
+
+---
+
+### 6.22 Entity Relationship Diagram
 
 ```mermaid
 erDiagram
@@ -1251,6 +1274,8 @@ erDiagram
 
     Proposal ||--o| Contract : "proposalId"
     Proposal ||--o| ProjectTracker : "proposalId"
+
+    ProjectTracker ||--o{ TrackerMessage : "trackerId"
 
     Payment }o--o| Pricing : "planId"
 
@@ -1392,8 +1417,10 @@ Authorization: Bearer <jwt_token>
 | POST | `/tracker/admin/:id/phase/advance` | Admin | Advance to next phase |
 | POST | `/tracker/admin/:id/deliverable/:dId/complete` | Admin | Mark deliverable as InReview |
 | POST | `/tracker/admin/:id/update` | Admin | Post project update |
+| GET | `/tracker/admin/:id/messages` | Admin | Get paginated chat messages |
 | POST | `/tracker/admin/:id/chat` | Admin | Send chat message to client |
 | POST | `/tracker/admin/:id/milestone/:mId/mark-payable` | Admin | Create Stripe session for milestone |
+| POST | `/tracker/admin/:id/milestone/:mId/mark-paid-manually` | Admin | Mark milestone paid manually (outside Stripe) |
 | POST | `/tracker/admin/:id/file/upload` | Admin | Upload file to project |
 | GET | `/tracker/admin/:id/audit` | Admin | Get project audit log |
 | POST | `/tracker/admin/:id/completion/request` | Admin | Request client sign-off |
@@ -1406,6 +1433,7 @@ Authorization: Bearer <jwt_token>
 | POST | `/tracker/client/:token/deliverable/:dId/approve` | Public | Approve deliverable |
 | POST | `/tracker/client/:token/deliverable/:dId/reject` | Public | Reject deliverable |
 | POST | `/tracker/client/:token/update/:uId/acknowledge` | Public | Acknowledge update |
+| GET | `/tracker/client/:token/messages` | Public | Get paginated chat messages |
 | POST | `/tracker/client/:token/chat` | Public | Send chat message |
 | POST | `/tracker/client/:token/file/:fId/approve` | Public | Approve file |
 | POST | `/tracker/client/:token/file/:fId/reject` | Public | Reject file |
@@ -1446,6 +1474,7 @@ Authorization: Bearer <jwt_token>
 | GET | `/newsletter/subscribers` | Admin | List subscribers |
 | DELETE | `/newsletter/subscribers/:id` | Admin | Delete subscriber |
 | POST | `/newsletter/broadcast` | Admin | Send broadcast campaign |
+| POST | `/newsletter/admin/campaigns/:id/retry` | Admin | Retry a failed campaign |
 | GET | `/newsletter/campaigns` | Admin | Campaign history |
 
 ---

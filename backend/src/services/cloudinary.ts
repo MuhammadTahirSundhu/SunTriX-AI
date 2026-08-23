@@ -7,11 +7,11 @@ import { getSetting } from "../lib/configLoader";
 import MediaAsset from "../models/MediaAsset";
 
 // ─── Apply current config before every operation ──────────────────────────
-function applyConfig(): void {
+export function applyConfig(): void {
   cloudinary.config({
-    cloud_name:  getSetting("CLOUDINARY_CLOUD_NAME"),
-    api_key:     getSetting("CLOUDINARY_API_KEY"),
-    api_secret:  getSetting("CLOUDINARY_API_SECRET"),
+    cloud_name:  getSetting("CLOUDINARY_CLOUD_NAME") || process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:     getSetting("CLOUDINARY_API_KEY") || process.env.CLOUDINARY_API_KEY,
+    api_secret:  getSetting("CLOUDINARY_API_SECRET") || process.env.CLOUDINARY_API_SECRET,
     secure: true,
   });
 }
@@ -30,24 +30,15 @@ function getMaxFileSizeBytes(): number {
   return mb * 1024 * 1024;
 }
 
-// ─── Multer — reads max size dynamically ──────────────────────────────────
+// ─── Multer — reads max size dynamically (allows all file types) ───────────
 export const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     get fileSize() { return getMaxFileSizeBytes(); },
   },
-  fileFilter(_req, file, cb) {
-    const allowed = [
-      ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg",
-      ".mp4", ".mov", ".webm",
-      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt",
-    ];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`File type ${ext} is not allowed`));
-    }
+  fileFilter(_req, _file, cb) {
+    // Allow all file types per platform requirement
+    cb(null, true);
   },
 });
 
@@ -73,7 +64,6 @@ export async function uploadImage(
     };
   }
 
-  const targetPublicId = publicId || `${targetFolder}/${hash}`;
 
   return new Promise((resolve, reject) => {
     const options: Record<string, unknown> = {
@@ -231,12 +221,20 @@ export async function uploadDocument(
   });
 }
 
-// ─── Delete asset ──────────────────────────────────────────────────────────
+// ─── Delete asset (dynamically determines image/video/raw) ──────────
 export async function deleteAsset(
   publicId: string,
   resourceType: "image" | "video" | "raw" = "image"
 ): Promise<void> {
   applyConfig();
-  await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-  await MediaAsset.deleteOne({ publicId });
+  const asset = await MediaAsset.findOne({ publicId });
+  const targetResourceType = asset?.resourceType || resourceType;
+
+  const result = await cloudinary.uploader.destroy(publicId, { resource_type: targetResourceType });
+  if (result.result === "ok" || result.result === "not_found") {
+    await MediaAsset.deleteOne({ publicId });
+  } else {
+    console.warn(`Cloudinary destroy returned result: ${result.result} for ${publicId}`);
+    await MediaAsset.deleteOne({ publicId });
+  }
 }

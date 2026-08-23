@@ -1,924 +1,491 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, ENDPOINTS } from "@/lib/api";
-import { Search, Filter, Trash2, Eye, ChevronDown, LayoutGrid, List as ListIcon, CheckSquare, Square, Copy, Check, X } from "lucide-react";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
-import { SortControl, SortOption } from "@/components/admin/SortControl";
-import AdminProjectHub from "../../components/AdminProjectHub";
-
-type TaskStatus = "new" | "in_review" | "proposal_sent" | "contract_sent" | "contract_signed" | "in_progress" | "completed" | "cancelled";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
+import { AdminDataTable } from "@/components/admin/AdminDataTable";
+import { EngagementCommandCenter } from "@/components/admin/EngagementCommandCenter";
+import {
+  List as ListIcon, LayoutGrid, Eye, Search, Filter, ArrowUpDown,
+  Inbox, FileSearch, FileText, FileCheck, CreditCard, Rocket, CheckCircle2, XCircle,
+  Clock, DollarSign, Tag, User, Building
+} from "lucide-react";
 
 interface StatusHistory {
-  status: TaskStatus;
-  note: string;
-  updatedAt: string;
+  status: string;
+  note?: string;
+  updatedAt?: string;
 }
 
 interface TaskRequest {
   _id: string;
   name: string;
   email: string;
-  company: string;
-  projectTitle: string;
+  company?: string;
+  projectTitle?: string;
   service: string;
-  budget: string;
-  timeline: string;
+  budget?: string;
+  timeline?: string;
   description: string;
-  priority: string;
-  techStack: string;
-  status: TaskStatus;
+  priority?: string;
+  techStack?: string;
+  status: string;
   statusHistory?: StatusHistory[];
   trackingToken?: string;
-  selectedPlan?: string;
-  planBudget?: number;
+  proposalId?: any;
   contractToken?: string;
   contractSignedAt?: string;
-  contractClientName?: string;
   createdAt: string;
 }
 
-const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
-  { value: "new",              label: "New Request",     color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-  { value: "in_review",       label: "In Review",       color: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
-  { value: "proposal_sent",   label: "Proposal Sent",   color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-  { value: "contract_sent",   label: "Contract Sent",   color: "bg-violet-500/10 text-violet-500 border-violet-500/20" },
-  { value: "contract_signed", label: "Contract Signed", color: "bg-teal-500/10 text-teal-500 border-teal-500/20" },
-  { value: "in_progress",     label: "In Progress",     color: "bg-primary/10 text-primary border-primary/20" },
-  { value: "completed",       label: "Completed",       color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-  { value: "cancelled",       label: "Cancelled",       color: "bg-red-500/10 text-red-500 border-red-500/20" },
+const LIFECYCLE_STAGES = [
+  { id: "submitted", label: "Request", desc: "New inquiries", icon: Inbox, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20" },
+  { id: "reviewing", label: "Review", desc: "Engineering evaluation", icon: FileSearch, color: "text-purple-500", bg: "bg-purple-500/10 border-purple-500/20" },
+  { id: "proposal_sent", label: "Proposal", desc: "Proposal drafted & sent", icon: FileText, color: "text-amber-500", bg: "bg-amber-500/10 border-amber-500/20" },
+  { id: "contract_sent", label: "Contract", desc: "Contract pending signature", icon: FileCheck, color: "text-orange-500", bg: "bg-orange-500/10 border-orange-500/20" },
+  { id: "accepted", label: "Payment", desc: "Deposit paid / signed", icon: CreditCard, color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20" },
+  { id: "in_progress", label: "Project", desc: "Active engineering sprint", icon: Rocket, color: "text-indigo-500", bg: "bg-indigo-500/10 border-indigo-500/20" },
+  { id: "completed", label: "Completed", desc: "Delivered & signed off", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10 border-green-500/20" },
+  { id: "cancelled", label: "Cancelled", desc: "Closed or inactive", icon: XCircle, color: "text-zinc-500", bg: "bg-zinc-500/10 border-zinc-500/20" },
 ];
 
-// Excludes 'completed' — use Project Hub two-step flow for proper client sign-off
-const editableStatusOptions = statusOptions.filter(s => s.value !== "completed");
+const TABS = [
+  { id: "all", label: "All Engagements" },
+  { id: "submitted", label: "New Requests" },
+  { id: "reviewing", label: "In Review" },
+  { id: "proposal_sent", label: "Proposal Sent" },
+  { id: "contract_sent", label: "Contract Sent" },
+  { id: "accepted", label: "Payment / Signed" },
+  { id: "in_progress", label: "Active Project" },
+  { id: "completed", label: "Completed" },
+  { id: "cancelled", label: "Cancelled" },
+];
 
+function formatTimeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffHours < 1) return "Just now";
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
 
-const AdminTasks = () => {
+export const AdminTasks = () => {
   const [tasks, setTasks] = useState<TaskRequest[]>([]);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("all");
+  const [serviceFilter, setServiceFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [sortOption, setSortOption] = useState<"newest" | "oldest" | "budget">("newest");
+  const [viewMode, setViewMode] = useState<"board" | "list">("board");
   const [selectedTask, setSelectedTask] = useState<TaskRequest | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "board">("board");
-  const [sortOption, setSortOption] = useState<SortOption>("date-desc");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Bulk selection
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  // Side panel state
-  const [showProjectHubModal, setShowProjectHubModal] = useState(false);
-  const [statusNote, setStatusNote] = useState("");
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  // Proposal panel state
-  const [showProposalPanel, setShowProposalPanel] = useState(false);
-  const [proposalDraft, setProposalDraft] = useState({
-    title: "", 
-    executiveSummary: "",
-    scopeOfWork: "", deliverables: "", timeline: "", pricingBreakdown: "",
-    revisionsPolicy: "", clientResponsibilities: "", supportAndWarranty: "", paymentTerms: "", nextSteps: "",
-    milestones: [{ title: "Milestone 1", description: "", amount: "", dueWeek: "" }],
-  });
-  const [aiDrafting, setAiDrafting] = useState(false);
-  const [sendingProposal, setSendingProposal] = useState(false);
-
-  // Invoice panel state
-  const [showInvoicePanel, setShowInvoicePanel] = useState(false);
-  const [invoiceDraft, setInvoiceDraft] = useState({ amountUSD: "", description: "" });
-  const [creatingInvoice, setCreatingInvoice] = useState(false);
-
-  const fetchTasks = async (currentTaskId?: string) => {
+  const fetchTasks = async () => {
+    setLoading(true);
     const { data } = await apiRequest<{ tasks: TaskRequest[] }>(ENDPOINTS.TASK_REQUEST_LIST);
     if (data?.tasks) {
       setTasks(data.tasks);
-      setSelectedTask((prev) => {
-        const activeId = currentTaskId || prev?._id;
-        if (!activeId) return null;
-        const updated = data.tasks.find((t) => t._id === activeId);
-        return updated || prev;
-      });
+      if (selectedTask) {
+        const updated = data.tasks.find((t) => t._id === selectedTask._id);
+        if (updated) setSelectedTask(updated);
+      }
     }
+    setLoading(false);
   };
 
-  useEffect(() => { fetchTasks(); }, []);
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
-  const filteredTasks = tasks.filter((t) => {
-    const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase()) || 
-                          t.email.toLowerCase().includes(search.toLowerCase()) || 
-                          (t.company || "").toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = filterStatus === "all" || t.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  }).sort((a, b) => {
-    if (sortOption === "date-desc") return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-    if (sortOption === "date-asc") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
-    if (sortOption === "az") return a.name.localeCompare(b.name);
-    if (sortOption === "za") return b.name.localeCompare(a.name);
-    return 0;
+  const handleOpenWorkspace = (task: TaskRequest) => {
+    setSelectedTask(task);
+    setDrawerOpen(true);
+  };
+
+  const services = useMemo(() => {
+    const set = new Set<string>();
+    tasks.forEach((t) => { if (t.service) set.add(t.service); });
+    return ["all", ...Array.from(set)];
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    return tasks
+      .filter((t) => {
+        const matchesTab =
+          activeTab === "all"
+            ? true
+            : activeTab === "accepted"
+            ? t.status === "accepted" || t.status === "signed"
+            : activeTab === "cancelled"
+            ? t.status === "cancelled" || t.status === "rejected"
+            : t.status === activeTab;
+
+        const matchesService = serviceFilter === "all" || t.service === serviceFilter;
+        const matchesPriority = priorityFilter === "all" || (t.priority || "normal").toLowerCase() === priorityFilter.toLowerCase();
+
+        const query = search.toLowerCase();
+        const matchesSearch =
+          !search ||
+          t.name.toLowerCase().includes(query) ||
+          t.email.toLowerCase().includes(query) ||
+          t.service.toLowerCase().includes(query) ||
+          (t.projectTitle && t.projectTitle.toLowerCase().includes(query)) ||
+          (t.company && t.company.toLowerCase().includes(query));
+
+        return matchesTab && matchesService && matchesPriority && matchesSearch;
+      })
+      .sort((a, b) => {
+        if (sortOption === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        if (sortOption === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        if (sortOption === "budget") {
+          const numA = parseInt((a.budget || "0").replace(/[^0-9]/g, "")) || 0;
+          const numB = parseInt((b.budget || "0").replace(/[^0-9]/g, "")) || 0;
+          return numB - numA;
+        }
+        return 0;
+      });
+  }, [tasks, activeTab, serviceFilter, priorityFilter, search, sortOption]);
+
+  const tabsWithCounts = TABS.map((tab) => {
+    const count =
+      tab.id === "all"
+        ? tasks.length
+        : tab.id === "accepted"
+        ? tasks.filter((t) => t.status === "accepted" || t.status === "signed").length
+        : tab.id === "cancelled"
+        ? tasks.filter((t) => t.status === "cancelled" || t.status === "rejected").length
+        : tasks.filter((t) => t.status === tab.id).length;
+    return { ...tab, count };
   });
 
-  const toggleSelection = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
-
-  const toggleAll = () => {
-    if (selectedIds.size === filteredTasks.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredTasks.map((t) => t._id)));
-    }
-  };
-
-  const updateStatus = async (id: string, status: TaskStatus, note?: string) => {
-    setUpdatingStatus(true);
-    await apiRequest(ENDPOINTS.TASK_REQUEST_UPDATE_STATUS(id), { 
-      method: "PUT", 
-      body: { status, note: note || "" } 
-    });
-    setStatusNote("");
-    setUpdatingStatus(false);
-    fetchTasks(id);
-  };
-
-  const handleSelectTask = async (task: TaskRequest) => {
-    setSelectedTask(task);
-    if (task.status === "new") {
-      // Automatically transition new tasks to in_review when admin opens them
-      await updateStatus(task._id, "in_review", "Admin opened for review");
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} tasks?`)) return;
-    await apiRequest(ENDPOINTS.TASK_REQUEST_BULK_DELETE, {
-      method: "DELETE",
-      body: { ids: Array.from(selectedIds) }
-    });
-    setSelectedIds(new Set());
-    setSelectedTask(null);
-    fetchTasks();
-  };
-
-  const copyTrackingLink = (token: string) => {
-    const url = `${window.location.origin}/track/${token}`;
-    navigator.clipboard.writeText(url);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
-
-  const handleAiDraftProposal = async () => {
-    if (!selectedTask) return;
-    setAiDrafting(true);
-    const { data, error } = await apiRequest<{ draft: any }>(ENDPOINTS.PROPOSAL_ADMIN_AI_DRAFT, {
-      method: "POST",
-      body: { taskRequestId: selectedTask._id },
-    });
-    setAiDrafting(false);
-    if (data?.draft) {
-      const d = data.draft;
-      setProposalDraft({
-        title:                     d.title || "",
-        executiveSummary:          d.executiveSummary || "",
-        scopeOfWork:               d.scopeOfWork || "",
-        deliverables:              d.deliverables || "",
-        timeline:                  d.timeline || "",
-        pricingBreakdown:          d.pricingBreakdown || "",
-        revisionsPolicy:           d.revisionsPolicy || "",
-        clientResponsibilities:    d.clientResponsibilities || "",
-        supportAndWarranty:        d.supportAndWarranty || "",
-        paymentTerms:              d.paymentTerms || "",
-        nextSteps:                 d.nextSteps || "",
-        milestones:   Array.isArray(d.milestones) && d.milestones.length > 0
-          ? d.milestones.map((m: any, i: number) => ({
-              title:       m.title       || `Milestone ${i + 1}`,
-              description: m.description || "",
-              amount:      String(m.amount || ""),
-              dueWeek:     String(m.dueWeek || ""),
-            }))
-          : [{ title: "Milestone 1", description: "", amount: "", dueWeek: "" }],
-      });
-    } else {
-      alert(error || "AI draft failed. Please fill in manually.");
-    }
-  };
-
-  const handleSendProposal = async () => {
-    if (!selectedTask || !proposalDraft.title || !proposalDraft.milestones.length) return;
-    setSendingProposal(true);
-    const { error } = await apiRequest(ENDPOINTS.PROPOSAL_ADMIN_CREATE, {
-      method: "POST",
-      body: {
-        taskRequestId: selectedTask._id,
-        clientEmail:   selectedTask.email,
-        clientName:    selectedTask.name,
-        title:                     proposalDraft.title,
-        executiveSummary:          proposalDraft.executiveSummary,
-        scopeOfWork:               proposalDraft.scopeOfWork,
-        deliverables:              proposalDraft.deliverables,
-        timeline:                  proposalDraft.timeline,
-        pricingBreakdown:          proposalDraft.pricingBreakdown,
-        revisionsPolicy:           proposalDraft.revisionsPolicy,
-        clientResponsibilities:    proposalDraft.clientResponsibilities,
-        supportAndWarranty:        proposalDraft.supportAndWarranty,
-        paymentTerms:              proposalDraft.paymentTerms,
-        nextSteps:                 proposalDraft.nextSteps,
-        milestones:    proposalDraft.milestones.map((m, i) => ({
-          title:       m.title,
-          description: m.description,
-          amount:      parseFloat(m.amount) || 0,
-          dueWeek:     parseInt(m.dueWeek) || 0,
-          order:       i,
-        })),
-        aiDrafted: aiDrafting,
-      },
-    });
-    setSendingProposal(false);
-    if (!error) {
-      setShowProposalPanel(false);
-      setProposalDraft({
-        title: "", 
-        executiveSummary: "",
-        scopeOfWork: "", deliverables: "", timeline: "", pricingBreakdown: "",
-        revisionsPolicy: "", clientResponsibilities: "", supportAndWarranty: "", paymentTerms: "", nextSteps: "",
-        milestones: [{ title: "Milestone 1", description: "", amount: "", dueWeek: "" }],
-      });
-      fetchTasks();
-    } else {
-      alert(error);
-    }
-  };
-
-  const handleCreateInvoice = async () => {
-    if (!selectedTask || !invoiceDraft.amountUSD || !invoiceDraft.description) return;
-    setCreatingInvoice(true);
-    const { error } = await apiRequest(ENDPOINTS.PAYMENT_ADMIN_CREATE_INVOICE, {
-      method: "POST",
-      body: {
-        taskRequestId: selectedTask._id,
-        clientEmail: selectedTask.email,
-        clientName: selectedTask.name,
-        amountUSD: parseFloat(invoiceDraft.amountUSD) || 0,
-        description: invoiceDraft.description,
-      },
-    });
-    setCreatingInvoice(false);
-    if (!error) {
-      setShowInvoicePanel(false);
-      setInvoiceDraft({ amountUSD: "", description: "" });
-      fetchTasks();
-      alert("Invoice created and sent successfully!");
-    } else {
-      alert(error);
-    }
-  };
-
-  const bulkActions = [
-    {
-      label: "Delete Selected",
-      icon: Trash2,
-      variant: "danger" as const,
-      onClick: handleBulkDelete
-    }
-  ];
-
-  // ── Import ENDPOINTS for proposal/contract actions ──
-  const ENDPOINTS_LOCAL = ENDPOINTS;
-
   return (
-    <div className="p-6 lg:p-8 flex h-[calc(100vh-theme(spacing.16))] flex-col">
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Task Pipeline</h1>
-          <p className="text-sm text-muted-foreground">Manage incoming requests and status</p>
-        </div>
-        <div className="flex bg-muted/50 p-1 rounded-lg border border-border">
-          <button 
-            onClick={() => setViewMode("board")} 
-            className={`p-2 rounded-md flex items-center justify-center transition-colors ${viewMode === "board" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-          <button 
-            onClick={() => setViewMode("list")} 
-            className={`p-2 rounded-md flex items-center justify-center transition-colors ${viewMode === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <ListIcon className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 shrink-0">
-        <div className="flex flex-wrap gap-3 flex-1 min-w-[200px]">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, email, or company..."
-              className="w-full rounded-lg border border-border bg-muted/50 pl-10 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="appearance-none rounded-lg border border-border bg-muted/50 pl-10 pr-8 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="all">All Statuses</option>
-              {statusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-          </div>
-        </div>
-        <SortControl value={sortOption} onChange={setSortOption} hideCustom />
-      </div>
-
-      <div className="flex gap-6 flex-1 min-h-0">
-        {/* Main View Area */}
-        <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
-          {viewMode === "board" ? (
-            <div className="flex gap-4 overflow-x-auto h-full pb-4 items-start snap-x">
-              {statusOptions.map((status) => {
-                const columnTasks = filteredTasks.filter(t => t.status === status.value);
-                return (
-                  <div key={status.value} className="flex-shrink-0 w-80 bg-muted/30 rounded-xl border border-border p-4 flex flex-col max-h-full snap-start">
-                    <div className="flex items-center justify-between mb-4 shrink-0">
-                      <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${status.color.split(" ")[0]}`}></span>
-                        {status.label}
-                      </h3>
-                      <span className="text-xs font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-full border border-border">
-                        {columnTasks.length}
-                      </span>
-                    </div>
-                    
-                    <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-1">
-                      {columnTasks.map(task => {
-                        const isSelected = selectedIds.has(task._id);
-                        return (
-                          <div 
-                            key={task._id}
-                            onClick={() => handleSelectTask(task)}
-                            className={`p-4 rounded-lg bg-card border cursor-pointer hover:border-primary/50 transition-colors relative group
-                              ${selectedTask?._id === task._id ? "border-primary shadow-sm" : "border-border shadow-sm"}
-                              ${isSelected ? "ring-1 ring-primary" : ""}
-                            `}
-                          >
-                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); toggleSelection(task._id); }}
-                                className="text-muted-foreground hover:text-primary bg-card rounded"
-                              >
-                                {isSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
-                              </button>
-                            </div>
-                            
-                            <h4 className="font-medium text-sm text-foreground pr-6 mb-1 truncate">{task.name}</h4>
-                            {task.company && <p className="text-xs text-muted-foreground mb-3 truncate">{task.company}</p>}
-                            
-                            <div className="flex items-center justify-between text-xs mt-4 pt-3 border-t border-border/50">
-                              <span className="text-muted-foreground bg-muted px-2 py-1 rounded-md">{task.service}</span>
-                              <span className="text-muted-foreground">{new Date(task.createdAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-border bg-card overflow-hidden flex-1 flex flex-col">
-              <div className="overflow-x-auto flex-1">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
-                    <tr className="border-b border-border">
-                      <th className="px-4 py-3 text-left w-10">
-                        <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground">
-                          {selectedIds.size === filteredTasks.length && filteredTasks.length > 0 ? (
-                            <CheckSquare className="h-4 w-4" />
-                          ) : (
-                            <Square className="h-4 w-4" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Client</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Service</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Status</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Date</th>
-                      <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredTasks.length === 0 ? (
-                      <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No tasks found</td></tr>
-                    ) : (
-                      filteredTasks.map((task) => (
-                        <tr 
-                          key={task._id} 
-                          onClick={() => handleSelectTask(task)}
-                          className={`hover:bg-muted/30 transition-colors cursor-pointer ${selectedTask?._id === task._id ? 'bg-primary/5' : ''}`}
-                        >
-                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => toggleSelection(task._id)} className="text-muted-foreground hover:text-primary">
-                              {selectedIds.has(task._id) ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
-                            </button>
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="font-medium text-foreground">{task.name}</p>
-                            <p className="text-xs text-muted-foreground">{task.company || task.email}</p>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">{task.service}</td>
-                          <td className="px-4 py-3">
-                            <span className={`text-xs px-2 py-1 rounded-full border ${statusOptions.find(s => s.value === task.status)?.color}`}>
-                              {statusOptions.find(s => s.value === task.status)?.label}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(task.createdAt).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button className="p-1.5 rounded-lg hover:bg-muted transition-colors">
-                                <Eye className="h-4 w-4 text-muted-foreground" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Side Panel for Detail */}
-        <AnimatePresence>
-          {selectedTask && (
-            <motion.div 
-              initial={{ opacity: 0, x: 20, width: 0 }} 
-              animate={{ opacity: 1, x: 0, width: 380 }} 
-              exit={{ opacity: 0, x: 20, width: 0 }}
-              className="rounded-xl border border-border bg-card shrink-0 self-start flex flex-col h-full overflow-hidden"
-            >
-              <div className="p-4 border-b border-border flex items-center justify-between bg-muted/20">
-                <h3 className="font-semibold text-foreground">
-                  {(selectedTask.status === "contract_signed" || selectedTask.status === "in_progress" || selectedTask.status === "completed") ? "Project Hub" : "Task Details"}
-                </h3>
-                <button 
-                  onClick={() => setSelectedTask(null)}
-                  className="p-1.5 hover:bg-muted rounded-md text-muted-foreground transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              
-              {(selectedTask.status === "contract_signed" || selectedTask.status === "in_progress" || selectedTask.status === "completed") ? (
-                <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center text-center">
-                  <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-5 shadow-inner">
-                     <svg className="h-10 w-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                     </svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Project is Active</h3>
-                  <p className="text-sm text-muted-foreground mb-8 px-2 leading-relaxed">
-                    This task has transitioned to an active project. You can now manage milestones, files, chat, and deliverables in the full-screen Project Hub.
-                  </p>
-                  <button 
-                    onClick={() => setShowProjectHubModal(true)} 
-                    className="w-full py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
-                  >
-                    Open Project Hub
-                  </button>
-                </div>
-              ) : (
-                <div className="flex-1 overflow-y-auto p-5">
-                  <div className="mb-6">
-                  <h2 className="text-xl font-bold text-foreground mb-1">{selectedTask.projectTitle || "New Project"}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedTask.name} • {selectedTask.company || selectedTask.email} 
-                    {selectedTask.role ? ` • ${selectedTask.role}` : ""}
-                    {selectedTask.phone ? ` • ${selectedTask.phone}` : ""}
-                  </p>
-                </div>
-
-                {selectedTask.selectedPlan && (
-                  <div className="mb-6 p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-purple-500 uppercase tracking-wider">Selected Plan</span>
-                    <p className="text-sm font-medium text-foreground">
-                      {selectedTask.selectedPlan} 
-                      {selectedTask.planBudget ? ` (Starts at $${selectedTask.planBudget})` : ""}
-                    </p>
-                  </div>
-                )}
-
-                {selectedTask.trackingToken && (
-                  <div className="mb-6 p-4 rounded-lg border border-primary/20 bg-primary/5 flex flex-col gap-2">
-                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">Client Portal Link</span>
-                    <div className="flex items-center gap-2">
-                      <input 
-                        readOnly 
-                        value={`${window.location.origin}/track/${selectedTask.trackingToken}`}
-                        className="flex-1 bg-background border border-border rounded-md px-3 py-1.5 text-xs text-muted-foreground outline-none"
-                      />
-                      <button 
-                        onClick={() => copyTrackingLink(selectedTask.trackingToken!)}
-                        className="p-1.5 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity"
-                        title="Copy tracking link"
-                      >
-                        {copiedLink ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-5 mb-8">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Service</p>
-                      <p className="text-sm font-medium text-foreground">{selectedTask.service}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Budget</p>
-                      <p className="text-sm font-medium text-foreground">{selectedTask.budget}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Timeline</p>
-                      <p className="text-sm font-medium text-foreground">{selectedTask.timeline}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Priority</p>
-                      <p className="text-sm font-medium text-foreground">{selectedTask.priority || "Normal"}</p>
-                    </div>
-                    {selectedTask.techStack && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Tech Stack</p>
-                        <p className="text-sm font-medium text-foreground">{selectedTask.techStack}</p>
-                      </div>
-                    )}
-                    {selectedTask.existingCode && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Existing Code?</p>
-                        <p className="text-sm font-medium text-foreground">{selectedTask.existingCode}</p>
-                      </div>
-                    )}
-                    {selectedTask.integrations && (
-                      <div className="col-span-2">
-                        <p className="text-xs text-muted-foreground mb-1">Integrations</p>
-                        <p className="text-sm font-medium text-foreground">{selectedTask.integrations}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Project Description</p>
-                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap p-3 bg-muted/30 rounded-lg border border-border">
-                      {selectedTask.description}
-                    </p>
-                  </div>
-
-                  {selectedTask.codeDetails && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Code/Architecture Details</p>
-                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap p-3 bg-muted/30 rounded-lg border border-border">
-                        {selectedTask.codeDetails}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedTask.notes && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Additional Notes</p>
-                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap p-3 bg-muted/30 rounded-lg border border-border">
-                        {selectedTask.notes}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-5 border-t border-border mb-8">
-                  <h4 className="text-sm font-semibold text-foreground mb-4">Actions</h4>
-                  <div className="space-y-3">
-                    {selectedTask.status === "in_review" && (
-                      <button
-                        onClick={() => setShowProposalPanel(true)}
-                        className="w-full rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors"
-                      >
-                        Draft & Send Proposal
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        if (selectedTask.status !== "contract_signed" && selectedTask.status !== "in_progress") {
-                          alert("Invoice can only be created after the contract is signed.");
-                          return;
-                        }
-                        setShowInvoicePanel(true);
-                      }}
-                      className={`w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                        selectedTask.status === "contract_signed" || selectedTask.status === "in_progress"
-                          ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                          : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
-                      }`}
-                      title={selectedTask.status === "contract_signed" || selectedTask.status === "in_progress" ? "Create Invoice" : "Contract must be signed first"}
-                    >
-                      Create Invoice
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-5 border-t border-border">
-                  <h4 className="text-sm font-semibold text-foreground mb-4">Update Status</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">New Status</label>
-                      <select
-                        value={selectedTask.status}
-                        onChange={(e) => updateStatus(selectedTask._id, e.target.value as TaskStatus)}
-                        disabled={updatingStatus}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      >
-                        {editableStatusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Internal Note (Saved to timeline)</label>
-                      <textarea
-                        value={statusNote}
-                        onChange={(e) => setStatusNote(e.target.value)}
-                        placeholder="Add a note about this status change..."
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary h-20 resize-none"
-                      />
-                    </div>
-                    <button
-                      onClick={() => updateStatus(selectedTask._id, selectedTask.status, statusNote)}
-                      disabled={updatingStatus || !statusNote.trim()}
-                      className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {updatingStatus ? "Saving..." : "Add Note & Save"}
-                    </button>
-                  </div>
-                </div>
-
-                {selectedTask.statusHistory && selectedTask.statusHistory.length > 0 && (
-                  <div className="pt-6 mt-6 border-t border-border">
-                    <h4 className="text-sm font-semibold text-foreground mb-4">Timeline</h4>
-                    <div className="space-y-4 border-l-2 border-border ml-2 pl-4">
-                      {selectedTask.statusHistory.map((h, i) => (
-                        <div key={i} className="relative">
-                          <span className={`absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full border-2 border-card ${statusOptions.find(s => s.value === h.status)?.color.split(" ")[0]}`}></span>
-                          <p className="text-xs font-medium text-foreground">{statusOptions.find(s => s.value === h.status)?.label}</p>
-                          <p className="text-[10px] text-muted-foreground mb-1">{new Date(h.updatedAt).toLocaleString()}</p>
-                          {h.note && (
-                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-md mt-1 italic border border-border/50">"{h.note}"</p>
-                          )}
-                        </div>
-                      )).reverse()}
-                    </div>
-                  </div>
-                )}
-              </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <BulkActionBar 
-        selectedCount={selectedIds.size} 
-        onClear={() => setSelectedIds(new Set())} 
-        actions={bulkActions} 
+    <div className="space-y-6 font-sans">
+      {/* Workspace Drawer */}
+      <EngagementCommandCenter
+        request={selectedTask}
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onRefresh={fetchTasks}
       />
 
-      {/* Project Hub Full-Screen Modal */}
-      <AnimatePresence>
-        {showProjectHubModal && selectedTask && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-7xl bg-card rounded-2xl border border-border shadow-2xl h-[95vh] flex flex-col overflow-hidden"
-            >
-              <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/30">
-                <div>
-                  <h3 className="font-extrabold text-lg text-foreground flex items-center gap-2">
-                    <span className="text-primary">Project Hub</span> 
-                    <span className="text-muted-foreground font-normal mx-1">/</span>
-                    {selectedTask.projectTitle || selectedTask.name}
-                  </h3>
-                </div>
-                <button 
-                  onClick={() => setShowProjectHubModal(false)} 
-                  className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden bg-background">
-                <AdminProjectHub key={selectedTask._id} taskId={selectedTask._id} />
-              </div>
-            </motion.div>
+      {/* Header */}
+      <AdminPageHeader
+        title="Kanban Lifecycle & Engagement Board"
+        description="Full lifecycle client pipeline: inquiry tracking, AI proposals, contracts, payments, and project sprints."
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-muted/60 border border-border/60 rounded-lg p-0.5 shadow-2xs">
+              <button
+                onClick={() => setViewMode("board")}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  viewMode === "board"
+                    ? "bg-background text-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" /> Kanban Board
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  viewMode === "list"
+                    ? "bg-background text-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <ListIcon className="h-3.5 w-3.5" /> Data Table
+              </button>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        }
+      />
 
-      {/* Proposal Modal */}
-      <AnimatePresence>
-        {showProposalPanel && selectedTask && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-3xl bg-card rounded-xl border border-border shadow-xl max-h-[90vh] flex flex-col overflow-hidden"
+      {/* Filters Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-card border border-border/50 rounded-xl shadow-2xs text-xs">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1">
+          {/* Search */}
+          <div className="relative min-w-[220px] flex-1 max-w-xs">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search client, company, project…"
+              className="w-full bg-background border border-border/60 rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary font-sans"
+            />
+          </div>
+
+          {/* Service Filter */}
+          <div className="flex items-center gap-1.5">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <select
+              value={serviceFilter}
+              onChange={(e) => setServiceFilter(e.target.value)}
+              className="bg-background border border-border/60 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
-                <h3 className="font-bold text-foreground">Draft Proposal</h3>
-                <button onClick={() => setShowProposalPanel(false)} className="text-muted-foreground hover:text-foreground">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                <div className="flex justify-end mb-2">
-                  <button
-                    onClick={handleAiDraftProposal}
-                    disabled={aiDrafting}
-                    className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              <option value="all">All Services ({tasks.length})</option>
+              {services.filter((s) => s !== "all").map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Priority Filter */}
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="bg-background border border-border/60 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="all">All Priorities</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="normal">Normal</option>
+          </select>
+        </div>
+
+        {/* Sort Option */}
+        <div className="flex items-center gap-1.5">
+          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value as any)}
+            className="bg-background border border-border/60 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="newest">Sort: Newest First</option>
+            <option value="oldest">Sort: Oldest First</option>
+            <option value="budget">Sort: Budget High-Low</option>
+          </select>
+        </div>
+      </div>
+
+      {/* VIEW RENDERER */}
+      {viewMode === "board" ? (
+        /* KANBAN BOARD HORIZONTAL LIFECYCLE VIEW */
+        <div className="overflow-x-auto pb-4 pt-1 border border-border/50 rounded-xl bg-card/40 p-4">
+          <div className="flex items-start gap-4 min-w-[2400px]">
+            {LIFECYCLE_STAGES.map((stage) => {
+              const StageIcon = stage.icon;
+              const stageTasks = filteredTasks.filter((t) => {
+                if (stage.id === "accepted") return t.status === "accepted" || t.status === "signed";
+                if (stage.id === "cancelled") return t.status === "cancelled" || t.status === "rejected";
+                return t.status === stage.id;
+              });
+
+              return (
+                <div
+                  key={stage.id}
+                  className="w-[280px] shrink-0 bg-card border border-border/60 rounded-xl flex flex-col shadow-2xs max-h-[calc(100vh-230px)] overflow-hidden"
+                >
+                  {/* Column Header */}
+                  <div className={`p-3.5 border-b flex items-center justify-between ${stage.bg}`}>
+                    <div className="flex items-center gap-2">
+                      <StageIcon className={`h-4 w-4 ${stage.color}`} />
+                      <div>
+                        <h3 className="text-xs font-bold text-foreground font-display flex items-center gap-1.5">
+                          {stage.label}
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground leading-tight">{stage.desc}</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-background border border-border/40 font-bold text-foreground">
+                      {stageTasks.length}
+                    </span>
+                  </div>
+
+                  {/* Column Cards Container */}
+                  <div className="p-3 overflow-y-auto space-y-3 flex-1 min-h-[400px]">
+                    {loading ? (
+                      <div className="space-y-3">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="h-28 rounded-lg bg-muted/40 animate-pulse" />
+                        ))}
+                      </div>
+                    ) : stageTasks.length === 0 ? (
+                      <div className="h-40 flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/50 rounded-lg text-muted-foreground">
+                        <StageIcon className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
+                        <p className="text-xs font-medium">No requests</p>
+                        <p className="text-[10px] opacity-70">Stage is currently empty</p>
+                      </div>
+                    ) : (
+                      <AnimatePresence mode="popLayout">
+                        {stageTasks.map((t) => {
+                          const priority = (t.priority || "normal").toLowerCase();
+                          const isUrgent = priority === "urgent" || priority === "high";
+
+                          return (
+                            <motion.div
+                              key={t._id}
+                              layout
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              whileHover={{ y: -3, transition: { duration: 0.15 } }}
+                              onClick={() => handleOpenWorkspace(t)}
+                              className="p-3.5 rounded-xl border border-border/60 bg-background hover:border-primary/50 hover:shadow-md transition-all cursor-pointer space-y-3 group relative overflow-hidden"
+                            >
+                              {/* Accent Line */}
+                              <div className={`absolute top-0 left-0 right-0 h-1 ${
+                                isUrgent ? "bg-red-500" : stage.color.replace("text-", "bg-")
+                              }`} />
+
+                              {/* Card Header: Client & Priority */}
+                              <div className="flex items-start justify-between gap-2 pt-1">
+                                <div>
+                                  <div className="font-bold text-xs text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    <span className="truncate max-w-[140px]">{t.name}</span>
+                                  </div>
+                                  {t.company && (
+                                    <div className="text-[10px] text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                                      <Building className="h-2.5 w-2.5 text-muted-foreground/60 shrink-0" />
+                                      <span>{t.company}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {isUrgent ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-red-500/10 text-red-500 border border-red-500/20 uppercase shrink-0">
+                                    {t.priority}
+                                  </span>
+                                ) : (
+                                  <AdminStatusBadge status={t.status} size="sm" />
+                                )}
+                              </div>
+
+                              {/* Project Title / Service */}
+                              <div>
+                                <h4 className="text-xs font-semibold text-foreground leading-snug line-clamp-1">
+                                  {t.projectTitle || t.service}
+                                </h4>
+                                <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                                  <Tag className="h-2.5 w-2.5 text-primary/70 shrink-0" />
+                                  <span className="truncate">{t.service}</span>
+                                </div>
+                              </div>
+
+                              {/* Card Description Snippet */}
+                              <p className="text-[11px] text-muted-foreground/90 line-clamp-2 leading-relaxed bg-muted/20 p-2 rounded-lg border border-border/30">
+                                {t.description}
+                              </p>
+
+                              {/* Footer: Budget & Time Ago */}
+                              <div className="flex items-center justify-between text-[11px] pt-2 border-t border-border/40">
+                                <div className="flex items-center gap-1 font-mono font-bold text-foreground bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded border border-emerald-500/20">
+                                  <DollarSign className="h-3 w-3 shrink-0" />
+                                  <span>{t.budget || "TBD"}</span>
+                                </div>
+
+                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                                  <Clock className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                                  <span>{formatTimeAgo(t.createdAt)}</span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* DATA TABLE LIST VIEW */
+        <AdminDataTable
+          searchQuery={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Filter by client name, email, or service…"
+          tabs={tabsWithCounts}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          loading={loading}
+          isEmpty={filteredTasks.length === 0}
+          emptyTitle="No engagements match criteria"
+          emptyDescription="Try adjusting your status filter or search keywords."
+          onRefresh={fetchTasks}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-muted/40 border-b border-border/40 text-muted-foreground font-mono uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="px-4 py-3">Client</th>
+                  <th className="px-4 py-3">Project / Service</th>
+                  <th className="px-4 py-3">Stage Status</th>
+                  <th className="px-4 py-3">Priority</th>
+                  <th className="px-4 py-3">Budget</th>
+                  <th className="px-4 py-3">Submitted</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {filteredTasks.map((t) => (
+                  <tr
+                    key={t._id}
+                    onClick={() => handleOpenWorkspace(t)}
+                    className="hover:bg-muted/40 transition-colors cursor-pointer group"
                   >
-                    {aiDrafting ? "Generating with AI..." : "✨ Generate with AI"}
-                  </button>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Proposal Title</label>
-                  <input
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.title}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Executive Summary</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-32 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.executiveSummary}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, executiveSummary: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Scope of Work</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-32 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.scopeOfWork}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, scopeOfWork: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Deliverables</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-32 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.deliverables}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, deliverables: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Timeline</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-24 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.timeline}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, timeline: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Pricing Breakdown</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-24 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.pricingBreakdown}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, pricingBreakdown: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Revisions Policy</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-16 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.revisionsPolicy}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, revisionsPolicy: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Client Responsibilities</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-20 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.clientResponsibilities}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, clientResponsibilities: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Support & Warranty</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-16 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.supportAndWarranty}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, supportAndWarranty: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Payment Terms</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-16 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.paymentTerms}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, paymentTerms: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Next Steps</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-20 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={proposalDraft.nextSteps}
-                    onChange={(e) => setProposalDraft({ ...proposalDraft, nextSteps: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="p-4 border-t border-border flex justify-end gap-3 bg-muted/20">
-                <button
-                  onClick={() => setShowProposalPanel(false)}
-                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSendProposal}
-                  disabled={sendingProposal || !proposalDraft.title}
-                  className="bg-primary px-4 py-2 rounded-lg text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {sendingProposal ? "Sending..." : "Send Proposal"}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                    <td className="px-4 py-3.5">
+                      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {t.name}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-mono">{t.email}</div>
+                    </td>
 
-      {/* Invoice Modal */}
-      <AnimatePresence>
-        {showInvoicePanel && selectedTask && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md bg-card rounded-xl border border-border shadow-xl overflow-hidden"
-            >
-              <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
-                <h3 className="font-bold text-foreground">Create Invoice</h3>
-                <button onClick={() => setShowInvoicePanel(false)} className="text-muted-foreground hover:text-foreground">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Amount (USD)</label>
-                  <input
-                    type="number"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={invoiceDraft.amountUSD}
-                    onChange={(e) => setInvoiceDraft({ ...invoiceDraft, amountUSD: e.target.value })}
-                    placeholder="e.g. 5000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Description (Milestone Details)</label>
-                  <textarea
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground h-24 focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={invoiceDraft.description}
-                    onChange={(e) => setInvoiceDraft({ ...invoiceDraft, description: e.target.value })}
-                    placeholder="e.g. Milestone 1 of 3: UI Design Delivery"
-                  />
-                </div>
-              </div>
-              <div className="p-4 border-t border-border flex justify-end gap-3 bg-muted/20">
-                <button
-                  onClick={() => setShowInvoicePanel(false)}
-                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateInvoice}
-                  disabled={creatingInvoice || !invoiceDraft.amountUSD || !invoiceDraft.description}
-                  className="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {creatingInvoice ? "Sending..." : "Send Invoice"}
-                </button>
-              </div>
-            </motion.div>
+                    <td className="px-4 py-3.5">
+                      <div className="font-medium text-foreground">
+                        {t.projectTitle || t.service}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-mono">{t.service}</div>
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      <AdminStatusBadge status={t.status} />
+                    </td>
+
+                    <td className="px-4 py-3.5 font-mono">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        (t.priority || "").toLowerCase() === "urgent"
+                          ? "bg-red-500/10 text-red-500 border border-red-500/20"
+                          : (t.priority || "").toLowerCase() === "high"
+                          ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {t.priority || "normal"}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3.5 font-mono font-semibold text-foreground">
+                      {t.budget || "TBD"}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-muted-foreground font-mono">
+                      {new Date(t.createdAt).toLocaleDateString()}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleOpenWorkspace(t)}
+                        className="px-2.5 py-1 rounded-md bg-muted hover:bg-primary hover:text-primary-foreground text-xs font-medium transition-all inline-flex items-center gap-1"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> Workspace
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </AnimatePresence>
+        </AdminDataTable>
+      )}
     </div>
   );
-}
+};
 
 export default AdminTasks;

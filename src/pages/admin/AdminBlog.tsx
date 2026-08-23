@@ -9,6 +9,7 @@ import { ImageUpload } from "@/components/admin/ImageUpload";
 import MediaUploader, { MediaAttachment } from "@/components/admin/MediaUploader";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { useRef, useMemo, useCallback } from "react";
 
 interface BlogPost {
@@ -212,24 +213,27 @@ const AdminBlog = () => {
   const inputCls = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Blog</h1>
-          <p className="text-sm text-muted-foreground">Write and schedule blog posts</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { openCreate(); setAiMode(true); }}
-            className="inline-flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 hover:bg-purple-500/20 transition-colors"
-          >
-            <span>✨</span> Add via AI
-          </button>
-          <button onClick={openCreate} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
-            <Plus className="h-4 w-4" /> Add Manually
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6 font-sans">
+      <AdminPageHeader
+        title="Blog Posts & Articles"
+        description="Publish, schedule, and edit marketing articles and technical blog posts."
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { handleOpen(); setAiMode(true); }}
+              className="px-3.5 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs font-semibold text-purple-400 hover:bg-purple-500/20 transition-all inline-flex items-center gap-1.5"
+            >
+              <span>✨</span> AI Article Drafter
+            </button>
+            <button
+              onClick={() => { handleOpen(); setAiMode(false); }}
+              className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 transition-all inline-flex items-center gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" /> Write Post
+            </button>
+          </div>
+        }
+      />
 
       {/* Filters & Sort */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">

@@ -43,9 +43,9 @@ async function logDatabaseInfo(): Promise<void> {
   console.log(`║  Database  : ${dbName.padEnd(48)}║`);
   console.log(`║  Host      : ${host.padEnd(48)}║`);
   console.log(`║  Port      : ${String(port || 27017).padEnd(48)}║`);
-  console.log(`║  Cluster   : HireFusion (MongoDB Atlas)                      ║`);
+  console.log(`║  Cluster   : SunTriX (MongoDB Atlas)                         ║`);
   console.log(`║  Auth DB   : admin                                           ║`);
-  console.log(`║  App Name  : HireFusion                                      ║`);
+  console.log(`║  App Name  : SunTriX                                         ║`);
   console.log("╠══════════════════════════════════════════════════════════════╣");
   console.log(`║  Registered Models : ${String(models.length).padEnd(40)}║`);
   console.log(`║  Atlas Collections : ${String(collectionList.length).padEnd(40)}║`);
